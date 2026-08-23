@@ -1,0 +1,28 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor settings
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Node / package manager
+node_modules/
+.npm/
+npm-debug.log*
+
+# Local build artifacts
+build/
+dist/
+coverage/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~

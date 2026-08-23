@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MiniStudio 3D - Control de Personajes & Ambientes</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🎬</text></svg>" />
+  <link rel="stylesheet" href="style.css?v=9" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./vendor/three.module.js",
+      "three/addons/": "./vendor/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="app-container">
+    <!-- 1. Header Toolbar -->
+    <header id="top-bar">
+      <div class="top-bar-left">
+        <div class="brand">
+          <span class="brand-icon">🔶</span>
+          <span>MiniStudio 3D</span>
+        </div>
+        <nav class="top-menu">
+          <div class="menu-item has-dropdown" id="menuArchivo">
+            Archivo ▾
+            <div class="menu-dropdown" id="menuArchivoDropdown">
+              <div class="menu-option" id="mnuOpen">📂 Abrir…</div>
+              <div class="menu-option" id="mnuSaveAs">💾 Guardar como…</div>
+              <div class="menu-option disabled" id="mnuSave">💾 Guardar</div>
+            </div>
+          </div>
+          <div class="menu-item">Editar</div>
+          <div class="menu-item">Agregar</div>
+          <div class="menu-item">Vista</div>
+        </nav>
+      </div>
+
+      <!-- Environment Selector -->
+      <div class="env-selector-container">
+        <button class="env-btn active" data-env="office" id="envOfficeBtn" title="Oficina moderna con escritorios y sala de servidores">🏢 Oficina</button>
+        <button class="env-btn" data-env="studio" id="envStudioBtn" title="Estudio neutro con grilla">🎬 Estudio 3D</button>
+        <button class="env-btn" data-env="day" id="envDayBtn" title="Parque con luz diurna">☀️ Parque Día</button>
+        <button class="env-btn" data-env="sunset" id="envSunsetBtn" title="Parque con atardecer dorado">🌅 Parque Tarde</button>
+        <button class="env-btn" data-env="night" id="envNightBtn" title="Parque nocturno con farolas">🌙 Parque Noche</button>
+      </div>
+
+      <div class="top-bar-right">
+        <button class="viewport-toggle-btn" id="undoBtn" title="Deshacer (Ctrl+Z)" disabled>↩ Deshacer</button>
+        <button class="viewport-toggle-btn" id="redoBtn" title="Rehacer (Ctrl+Y)" disabled>↪ Rehacer</button>
+        <button class="viewport-toggle-btn active" id="toggleGridBtn" title="Alternar Grilla">🌐 Grilla</button>
+        <button class="viewport-toggle-btn active" id="toggleAxesBtn" title="Alternar Ejes">🧭 Ejes</button>
+        <button class="viewport-toggle-btn" id="resetCamBtn" title="Restablecer Vista">🎯 Reset Vista</button>
+      </div>
+    </header>
+
+    <!-- 2. Main Workspace Layout -->
+    <div id="main-workspace">
+      <!-- Left Panel (Sidebar) -->
+      <aside id="left-panel">
+
+        <!-- Selector de Objetos y Personajes -->
+        <div class="panel-section">
+          <div class="section-header">
+            <span>Objetivo Seleccionado</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="section-content">
+            <div class="target-category-label">🧍 PERSONAJES</div>
+            <div class="target-selector-box" style="grid-template-columns: repeat(3, 1fr);">
+              <button class="target-btn active" id="targetHuman1Btn" data-target="human1">🧍 Alex</button>
+              <button class="target-btn" id="targetHuman2Btn" data-target="human2">👔 Carlos</button>
+              <button class="target-btn" id="targetHuman3Btn" data-target="human3">👩 Elena</button>
+              <button class="target-btn" id="targetDogBtn" data-target="dog">🐕 Perro</button>
+              <button class="target-btn" id="targetCatBtn" data-target="cat">🐱 Gato</button>
+            </div>
+
+            <button class="blender-btn" id="btnEditObjects" style="width:100%; margin-top:8px;">✏️ Editar Objetos: OFF</button>
+            <p class="cinema-hint" style="margin-top:2px;">Con ON podés hacer click y mover muebles/objetos. Los personajes siempre se pueden mover.</p>
+          </div>
+        </div>
+
+        <!-- Section: Acciones y Poses en Vivo (Para personajes) -->
+        <div class="panel-section" id="section-actions">
+          <div class="section-header">
+            <span id="actionsSectionTitle">Animaciones en Bucle (Personaje)</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="section-content">
+            <!-- Botones de Acción para Humanos -->
+            <div class="action-grid" id="humanActionsGrid">
+              <button class="action-btn" data-action="talk">🗣️ Hablando</button>
+              <button class="action-btn" data-action="sit_typing">💻 Tecleando</button>
+              <button class="action-btn" data-action="sit">🪑 Sentado</button>
+              <button class="action-btn" data-action="lay">🛌 Tirado en piso</button>
+              <button class="action-btn active" data-action="idle">🧍 De pie</button>
+              <button class="action-btn" data-action="walk">🚶 Caminar</button>
+              <button class="action-btn" data-action="run">🏃 Correr</button>
+            </div>
+
+            <!-- Botones de Acción para Perro y Gato -->
+            <div class="action-grid" id="petActionsGrid" style="display: none;">
+              <button class="action-btn" data-action="sit">🐕 / 🐱 Sentado</button>
+              <button class="action-btn" data-action="lay">🛌 Acostado</button>
+              <button class="action-btn active" data-action="idle">🧍 De pie</button>
+              <button class="action-btn" data-action="walk">🚶 Caminar</button>
+              <button class="action-btn" data-action="run">🏃 Correr</button>
+            </div>
+
+            <!-- Controles para Muebles / Equipos IT -->
+            <div id="propControlsGrid" style="display: none; flex-direction: column; gap: 4px;">
+              <p class="cinema-hint">Mové el objeto con el gizmo o el anillo; el imán lo deja a la altura de mesa o piso.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Posición 3D con Barras Deslizantes (Sliders XYZ) -->
+        <div class="panel-section" id="section-transform">
+          <div class="section-header">
+            <span id="transformSectionTitle">Transformación 3D</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="section-content">
+            <div class="slider-group">
+              <!-- Posición X -->
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span>Posición X (Lateral)</span>
+                </div>
+                <div class="slider-ctrl">
+                  <span class="axis-tag x">X</span>
+                  <input type="range" id="sliderX" min="-15" max="15" step="0.05" value="0" />
+                  <input type="number" id="numX" step="0.05" value="0.00" />
+                </div>
+              </div>
+
+              <!-- Posición Z -->
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span>Posición Z (Profundidad)</span>
+                </div>
+                <div class="slider-ctrl">
+                  <span class="axis-tag z">Z</span>
+                  <input type="range" id="sliderZ" min="-15" max="15" step="0.05" value="0" />
+                  <input type="number" id="numZ" step="0.05" value="0.00" />
+                </div>
+              </div>
+
+              <!-- Posición Y -->
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span>Posición Y (Altura)</span>
+                </div>
+                <div class="slider-ctrl">
+                  <span class="axis-tag y">Y</span>
+                  <input type="range" id="sliderY" min="-1" max="8" step="0.05" value="0" />
+                  <input type="number" id="numY" step="0.05" value="0.00" />
+                </div>
+              </div>
+
+              <!-- Rotación Y -->
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span>Giro / Orientación (°)</span>
+                </div>
+                <div class="slider-ctrl">
+                  <span class="axis-tag r">Rot</span>
+                  <input type="range" id="sliderRotY" min="0" max="360" step="5" value="0" />
+                  <input type="number" id="numRotY" step="5" value="0" />
+                </div>
+              </div>
+            </div>
+
+            <div class="btn-grid" style="margin-top: 4px;">
+              <button class="blender-btn" id="btnFaceCamera">👀 Mirar Cámara</button>
+              <button class="blender-btn" id="btnResetTargetPos">⌖ Reset Posición</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Editor de Pared -->
+        <div class="panel-section" id="section-wall" style="display:none;">
+          <div class="section-header">
+            <span>🧱 Pared</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="section-content">
+            <label class="inline-label">Largo <input type="range" id="wallLen" min="0.5" max="30" step="0.1" value="5" style="flex:1; accent-color: var(--accent-primary);" /> <input type="number" id="wallLenNum" class="tl-input" min="0.5" max="30" step="0.1" value="5" style="width:52px;" /></label>
+            <label class="inline-label">Alto <input type="range" id="wallHeight" min="1" max="6" step="0.1" value="3.5" style="flex:1; accent-color: var(--accent-primary);" /> <input type="number" id="wallHeightNum" class="tl-input" min="1" max="6" step="0.1" value="3.5" style="width:52px;" /></label>
+            <label class="inline-label">Espesor <input type="range" id="wallThick" min="0.05" max="1" step="0.05" value="0.15" style="flex:1; accent-color: var(--accent-primary);" /> <input type="number" id="wallThickNum" class="tl-input" min="0.05" max="1" step="0.05" value="0.15" style="width:52px;" /></label>
+            <label class="inline-label" style="margin-top:4px;">Textura
+              <select id="wallTexture" class="tl-input" style="flex:1;"></select>
+            </label>
+            <p class="cinema-hint" style="margin-top:4px;">La pared se mueve con el gizmo o los sliders de posición. Largo/espesor siguen su rotación.</p>
+          </div>
+        </div>
+
+        <!-- Section: Cinemática (Recorrido Animado) -->
+        <div class="panel-section" id="section-cinematic">
+          <div class="section-header">
+            <span>Cinemática (Recorrido)</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="section-content">
+            <p class="cinema-hint" id="cinemaHint">Activa la cinemática de un personaje para grabar su recorrido.</p>
+
+            <button class="blender-btn primary" id="btnCinemaPlayAll" style="width:100%;">▶ Reproducir Todas las Cinemáticas</button>
+
+            <div class="cinema-chars-label">Recorridos por personaje</div>
+            <div class="cinema-chars" id="cinemaCharList"></div>
+
+            <button class="blender-btn" id="btnCinemaExit" style="width:100%; margin-top:4px;">✖ Salir de Cinemática</button>
+
+            <div id="cameraViewControls" class="camera-view-block" style="display:none;">
+              <div class="camera-view-label">🎥 Vista de Cámara</div>
+              <div class="view-btn-grid">
+                <button class="blender-btn view-btn" data-view="fpv">1ª Persona</button>
+                <button class="blender-btn view-btn" data-view="third">3ª Persona</button>
+                <button class="blender-btn view-btn" data-view="top">Perseguir</button>
+              </div>
+              <div class="view-btn-grid" style="margin-top:4px;">
+                <button class="blender-btn view-btn" data-view="cine1">🎬 Cine 1</button>
+                <button class="blender-btn view-btn" data-view="cine2">🎬 Cine 2</button>
+                <button class="blender-btn view-btn" data-view="cine3">🎬 Cine 3</button>
+              </div>
+              <div class="view-btn-grid" style="margin-top:4px;">
+                <button class="blender-btn view-btn active" data-view="orbit">🎥 Libre (Órbita)</button>
+                <button class="blender-btn view-btn" data-view="aerial">🚁 Aérea</button>
+              </div>
+            </div>
+
+            <div id="cinemaEditControls" style="display:none; flex-direction:column; gap:6px; margin-top:6px;">
+              <div class="btn-grid">
+                <button class="blender-btn primary" id="btnCinemaReverse">⟲ Invertir</button>
+              </div>
+              <label class="inline-label">Velocidad <input type="range" id="cinemaSpeed" min="0.5" max="6" step="0.1" value="2" style="flex:1; accent-color: var(--accent-primary);" /> <span id="cinemaSpeedVal">2.0</span> m/s</label>
+              <label class="inline-label"><input type="checkbox" id="cinemaLoop" checked /> Repetir en bucle</label>
+              <p class="cinema-hint" style="margin-top:2px;">Doble click en un punto del recorrido para editar su evento (acción + espera).</p>
+            </div>
+
+            <div id="waypointEventPanel" class="waypoint-event-panel" style="display:none;">
+              <div class="camera-view-label">📌 Evento del punto <span id="waypointEventTitle"></span></div>
+              <label class="inline-label">Acción al llegar
+                <select id="waypointEventAction" class="tl-input">
+                  <option value="">— sin cambio —</option>
+                  <option value="idle">Idle</option>
+                  <option value="talk">Hablar</option>
+                  <option value="sit">Sentarse</option>
+                  <option value="lay">Acostarse</option>
+                  <option value="walk">Caminar</option>
+                  <option value="run">Correr</option>
+                </select>
+              </label>
+              <label class="inline-label">Espera <input type="number" id="waypointEventWait" class="tl-input" min="0" step="0.5" value="0" style="width:52px;" /> s</label>
+              <div class="btn-grid" style="margin-top:4px;">
+                <button class="blender-btn primary" id="waypointEventApply">✔ Aplicar</button>
+                <button class="blender-btn danger" id="waypointEventRemove">Quitar evento</button>
+                <button class="blender-btn" id="waypointEventClose">Cerrar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Outliner / Jerarquía Completa -->
+        <div class="panel-section" id="section-outliner">
+          <div class="section-header">
+            <span>Jerarquía de Escena (Outliner)</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="section-content">
+            <ul class="outliner-tree" id="outlinerTree">
+              <!-- Dynamically populated / organized -->
+            </ul>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Viewport Area -->
+      <main id="viewport-container">
+        <canvas id="view"></canvas>
+
+        <!-- Banner de instrucción de cinemática -->
+        <div id="cinemaBanner" class="cinema-banner" style="display:none;"></div>
+
+        <!-- Viewport HUD Info -->
+        <div class="hud-top-left">
+          <div class="hud-tag">
+            <span id="hudEnvName">Oficina Moderna</span>
+            <span class="hud-sub">(Haz clic en cualquier objeto o personaje para moverlo)</span>
+          </div>
+          <div>
+            <span class="hud-selected-badge" id="hudSelectedBadge">🧍 Enfocado: Alex</span>
+          </div>
+          <div class="hud-tag">
+            <span class="hud-sub" id="hudFps">60 FPS</span>
+          </div>
+        </div>
+
+        <div class="hud-bottom-left" id="hudCamPos">
+          Cam: X: 5.50, Y: 3.50, Z: 7.00
+        </div>
+
+        <div class="hud-top-right">
+          <button class="hud-btn" id="snapViewFront" title="Vista Frontal">Frontal</button>
+          <button class="hud-btn" id="snapViewTop" title="Vista Superior">Superior</button>
+          <button class="hud-btn" id="snapViewSide" title="Vista Lateral">Lateral</button>
+        </div>
+      </main>
+    </div>
+
+    <!-- 2b. Secuenciador de escenas: línea de tiempo de tomas -->
+    <section id="scene-timeline">
+      <div class="tl-toolbar">
+        <button class="blender-btn primary" id="btnPlayScene" title="Reproduce todos los recorridos y aplica las tomas de cámara">▶ Reproducir Escena</button>
+        <button class="blender-btn danger" id="btnRecordScene" title="Reproduce la escena y la graba como un único video">⏺ Grabar Escena</button>
+        <button class="blender-btn" id="btnStopScene" disabled>⏹ Detener</button>
+        <button class="blender-btn" id="btnAddShot" title="Agrega una toma de 3s al final de la línea">＋ Nueva toma</button>
+        <span id="timelineClock" class="tl-clock">0.0s / 0.0s</span>
+      </div>
+      <div class="tl-body">
+        <div id="timelineRuler" class="tl-ruler"></div>
+        <div id="timelineTrack" class="tl-track">
+          <div id="tlPlayhead" class="tl-playhead" style="display:none;"></div>
+        </div>
+      </div>
+      <div id="shotEditor" class="tl-shot-editor" style="display:none;"></div>
+    </section>
+
+    <!-- 3. Bottom Animation Timeline Bar (Video Recorder) -->
+    <footer id="bottom-timeline">
+      <div class="timeline-header">
+        <div class="transport-controls">
+          <button class="blender-btn primary" id="exportBtn" style="padding: 4px 14px;" title="Exportar animación en bucle como video WebM">⬇ Grabar & Exportar Video</button>
+          <span style="color: var(--text-muted); font-size: 11px; margin-left: 8px;">(Graba la escena con todas las animaciones activas)</span>
+        </div>
+
+        <div class="timeline-settings">
+          <label class="inline-label">Duración video <input type="number" id="durationInput" value="5" step="1" min="1" max="60" />s</label>
+          <label class="inline-label">FPS <input type="number" id="fpsInput" value="30" step="1" min="1" max="60" /></label>
+          <span id="status">Listo - Modo Oficina Activo</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <div id="err"></div>
+  <input type="file" id="projectFileInput" accept=".json,application/json" style="display:none;" />
+  <script>
+    window.addEventListener('error', (e) => {
+      const el = document.getElementById('err');
+      if (el) el.textContent = 'Error: ' + (e.message || e.error || 'desconocido') + ' — abre F12 (Consola).';
+    });
+    window.addEventListener('unhandledrejection', (e) => {
+      const el = document.getElementById('err');
+      if (el) el.textContent = 'Error: ' + (e.reason && e.reason.message ? e.reason.message : e.reason) + ' — abre F12 (Consola).';
+    });
+  </script>
+  <script type="module" src="js/main.js?v=11"></script>
+</body>
+</html>
