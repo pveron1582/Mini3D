@@ -89,27 +89,72 @@ La intención es seguir mejorando la herramienta con foco en calidad, producció
 
 ```text
 Mini 3D/
-├── index.html
-├── style.css
-├── serve.py
-├── CHANGELOG.md
-├── GLM.md
-├── README.md
+├── index.html              # UI principal (import map, paneles, menús)
+├── style.css               # Estilos del editor
+├── serve.py                # Servidor local para desarrollo
 ├── assets/
 │   └── mini3d-cover.svg
 ├── js/
-│   ├── main.js
-│   ├── core.js
-│   ├── state.js
-│   ├── characters.js
-│   ├── office.js
-│   ├── park.js
-│   ├── timeline.js
-│   ├── recorder.js
-│   └── ...
-├── vendor/
-│   └── Three.js local + dependencias
-└── ...
+│   ├── boot.js             # Punto de entrada (modal de inicio)
+│   ├── main.js             # Orquestador del editor
+│   ├── core.js             # Renderer, escena, cámara, OrbitControls
+│   ├── state.js             # Estado central compartido
+│   ├── render.js            # Loop de animación central
+│   ├── dom.js               # Lookups DOM (byId memoizado)
+│   ├── tickers.js           # Animaciones registradas por frame
+│   ├── collision.js         # Colisiones y ley del piso
+│   ├── undo.js              # Historial (snapshots JSON)
+│   ├── catalog.js           # Catálogo de piezas spawneables
+│   ├── trayDraw.js          # Dibujo de canaletas punto a punto
+│   ├── construction.js      # Capa de construcción (pisos/paredes)
+│   ├── projectFiles.js      # Guardar/abrir proyectos JSON
+│   ├── environment.js       # Ambientes y presets
+│   ├── lights.js / park.js / terrain.js   # Escenarios y luces
+│   ├── startup.js           # Modal de arranque y accesos rápidos
+│   ├── characters/          # Personajes
+│   │   ├── characters.js    #   Rigs procedurales + gestos one-shot
+│   │   ├── characterCreator.js  # Modal de creación (género, vestimenta)
+│   │   └── anchors.js       #   Anclas de asiento (sillas)
+│   ├── cinema/              # Narrativa temporal
+│   │   ├── cinematics.js    #   Recorridos por waypoints y vistas
+│   │   ├── timeline.js      #   Secuenciador de tomas y eventos
+│   │   ├── quizTrack.js     #   Pista de carteles de pregunta (quiz)
+│   │   ├── wizard.js        #   Asistente de escenas
+│   │   └── navigation.js    #   A* de recorridos automáticos
+│   ├── ui/                  # Interacción
+│   │   ├── ui.js            #   Paneles y selector de modo Editar
+│   │   ├── gizmo.js         #   Flechas/anillo de transformación
+│   │   ├── selection.js     #   Registro de seleccionables
+│   │   ├── multiselect.js   #   Ctrl+clic, marquesina, grupos
+│   │   └── viewport.js      #   Vistas de cámara + vuelo al objetivo
+│   ├── media/               # Capas sobre el video
+│   │   ├── recorder.js      #   Grabación y exportación
+│   │   ├── subtitles.js     #   Subtítulos en canvas WebGL
+│   │   └── quiz.js          #   Cartel de pregunta con reloj
+│   └── office/              # Entorno oficina (por subsistema)
+│       ├── group.js         #   Grupos compartidos y mini racks
+│       ├── walls.js         #   Tabiques, puertas, texturas
+│       ├── materials.js     #   Materiales
+│       ├── furniture.js     #   Escritorios, sillas, PCs…
+│       ├── serverRoom.js    #   Sala de servidores
+│       ├── lounge.js        #   Juntas, gerencia, bar, cocina
+│       ├── network.js       #   Mini rack, canaletas, APs WiFi
+│       ├── city.js / alarm.js / hackerHouse.js
+│       ├── geoCache.js      #   Caché de primitivas
+│       └── index.js         #   Orquestador del layout
+├── scenes/                  # Escenas de ejemplo (.json)
+├── tools/                   # Validadores y tests (Node)
+│   ├── check-imports.cjs    #   Resuelve todas las rutas de import
+│   ├── check-scc.js         #   Guardia de ciclos de dependencia
+│   ├── p7-test.mjs          #   Suite funcional del catálogo/edición
+│   ├── p7-loadtest.mjs      #   Test de carga de proyecto vacío
+│   └── test-geo-cache.js    #   Test de caché de geometría
+├── vendor/                  # Three.js local (única copia en uso)
+├── SKILL.md                 # Guía del proyecto y reglas de trabajo
+├── GLM.md                   # Informe de estado del proyecto
+├── CHANGELOG.md             # Registro de cambios
+├── mini3d_mejoras.md        # Backlog priorizado
+└── AGENTS.md                # Reglas para agentes (fuente única)
 ```
 
 > Importante: `app.js` en la raíz es código heredado y no debe tomarse como referencia de arquitectura del proyecto actual.
