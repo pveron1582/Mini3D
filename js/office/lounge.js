@@ -8,7 +8,7 @@ import { createChair, createCopier, createEmptyTable } from './furniture.js';
 import { createWallAP } from './network.js';
 import { createWindow } from './walls.js';
 import { registerSelectable } from '../ui/selection.js';
-import { registerAnchor } from '../characters/anchors.js';
+import { registerAnchor, setSeatSpots } from '../characters/anchors.js';
 import { registerCatalogEntry } from '../catalog.js';
 
 const counterMat = new THREE.MeshStandardMaterial({ color: 0xcfd4dc, roughness: 0.35, metalness: 0.2 });
@@ -388,7 +388,9 @@ export function createChesterfield(id, name, x, z, rotY = 0) {
   });
   officeGroup.add(g);
   registerSelectable(id, name, g, 'furniture');
+  // Chesterfield de 2 m: 2 lugares (un cuerpo a cada lado).
   registerAnchor('seat_' + id, g);
+  setSeatSpots(g, [{ dx: -0.5, dz: 0 }, { dx: 0.5, dz: 0 }]);
   return g;
 }
 

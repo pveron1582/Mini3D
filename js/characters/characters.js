@@ -6,7 +6,7 @@ import { updateActionButtonsState, updateMoodButtonsState } from '../ui/ui.js';
 import { setStatus } from '../media/recorder.js';
 import { store, interactiveRegistry } from '../state.js';
 import { registerTicker, unregisterTicker } from '../tickers.js';
-import { anchorPose } from './anchors.js';
+import { anchorPose, anchorSeats } from './anchors.js';
 
 // ==========================================
 // 3D CHARACTERS (3 HUMANS, DOG, CAT)
@@ -1498,21 +1498,29 @@ export function clearCustomCharacters() {
 // SENTARSE EN UN ASIENTO (ancla) CON ANIMACIÓN SUAVE
 // ==========================================
 // Coloca al personaje en el asiento registrado con nombre `seat_<ancla>`
-// (ver js/characters/anchors.js): camina/gira hasta la pose del ancla en
-// ~0.8 s (easing) y queda sentado (acción `sit`) mirando como mira la silla.
+// (ver js/characters/anchors.js): camina/gira hasta el asiento en ~0.8 s
+// (easing) y queda sentado (acción `sit`) MIRANDO HACIA ADELANTE de la silla
+// (el personaje gira 180° respecto de la silla: el respaldo queda a su espalda).
 // Lo usan los eventos de waypoint `sit_at` (cinemáticas) y el menú contextual.
 // opts.instant = true lo posiciona DIRECTO (sin animación): para posar la
 // escena (que el personaje arranque sentado o se quede durante una toma).
+// opts.spot = índice del lugar de asiento (0 por defecto; los sillones de 2
+// cuerpos registran 2 spots con setSeatSpots).
 // La animación corre por ticker propio y se auto-limpia al terminar.
 export function sitAtAnchor(rig, anchorName, opts = {}) {
-  const pose = anchorPose(anchorName);
-  if (!rig || !pose) return false;
+  const seats = anchorSeats(anchorName);
+  if (!rig || seats.length === 0) return false;
+  const spot = seats[Math.min(opts.spot || 0, seats.length - 1)];
+  // Orientación: el personaje mira HACIA EL FRENTE de la silla. El respaldo
+  // de las sillas está en local +z, así que el personaje debe apuntar al
+  // lado opuesto: rotY de la silla + 180°.
+  const facingRot = spot.rotY + Math.PI;
   const root = rig.root;
 
   if (opts.instant) {
     // Posicionamiento inmediato: pose exacta + sentado.
-    root.position.set(pose.x, 0, pose.z);
-    root.rotation.y = pose.rotY;
+    root.position.set(spot.x, 0, spot.z);
+    root.rotation.y = facingRot;
     rig.setAction('sit');
     return true;
   }
@@ -1520,8 +1528,8 @@ export function sitAtAnchor(rig, anchorName, opts = {}) {
   const startX = root.position.x, startZ = root.position.z;
   const startY = root.position.y;
   const startRot = root.rotation.y;
-  // Rotación más corta hacia la de la silla
-  let dRot = pose.rotY - startRot;
+  // Rotación más corta hacia la de sentado
+  let dRot = facingRot - startRot;
   while (dRot > Math.PI) dRot -= Math.PI * 2;
   while (dRot < -Math.PI) dRot += Math.PI * 2;
   const targetY = 0; // sentado: el origen del rig apoya en el asiento vía la pose sit
@@ -1531,8 +1539,8 @@ export function sitAtAnchor(rig, anchorName, opts = {}) {
   const tick = (simDt) => {
     t = Math.min(1, t + simDt / DUR);
     const k = ease(t);
-    root.position.x = startX + (pose.x - startX) * k;
-    root.position.z = startZ + (pose.z - startZ) * k;
+    root.position.x = startX + (spot.x - startX) * k;
+    root.position.z = startZ + (spot.z - startZ) * k;
     root.position.y = startY + (targetY - startY) * k;
     root.rotation.y = startRot + dRot * k;
     // A mitad de camino empieza a "doblarse" (acción sit): la pose sit baja
@@ -1540,8 +1548,8 @@ export function sitAtAnchor(rig, anchorName, opts = {}) {
     if (t >= 0.5) rig.setAction('sit');
     if (t >= 1) {
       // Fijo la pose final exacta y suelto el ticker
-      root.position.set(pose.x, targetY, pose.z);
-      root.rotation.y = pose.rotY;
+      root.position.set(spot.x, targetY, spot.z);
+      root.rotation.y = facingRot;
       rig.setAction('sit');
       const i = sitTickers.indexOf(tick);
       if (i >= 0) { sitTickers.splice(i, 1); unregisterTicker(tick); }

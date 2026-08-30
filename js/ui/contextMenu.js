@@ -13,11 +13,10 @@
 
 import { byId } from '../dom.js';
 import { canvas, camera } from '../core.js';
-import { store, interactiveRegistry } from '../state.js';
+import { interactiveRegistry } from '../state.js';
 import { getActiveEntry } from './selection.js';
 import { sitAtAnchor, GESTURE_DEFS } from '../characters/characters.js';
-import { getAnchor } from '../characters/anchors.js';
-import { raycaster } from './gizmo.js';
+import { getAnchor, anchorSeats } from '../characters/anchors.js';
 import { setStatus } from '../media/recorder.js';
 import { pushHistory } from '../undo.js';
 import * as THREE from 'three';
@@ -122,12 +121,14 @@ function pickSeatAt(e) {
   const groups = seatEntries().map(en => en.group);
   const hits = seatRaycaster.intersectObjects(groups, true);
   if (hits.length === 0) return null;
+  // Punto de impacto en mundo (para elegir el CUERPO del sillón tocado)
+  const hitPoint = hits[0].point;
   let curr = hits[0].object;
   while (curr) {
     if (curr.userData && curr.userData.selectableRoot) {
       const root = curr.userData.selectableRoot;
       const entry = seatEntries().find(en => en.group === root);
-      if (entry) return entry;
+      if (entry) return { entry, hitPoint };
     }
     curr = curr.parent;
   }
@@ -189,23 +190,34 @@ function exitPickSeat() {
 canvas.addEventListener('pointermove', (e) => {
   if (!pickSeatMode) return;
   const hit = pickSeatAt(e);
-  if (hit === hoveredSeat) return;
+  const seatEntry = hit ? hit.entry : null;
+  if (seatEntry === hoveredSeat) return;
   if (hoveredSeat) setSeatGlow(hoveredSeat, false);
-  if (hit) setSeatGlow(hit, true);
-  hoveredSeat = hit;
+  if (seatEntry) setSeatGlow(seatEntry, true);
+  hoveredSeat = seatEntry;
 });
 
 // Click en el asiento: capture ANTES del gizmo para que no lo pise la
 // selección normal (en modo Personajes el click en la silla no selecciona).
+// En sillones de 2 cuerpos, el LUGAR es el cuerpo más cercano al punto donde
+// se hizo click (spot 0 o 1).
 canvas.addEventListener('pointerdown', (e) => {
   if (!pickSeatMode || e.button !== 0) return;
   e.preventDefault();
   e.stopPropagation();
   const hit = pickSeatAt(e);
   if (!hit) return;
+  const { entry: seatEntry, hitPoint } = hit;
+  // Elegir el spot (lugar) más cercano al punto de click
+  const seats = anchorSeats('seat_' + seatEntry.id);
+  let bestSpot = 0, bestD = Infinity;
+  seats.forEach((s, i) => {
+    const d = Math.hypot(s.x - hitPoint.x, s.z - hitPoint.z);
+    if (d < bestD) { bestD = d; bestSpot = i; }
+  });
   const entry = getActiveEntry();
-  if (entry && entry.rig && sitAtAnchor(entry.rig, 'seat_' + hit.id, { instant: true })) {
-    setStatus(`${entry.name} sentado en ${hit.name}.`);
+  if (entry && entry.rig && sitAtAnchor(entry.rig, 'seat_' + seatEntry.id, { instant: true, spot: bestSpot })) {
+    setStatus(`${entry.name} sentado en ${seatEntry.name}${seats.length > 1 ? ' (lugar ' + (bestSpot + 1) + ')' : ''}.`);
     pushHistory();
     exitPickSeat();
   }
@@ -234,5 +246,15 @@ window.addEventListener('pointerdown', (e) => {
   if (!menu || menu.style.display === 'none') return;
   if (e.target !== menu && !menu.contains(e.target)) hideMenu();
 }, true);
+
+// Rueda del mouse sobre el menú: desplaza sus opciones (el scroll nativo
+// puede perderse contra el zoom de cámara, así que se asegura explícito).
+menu?.addEventListener('wheel', (e) => {
+  if (menu.scrollHeight > menu.clientHeight) {
+    e.preventDefault();
+    e.stopPropagation();
+    menu.scrollTop += e.deltaY;
+  }
+}, { passive: false });
 
 buildMenu();

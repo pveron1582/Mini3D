@@ -268,15 +268,26 @@ assert(!!serChef && serChef.colors.outfit === 'chef' && serChef.colors.sunglasse
 
 // --- sentarse en asiento (sit_at): evento con silla + ancla ---
 const { sitAtAnchor } = await import(pathToFileURL('./js/characters/characters.js'));
-const { anchorPose } = await import(pathToFileURL('./js/characters/anchors.js'));
+const { anchorPose, anchorSeats } = await import(pathToFileURL('./js/characters/anchors.js'));
 const sitRig = addHumanCharacter('sitTestChar', 'Sit Test', 2, 2, 0, {});
 // El evento del waypoint guarda la silla elegida junto a la acción
 const sitPose = anchorPose('seat_chair1');
 assert(!!sitPose, 'ancla de asiento registrada (seat_chair1)');
 assert(sitAtAnchor(sitRig, 'seat_chair1', { instant: true }) === true, 'sitAtAnchor instant coloca directo');
 assert(Math.abs(sitRig.root.position.x - sitPose.x) < 1e-6 && Math.abs(sitRig.root.position.z - sitPose.z) < 1e-6, 'personaje en la pose del asiento');
+// Gira 180° respecto de la silla: mirando HACIA EL FRENTE (respaldo atrás)
+const chairEntry = interactiveRegistry.get('chair1');
+const expectedRot = chairEntry.group.rotation.y + Math.PI;
+assert(Math.abs(sitRig.root.rotation.y - expectedRot) < 1e-6, 'sentado mirando al frente de la silla (rotY + 180°)');
 assert(sitRig.currentAction === 'sit', 'sentado tras sitAtAnchor instant');
 assert(sitAtAnchor(sitRig, 'seat_inexistente_xyz') === false, 'sitAtAnchor devuelve false con ancla inexistente');
+// Sillón de 2 cuerpos: 2 lugares con offsets laterales
+const sofaSeats = anchorSeats('seat_sofa1');
+assert(sofaSeats.length === 2, 'sillón verde de 2 cuerpos ofrece 2 lugares');
+assert(Math.hypot(sofaSeats[0].x - sofaSeats[1].x, sofaSeats[0].z - sofaSeats[1].z) > 0.1, 'los 2 lugares del sillón están separados');
+// Spot 1 = segundo lugar
+assert(sitAtAnchor(sitRig, 'seat_sofa1', { instant: true, spot: 1 }) === true, 'sitAtAnchor con spot 1 (segundo cuerpo)');
+assert(Math.abs(sitRig.root.position.x - sofaSeats[1].x) < 1e-6 && Math.abs(sitRig.root.position.z - sofaSeats[1].z) < 1e-6, 'sentado en el lugar 2 del sillón');
 // Serialización: el evento sit_at guarda la silla (sitAt) en el recorrido
 cinemaPaths.set('sitTestChar', {
   waypoints: [new (await import('three')).Vector3(2, 0, 2), new (await import('three')).Vector3(4, 0, 2)],

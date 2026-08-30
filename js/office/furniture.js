@@ -5,7 +5,7 @@ import * as geo from './geoCache.js';
 import { officeGroup, serverLedMaterials } from './group.js';
 import { woodDeskMat, darkWoodMat, metalDeskMat, chairMat, screenMat } from './materials.js';
 import { registerSelectable } from '../ui/selection.js';
-import { registerAnchor } from '../characters/anchors.js';
+import { registerAnchor, setSeatSpots } from '../characters/anchors.js';
 
 // 3. Independent Desks & Chairs (Improved scale: 1.9m width x 0.95m depth)
 export function createDesk(id, name, x, z, rotY = 0, isWood = false) {
@@ -168,6 +168,10 @@ export function createSofa(id, name, x, z, rotY = 0) {
 
   officeGroup.add(g);
   registerSelectable(id, name, g, 'furniture');
+  // Ancla de asiento con 2 LUGARES (sillón de 2 cuerpos): un cuerpo a cada
+  // lado (±0.45 en el eje lateral del sillón).
+  registerAnchor('seat_' + id, g);
+  setSeatSpots(g, [{ dx: -0.45, dz: 0 }, { dx: 0.45, dz: 0 }]);
   return g;
 }
 export function createPlant(id, name, x, z) {

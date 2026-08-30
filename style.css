@@ -485,68 +485,85 @@ body, html {
 /* ---------- Menú contextual (click derecho sobre un personaje) ---------- */
 .context-menu {
   position: fixed;
-  min-width: 210px;
-  max-width: 260px;
+  width: 230px;
   background: rgba(20, 23, 30, 0.97);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  padding: 8px;
+  padding: 10px;
   z-index: 200;
   box-shadow: 0 6px 22px rgba(0, 0, 0, 0.55);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
+  /* Alto máx: si no entra, SCROLL (no comprime todo). La rueda del mouse
+     desplaza el contenido cuando el cursor está sobre el menú. */
+  max-height: 80vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #4a5568 transparent;
 }
 
+.context-menu::-webkit-scrollbar { width: 8px; }
+.context-menu::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 4px;
+}
+.context-menu::-webkit-scrollbar-track { background: transparent; }
+
 .context-menu-title {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--accent-primary);
   padding: 2px 4px 6px;
   border-bottom: 1px solid var(--border-color);
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 }
 
 .context-menu-section {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.6px;
   color: var(--text-muted);
-  padding: 3px 4px 1px;
+  padding: 4px 4px 2px;
 }
 
+/* Grillas de opciones: columnas de 2 para no alargar el menú; sin límite de
+   altura interno (el scroll lo maneja el menú completo). */
 .context-menu-items {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  max-height: 150px;
-  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
 }
 
-.context-menu-items .action-btn {
+/* Botones del menú (clase propia para NO entrar en el handler global de
+   .action-btn del panel izquierdo). Hover resaltado para navegación con
+   rueda + teclado visualmente clara. */
+.ctx-btn {
   width: 100%;
-  text-align: left;
   font-size: 0.78rem;
-  padding: 4px 8px;
+  padding: 5px 7px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.ctx-btn:hover {
+  background: var(--accent-primary);
+  color: #fff;
+  border-color: var(--accent-primary);
 }
 
 .context-menu-sep {
   height: 1px;
   background: var(--border-color);
-  margin: 4px 0;
-}
-
-/* Botones del menú contextual (clase propia para NO entrar en el handler
-   global de .action-btn del panel izquierdo) */
-.ctx-btn {
-  width: 100%;
-  text-align: left;
-  font-size: 0.78rem;
-  padding: 4px 8px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin: 5px 0;
 }
 
 .cinema-chars-label {

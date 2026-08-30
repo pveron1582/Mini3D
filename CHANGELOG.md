@@ -2,6 +2,26 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-08-28] — Sentarse: giro 180° (frente a la silla), sillones de 2 lugares, menú amplio
+
+- **Sentado al revés — FIX**: el personaje se sentaba mirando el respaldo.
+  Ahora `sitAtAnchor` gira 180° respecto de la silla: queda mirando al FRENTE
+  (respaldo a su espalda), igual que una persona real (la convención es la
+  misma que ya usaban los personajes default: rotY_silla + π).
+- **Sillones verdes de 2 cuerpos**: los 7 sillones (`sofa1–5`, recepción) y
+  los chesterfield ahora registran **2 lugares** de asiento (un cuerpo a cada
+  lado). Al hacer click durante la elección, se sienta en el CUERPO más
+  cercano al punto donde clickeaste (spot por raycast). En el menú contextual
+  de cinemática, por ahora ocupa el lugar 1.
+- **Menú contextual amplio**: ancho fijo 230px, opciones en grilla de 2
+  columnas (antes todo comprimido), alto máximo 80vh con **barra de
+  desplazamiento** y **rueda del mouse** para recorrer las opciones, hover
+  resaltado en cada botón.
+- **`js/characters/anchors.js`**: `anchorPose(name, offset)` con
+  desplazamiento local, `anchorSeats(name)` (lugares de una pieza) y
+  `setSeatSpots(group, spots)` para registrar asientos múltiples.
+- Tests: giro 180°, 2 lugares del sillón separados, spot 1 (segundo cuerpo).
+
 ## [2026-08-28] — Fix menú contextual: animación sin error, asiento funcional + sillas iluminadas
 
 - **Error al clickear una animación del menú**: los botones usaban la clase
