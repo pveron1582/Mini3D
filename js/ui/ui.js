@@ -956,8 +956,16 @@ byId('mnuEditCinematica')?.addEventListener('click', () => { setEditMode('cinema
 byId('btnEditModePrev')?.addEventListener('click', () => cycleEditMode(-1));
 byId('btnEditModeNext')?.addEventListener('click', () => cycleEditMode(1));
 
-// Cerrar dropdown al click fuera (extiende el handler de Archivo)
-document.addEventListener('click', () => menuEditar?.classList.remove('open'));
+// Cierre global de TODOS los dropdowns de la barra (Archivo, Editar, etc.)
+// al hacer click en CUALQUIER lado — incluso dentro de una opción: los
+// handlers de opción no deben cortar la propagación (el menú se cierra solo).
+document.addEventListener('click', () => {
+  menuEditar?.classList.remove('open');
+  const menuArchivo = byId('menuArchivo');
+  menuArchivo?.classList.remove('open');
+  const menuAyuda = byId('menuAyuda');
+  menuAyuda?.classList.remove('open');
+});
 
 // Inicializar estado visual
 applyEditMode();

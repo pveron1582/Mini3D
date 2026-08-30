@@ -2,6 +2,24 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-08-28] — UI: miniaturas de escenario, branding abajo, menús que cierran, sin botón de silla en el menú
+
+- **Miniaturas de escenario** (`index.html` + `style.css`): el selector de
+  ambiente del proyecto nuevo muestra una **vista previa ilustrativa** (SVG
+  propio por ambiente: oficina con racks, estudio con grilla, parque día/tarde/
+  noche, terreno) en tarjetas de grilla 3×2 con nombre debajo — antes eran
+  botones de texto en fila.
+- **Branding abajo en proyecto nuevo**: al pasar del home al formulario, el
+  logo 🎬 y "MiniStudio 3D" bajan al FINAL del card en versión compacta (el
+  encabezado queda para el form). Vuelve arriba al entrar al home.
+- **Menús de la barra que cierran bien**: el menú Archivo no se cerraba al
+  elegir "Nuevo…" (su handler cortaba la propagación y anulaba el cierre) ni
+  con clicks afuera en algunos casos. Ahora hay un cierre UNIFICADO en ui.js
+  que cierra todos los dropdowns (Archivo, Editar) ante cualquier click.
+- **Botón "Sentarse en una silla" quitado del menú contextual**: la acción de
+  sentarse se elige desde el botón 🪑 "Sentado" del panel izquierdo (que abre
+  el modo de elegir asiento con sillas iluminadas).
+
 ## [2026-08-28] — Sentarse: giro 180° (frente a la silla), sillones de 2 lugares, menú amplio
 
 - **Sentado al revés — FIX**: el personaje se sentaba mirando el respaldo.

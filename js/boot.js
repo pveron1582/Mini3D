@@ -23,6 +23,10 @@ export function showBoot(mode = 'home') {
   if (!modal) return;
   if (suHome) suHome.style.display = mode === 'home' ? 'block' : 'none';
   if (suNewForm) suNewForm.style.display = mode === 'new' ? 'block' : 'none';
+  // En el form de proyecto nuevo el branding pasa ABAJO (compacto): el logo
+  // grande no compite con el formulario (class en el card lo acomoda por CSS).
+  const card = modal.querySelector('.startup-card');
+  if (card) card.classList.toggle('branding-bottom', mode === 'new');
   if (mode === 'new' && suName) {
     suName.value = '';
     suName.focus();

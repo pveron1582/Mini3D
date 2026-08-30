@@ -536,7 +536,8 @@ menuArchivo?.addEventListener('click', (e) => {
   menuArchivo.classList.toggle('open');
   e.stopPropagation();
 });
-document.addEventListener('click', () => menuArchivo?.classList.remove('open'));
+// (El cierre por click afuera está unificado en js/ui/ui.js: cierra todos los
+// dropdowns de la barra, incluido éste.)
 
 byId('mnuOpen')?.addEventListener('click', () => {
   openProjectPicker();

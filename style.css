@@ -1038,6 +1038,28 @@ body, html {
 }
 .startup-card p { margin: 8px 0; }
 
+/* Form de proyecto nuevo: el branding (logo + título) pasa ABAJO del
+   formulario, en versión compacta — el encabezado queda para el form. */
+.startup-card.branding-bottom .startup-logo {
+  display: none;              /* emoji grande fuera */
+}
+.startup-card.branding-bottom h1 {
+  order: 99;                  /* va al final del card (flex column) */
+  font-size: 14px;
+  margin: 14px 0 0;
+  opacity: 0.85;
+}
+.startup-card.branding-bottom .startup-sub {
+  order: 100;
+  font-size: 10px;
+  margin: 2px 0 0;
+  opacity: 0.6;
+}
+.startup-card {
+  display: flex;
+  flex-direction: column;
+}
+
 .startup-actions {
   display: flex;
   gap: 10px;
@@ -1065,11 +1087,47 @@ body, html {
 }
 #suName:focus { outline: 1px solid #4772b3; }
 
+/* Selector de escenario con MINIATURAS: cada ambiente es una tarjeta con su
+   vista previa (SVG ilustrativo) arriba y el nombre abajo. Se ordenan en
+   grilla de 3 (en vez de fila apretada). */
 .startup-envs {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
   margin-top: 6px;
+  text-align: center;
+}
+
+.startup-envs .env-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: rgba(26, 29, 36, 0.55);
+}
+
+.env-thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+}
+
+.env-thumb svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.env-name {
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* Pista de subtÃ­tulos debajo de las tomas: mismo alto y formato que la

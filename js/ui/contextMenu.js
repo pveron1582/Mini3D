@@ -177,8 +177,6 @@ function enterPickSeat() {
 // ya no deja al personaje en el aire — siempre elige la silla).
 export function startPickSeatMode() { enterPickSeat(); }
 
-byId('contextMenuSit')?.addEventListener('click', enterPickSeat);
-
 function exitPickSeat() {
   pickSeatMode = false;
   if (hoveredSeat) setSeatGlow(hoveredSeat, false);

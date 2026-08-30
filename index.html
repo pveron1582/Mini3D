@@ -87,12 +87,42 @@
           <input type="text" id="suName" placeholder="mi_proyecto" autocomplete="off" />
           <p class="startup-label">Elegí el escenario:</p>
           <div class="env-selector-container startup-envs">
-            <button class="env-btn active" data-env="office" title="Oficina moderna con escritorios y sala de servidores">🏢 Oficina</button>
-            <button class="env-btn" data-env="studio" title="Estudio neutro con grilla">🎬 Estudio 3D</button>
-            <button class="env-btn" data-env="day" title="Parque con luz diurna">☀️ Parque Día</button>
-            <button class="env-btn" data-env="sunset" title="Parque con atardecer dorado">🌅 Parque Tarde</button>
-            <button class="env-btn" data-env="night" title="Parque nocturno con farolas">🌙 Parque Noche</button>
-            <button class="env-btn" data-env="terrain" title="Lote vacío con césped para construir desde cero (Modo Construcción)">🌱 Terreno</button>
+            <button class="env-btn active" data-env="office" title="Oficina moderna con escritorios y sala de servidores">
+              <span class="env-thumb">
+                <svg viewBox="0 0 96 54" aria-hidden="true"><rect width="96" height="54" fill="#2a3340"/><rect x="8" y="10" width="18" height="10" rx="1" fill="#4c5a6e"/><rect x="30" y="10" width="18" height="10" rx="1" fill="#4c5a6e"/><rect x="52" y="10" width="18" height="10" rx="1" fill="#4c5a6e"/><rect x="8" y="26" width="18" height="10" rx="1" fill="#39424e"/><rect x="30" y="26" width="18" height="10" rx="1" fill="#39424e"/><rect x="52" y="26" width="18" height="10" rx="1" fill="#39424e"/><rect x="76" y="8" width="12" height="30" rx="1" fill="#1f2733"/><rect x="78" y="16" width="8" height="2" fill="#2ecc71"/><rect x="78" y="22" width="8" height="2" fill="#2ecc71"/><rect x="78" y="28" width="8" height="2" fill="#2ecc71"/></svg>
+              </span>
+              <span class="env-name">🏢 Oficina</span>
+            </button>
+            <button class="env-btn" data-env="studio" title="Estudio neutro con grilla">
+              <span class="env-thumb">
+                <svg viewBox="0 0 96 54" aria-hidden="true"><rect width="96" height="54" fill="#1c2028"/><path d="M0 27h96M48 0v54M24 0v54M72 0v54M0 13h96M0 41h96" stroke="#323a48" stroke-width="1"/><circle cx="48" cy="27" r="9" fill="none" stroke="#5685cf" stroke-width="2"/><rect x="40" y="20" width="16" height="14" fill="none" stroke="#5685cf" stroke-width="2"/></svg>
+              </span>
+              <span class="env-name">🎬 Estudio 3D</span>
+            </button>
+            <button class="env-btn" data-env="day" title="Parque con luz diurna">
+              <span class="env-thumb">
+                <svg viewBox="0 0 96 54" aria-hidden="true"><rect width="96" height="54" fill="#87b8e8"/><circle cx="20" cy="14" r="7" fill="#ffe08a"/><rect y="38" width="96" height="16" fill="#69a95c"/><path d="M50 38V22" stroke="#6b4a2f" stroke-width="3"/><circle cx="50" cy="18" r="10" fill="#3f7d3a"/></svg>
+              </span>
+              <span class="env-name">☀️ Parque Día</span>
+            </button>
+            <button class="env-btn" data-env="sunset" title="Parque con atardecer dorado">
+              <span class="env-thumb">
+                <svg viewBox="0 0 96 54" aria-hidden="true"><rect width="96" height="54" fill="#e8915a"/><circle cx="48" cy="26" r="9" fill="#ffd24d"/><rect y="38" width="96" height="16" fill="#5a4632"/><path d="M22 38V24" stroke="#4a3626" stroke-width="3"/><circle cx="22" cy="20" r="8" fill="#3d2e20"/></svg>
+              </span>
+              <span class="env-name">🌅 Parque Tarde</span>
+            </button>
+            <button class="env-btn" data-env="night" title="Parque nocturno con farolas">
+              <span class="env-thumb">
+                <svg viewBox="0 0 96 54" aria-hidden="true"><rect width="96" height="54" fill="#141b2e"/><circle cx="14" cy="10" r="1.5" fill="#fff"/><circle cx="30" cy="8" r="1" fill="#fff"/><circle cx="78" cy="12" r="1.5" fill="#fff"/><rect y="38" width="96" height="16" fill="#1e3326"/><path d="M48 38V20" stroke="#333" stroke-width="2"/><circle cx="48" cy="17" r="4" fill="#ffe08a"/></svg>
+              </span>
+              <span class="env-name">🌙 Parque Noche</span>
+            </button>
+            <button class="env-btn" data-env="terrain" title="Lote vacío con césped para construir desde cero (Modo Construcción)">
+              <span class="env-thumb">
+                <svg viewBox="0 0 96 54" aria-hidden="true"><rect width="96" height="54" fill="#3f6f3a"/><path d="M8 12l6 0M30 8l8 0M60 14l7 0" stroke="#528548" stroke-width="2"/><circle cx="20" cy="26" r="2" fill="#5c9450"/><circle cx="44" cy="32" r="2" fill="#5c9450"/><circle cx="70" cy="24" r="2" fill="#5c9450"/></svg>
+              </span>
+              <span class="env-name">🌱 Terreno</span>
+            </button>
           </div>
           <div class="startup-actions">
             <button class="blender-btn primary" id="suCreate">✔ Crear proyecto</button>
@@ -830,18 +860,14 @@
         <div id="cinemaBanner" class="cinema-banner" style="display:none;"></div>
 
     <!-- Menú contextual del click derecho (sobre un personaje seleccionado):
-         acciones rápidas, gestos de un disparo y sentarse en un asiento.
-         "Sentarse" entra en modo selección: las sillas se iluminan al pasar
-         el mouse y un click lo sienta directo (para posar la escena). -->
+         acciones rápidas y gestos de un disparo. Sentarse se elige desde el
+         botón 🪑 "Sentado" del panel izquierdo (modo elegir asiento). -->
     <div id="contextMenu" class="context-menu" style="display:none;">
       <div class="context-menu-title" id="contextMenuTitle">Personaje</div>
       <div class="context-menu-section">Animar</div>
       <div class="context-menu-items" id="contextMenuAnim"></div>
       <div class="context-menu-section">Acción única</div>
       <div class="context-menu-items" id="contextMenuGestures"></div>
-      <div class="context-menu-sep"></div>
-      <button class="blender-btn primary" id="contextMenuSit" style="width:100%;">🪑 Sentarse en una silla…</button>
-      <p class="cinema-hint" style="margin:4px 0 0;">Las sillas se iluminan al pasar el mouse; click para sentarlo ahí.</p>
     </div>
 
         <!-- Viewport HUD Info -->

@@ -22,6 +22,9 @@ export function showStartup(mode = 'home') {
   if (!modal) return;
   if (suHome) suHome.style.display = mode === 'home' ? 'block' : 'none';
   if (suNewForm) suNewForm.style.display = mode === 'new' ? 'block' : 'none';
+  // Branding abajo cuando se llena el formulario (igual que en boot.js).
+  const card = modal.querySelector('.startup-card');
+  if (card) card.classList.toggle('branding-bottom', mode === 'new');
   if (mode === 'new' && suName) {
     suName.value = getProjectName() || '';
     suName.focus();
@@ -53,8 +56,9 @@ byId('btnNewBlank')?.addEventListener('click', async () => {
   showStartup('home');
 });
 
-byId('mnuNew')?.addEventListener('click', async (e) => {
-  e.stopPropagation();
+byId('mnuNew')?.addEventListener('click', async () => {
+  // (Sin stopPropagation: el click debe burbujear para que el menú Archivo se
+  // cierre solo — el cierre global vive en ui.js.)
   await confirmSaveBeforeContinue();
   showStartup('home');
 });
