@@ -2,6 +2,16 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-08-28] — pnpm documentado como runner de los validadores
+
+- **`README.md`**: comandos de verificación actualizados a `pnpm run verify /
+  check / test` (npm sigue funcionando igual); nota de que el proyecto no
+  tiene dependencias (no hace falta install); fila nueva en el stack
+  tecnológico (Node + pnpm para validadores).
+- **`SKILL.md`**: regla 6 nueva — correr `pnpm run verify` antes de dar por
+  terminada una tarea de desarrollo; `pnpm run check` como verificación
+  rápida del grafo.
+
 ## [2026-08-28] — Fase 3 de reorganización: grafo 100% acíclico + npm verify
 
 - **Último ciclo de imports roto** (`js/undo.js` + `js/main.js`): undo.js ya

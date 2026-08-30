@@ -95,3 +95,7 @@ modular). No usarlo como referencia de arquitectura.
    las bocas/puestos de red del piso solo se dejan si hay un equipo conectado
    junto a ellos. Si el equipo se mueve o se elimina, mover/eliminar también su
    conexión.
+6. **Verificar antes de dar por terminada una tarea**: correr `pnpm run verify`
+   (imports + ciclos + suite funcional + carga + geo-cache). El proyecto no
+   tiene dependencias, así que no hace falta instalar nada — solo Node y pnpm.
+   Verificación rápida del grafo: `pnpm run check`.

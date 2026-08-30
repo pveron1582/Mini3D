@@ -84,6 +84,7 @@ La intención es seguir mejorando la herramienta con foco en calidad, producció
 | Three.js | Motor 3D y render |
 | MediaRecorder | Grabación y exportación de video |
 | Python (`serve.py`) | Servidor local para desarrollo |
+| Node + pnpm | Validadores y tests (`pnpm run verify`) — sin dependencias |
 
 ## Estructura del repositorio
 
@@ -159,10 +160,13 @@ Mini 3D/
 
 ### Comandos de verificación
 
+Los scripts corren con **pnpm** (preferido) o npm — el proyecto no tiene
+dependencias (`pnpm install` no es necesario; los validadores usan Node puro).
+
 ```bash
-npm run verify      # TODO: imports + ciclos + suite funcional + carga + geo-cache
-npm run check       # Salud del grafo (imports + ciclos)
-npm test            # Solo la suite funcional
+pnpm run verify    # TODO: imports + ciclos + suite funcional + carga + geo-cache
+pnpm run check     # Salud del grafo (imports + ciclos)
+pnpm test          # Solo la suite funcional
 ```
 
 > Importante: `app.js` en la raíz es código heredado y no debe tomarse como referencia de arquitectura del proyecto actual.
