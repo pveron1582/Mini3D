@@ -1,6 +1,8 @@
 import * as THREE from 'three';
-import { interactiveRegistry } from './state.js';
-import { getWallColliders, officeGroup } from './office.js';
+import { interactiveRegistry, store } from './state.js';
+import { officeGroup } from './office/group.js';
+import { getWallColliders, getDoorColliders } from './office/walls.js';
+import { getHackerHouseColliders } from './office/hackerHouse.js';
 
 // ==========================================
 // COLISIONES SENCILLAS (círculos en el plano XZ)
@@ -54,25 +56,41 @@ export function resolveCollisions() {
     const e = entries[i];
     if (!e.group) continue;
     const wd = e.group.userData.wallData;
-    const minY = e.rig && e.rig.groundY ? e.rig.groundY
+    // Sentados/acostados pueden bajar (su "piso" es el asiento/cama), para no
+    // flotar sobre la silla (el asiento está a y≈0.48).
+    const act = e.rig ? (e.rig.currentAction || '') : '';
+    const seated = act.startsWith('sit') || act === 'lay';
+    const minY = e.rig && e.rig.groundY && !seated ? e.rig.groundY
       : wd ? (wd.h * e.group.scale.y) / 2
       : 0;
     if (e.group.position.y < minY) e.group.position.y = minY;
   }
 
-  const wallBoxes = officeGroup.visible ? getWallColliders() : [];
+  const boxes = [];
+  if (officeGroup.visible) {
+    boxes.push(...getWallColliders());
+    boxes.push(...getDoorColliders());
+    boxes.push(...getHackerHouseColliders());
+  }
+  const wallBoxes = boxes;
   if (entries.length < 2 && wallBoxes.length === 0) return;
 
   for (let i = 0; i < entries.length; i++) {
     const a = entries[i];
     if (!a.group || !isDynamic(a)) continue;
+    // Durante un arrastre con el gizmo NO se empuja contra paredes/puertas:
+    // el usuario puede cruzar de un lado al otro con el objeto en la mano;
+    // al soltar (endDrag) se resuelve la posición al lado más cercano.
+    const dragging = store.dragTargetId === a.id;
 
     const pa = a.group.position;
     const ra = entryRadius(a);
 
     // Paredes del ambiente activo (no atravesarlas; colisionan como cajas)
-    for (let w = 0; w < wallBoxes.length; w++) {
-      resolveAABB(pa, ra * COLLISION_MARGIN, wallBoxes[w]);
+    if (!dragging) {
+      for (let w = 0; w < wallBoxes.length; w++) {
+        resolveAABB(pa, ra * COLLISION_MARGIN, wallBoxes[w]);
+      }
     }
 
     for (let j = 0; j < entries.length; j++) {
@@ -80,8 +98,8 @@ export function resolveCollisions() {
       const b = entries[j];
       if (!b.group || b.group === a.group) continue;
       if (!b.group.visible) continue;
-      // Las paredes colisionan como cajas AABB, no como círculos
-      if (b.group.userData.wallData) continue;
+      // Paredes y puertas colisionan como cajas AABB (según su estado), no como círculos
+      if (b.group.userData.wallData || b.group.userData.doorData) continue;
       // Elementos montados en altura (APs, mini rack, tablero): no bloquean
       // el paso a nivel del piso
       if (b.group.position.y > 1.0) continue;
@@ -145,3 +163,31 @@ function resolveAABB(p, minDist, box) {
 
 // Exportar para el módulo de navegación
 export { entryRadius, isDynamic };
+
+// ==========================================
+// RESOLUCIÓN AL SOLTAR EL ARRASTRE
+// ==========================================
+// Se llama al terminar un drag del gizmo (endDrag). Si el personaje quedó
+// DENTRO de una pared/puerta (o pegado a ella a medias), se lo coloca del
+// lado más cercano, apoyado contra la cara de la pared sin atravesarla.
+function resolveDropAfterDrag() {
+  const id = store.dragTargetId;
+  if (id) {
+    const entry = interactiveRegistry.get(id);
+    if (!entry || !entry.group || !isDynamic(entry)) return;
+    const pa = entry.group.position;
+    const ra = entryRadius(entry);
+    const boxes = [];
+    if (officeGroup.visible) {
+      boxes.push(...getWallColliders());
+      boxes.push(...getDoorColliders());
+      boxes.push(...getHackerHouseColliders());
+    }
+    // Empujar fuera de cada caja: termina pegado a la cara más cercana
+    for (let w = 0; w < boxes.length; w++) {
+      resolveAABB(pa, ra * COLLISION_MARGIN, boxes[w]);
+    }
+  }
+  store.dragTargetId = null;
+}
+export { resolveDropAfterDrag };

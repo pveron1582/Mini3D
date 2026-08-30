@@ -28,20 +28,43 @@ La filosofía del proyecto:
 ## Estructura del código
 
 - `index.html` — UI principal (import map, paneles, menús).
-- `js/main.js` — punto de entrada, importa y inicializa todo.
+- `js/boot.js` — punto de entrada: muestra solo el pop-up de inicio (nuevo /
+  cargar) y carga el editor (`main.js`) recién después de elegir.
+- `js/main.js` — orquestador del editor: importa e inicializa todo.
 - `js/core.js` — renderer, escena, cámara, OrbitControls.
 - `js/state.js` — estado central compartido.
 - `js/characters.js` — rigs procedurales (humanos y mascotas) y sus animaciones.
-- `js/office.js`, `js/park.js`, `js/lights.js`, `js/environment.js` — escenarios y luces.
+- `js/office/` — entorno oficina, dividido por subsistema (split P1):
+  `group.js` (grupos compartidos: officeGroup, escalera, mini rack, LEDs),
+  `walls.js` (tabiques, puertas, texturas de pared), `materials.js` (materiales),
+  `furniture.js` (fábricas de escritorios/sillas/sillones/PCs), `serverRoom.js`
+  (sala de servidores + escalera + rincón de recambio), `lounge.js` (sala de
+  juntas, oficina del jefe, bar, cocina), `network.js` (mini rack, canales de
+  cableado, APs WiFi), `city.js` (calle/vereda exterior), `alarm.js` (balizas),
+  `hackerHouse.js` (casa del hacker), `geoCache.js` (caché de primitivas
+  compartidas, P9) e `index.js` (orquestador del layout).
+- `js/catalog.js` — catálogo de piezas (P7): spawn/duplicar/borrar objetos del
+  panel "➕ Agregar Objeto" y su persistencia en el JSON de proyecto.
+- `js/multiselect.js` — selección múltiple: Ctrl+clic, marquesina, mover en
+  bloque y borrado de grupo.
+- `js/park.js`, `js/lights.js`, `js/environment.js` — escenarios y luces.
 - `js/cinematics.js` — recorridos por waypoints y vistas de cámara.
 - `js/timeline.js` — secuenciador de escenas: línea de tiempo de tomas de
   cámara, eventos de waypoint (acción + espera) y grabación de la escena.
+- `js/subtitles.js` — subtítulos dibujados dentro del canvas WebGL (salen en
+  el video grabado); pista de cues `{ start, end, text }`.
+- `js/demoScene.js` — escena de ejemplo de 15s (botón "🎬 Escena Demo").
+- `js/dom.js` — lookups DOM centralizados (`byId` memoizado + `qs`/`qsa`).
 - `js/gizmo.js`, `js/selection.js`, `js/ui.js`, `js/viewport.js` — interacción y UI.
 - `js/render.js` — loop de animación central.
 - `js/recorder.js` — grabación de video.
+- `js/startup.js` — modal de arranque (nuevo/cargar proyecto) y accesos
+  rápidos de la barra superior (guardar, nuevo, undo/redo).
 - `vendor/` — Three.js local (única copia en uso).
 - `GLM.md` — informe de revisión del estado del proyecto.
 - `CHANGELOG.md` — registro de cambios (ver abajo).
+- `mini3d_mejoras.md` — backlog priorizado de mejoras del producto
+  (gestos, audio, lip-sync, etc.).
 
 ⚠️ `app.js` en la raíz es **código muerto** (el monolito original previo al refactor
 modular). No usarlo como referencia de arquitectura.
@@ -56,19 +79,7 @@ modular). No usarlo como referencia de arquitectura.
 4. **Registrar cambios**: luego de generar cualquier cambio en el proyecto, agregar
    una entrada en `CHANGELOG.md` describiendo qué se hizo (fecha + cambio).
    Esto es obligatorio al final de cada tarea de desarrollo.
-5. **Orientación de mesas y sillas** (error común): las mesas/escritorios deben
-   orientarse de modo que la persona sentada en su silla tenga **en frente el o
-   los monitores**. Convención en `createDesk`: el monitor está del lado local
-   -z y la pantalla mira hacia local -z. **Lado correcto de la silla**: quien
-   usa el escritorio se sienta del lado opuesto al bisel/monitor (donde está el
-   teclado, local +z) y mira hacia la pantalla. Al rotar una mesa 180°, la
-   silla debe acompañar el giro y quedar SIEMPRE del lado del teclado, mirando
-   a los monitores; nunca del lado del monitor (detrás de la pantalla). Para
-   oficinas con escritorio administrativo (ej. del jefe), la silla principal va
-   en el lado del teclado mirando a la pantalla, y una **silla de invitado**
-   opcional se coloca del lado del monitor, frente al ocupante, para conversar
-   cara a cara.
-6. **Nada "flotando" ni sockets huérfanos**: todo objeto montado en una pared
+5. **Nada "flotando" ni sockets huérfanos**: todo objeto montado en una pared
    debe estar apoyado sobre un tramo de pared real (verificar coordenadas);
    las bocas/puestos de red del piso solo se dejan si hay un equipo conectado
    junto a ellos. Si el equipo se mueve o se elimina, mover/eliminar también su

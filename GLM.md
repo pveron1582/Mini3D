@@ -17,6 +17,56 @@
 > `assets/mini3d-cover.svg` y se renovó la presentación del repositorio para un
 > tono más premium y profesional, manteniendo el enfoque técnico y abierto del
 > proyecto.
+>
+> **Actualización 2026-08-27 (Estado)**: oficina poblada con 9 empleados
+> (5 nuevos, sentados tipeando en sus PCs), cocina/comedor mudada a la oficina
+> este, recepción/sala de espera junto a la oficina del jefe (donde estaba la
+> cocina) y casa del hacker a cielo abierto (sin techo). Detalle en
+> `CHANGELOG.md`.
+>
+> **Actualización 2026-08-27 (Catálogo Cocina)**: las piezas de la cocina
+> (mesada, heladera, dispenser, máquina de golosinas y mesa de comedor) se
+> extrajeron como fábricas y quedaron disponibles en el catálogo bajo la
+> categoría `🍽️ Cocina`. Detalle en `CHANGELOG.md`.
+>
+> **Actualización 2026-08-27 (Catálogo Lounge/Gerencia)**: se extrajeron y
+> catalogaron las piezas de juntas y gerencia (mesa de juntas, chesterfield,
+> mesa ratona, barra, escritorio/silla gerencia, silla de invitado, cuadros y
+> reloj) bajo la categoría `🛋️ Lounge/Gerencia`. Detalle en `CHANGELOG.md`.
+>
+> **Actualización 2026-08-27 (Creador de personajes)**: los proyectos nuevos
+> arrancan sin personajes por defecto. Se agregó el botón “➕ Añadir Personaje”
+> con editor 3D (nombre, piel, peinado, ropa y zapatos), cámara libre en la
+> vista previa y persistencia de personajes personalizados en el JSON.
+> Detalle en `CHANGELOG.md`.
+>
+> **Actualización 2026-08-28 (Catálogo Red)**: se extrajeron y catalogaron las
+> piezas de red (AP WiFi de pared, tablero eléctrico, canaleta de cables y
+> puesto de red+electricidad de piso) bajo la categoría `📡 Red`; el catálogo
+> pasa de 28 a 32 piezas. Además, la canaleta ahora se puede **dibujar punto a
+> punto** (`js/trayDraw.js`): click marca el inicio y cada click agrega un tramo
+> con ghost transparente, ESC o click derecho termina, y el tramo queda como un
+> objeto seleccionable y serializable. El dibujo es **ortogonal** (sin
+> diagonales) y tiene **imán** que se conecta a la red existente resolviendo
+> continuación recta, esquina en 90° o unión en "T". El mini rack queda pendiente
+> (`Lote 3b`) por su puerta interactiva. Al backlog se sumaron el ítem "Terminal
+> en pantalla / screencast" y el capstone "AI Director local (Ollama)". Detalle
+> en `CHANGELOG.md`.
+>
+> **Actualización 2026-08-28 (Lote 3b — Mini Rack, cierra el Lote 3)**: el mini
+> rack de pared ahora es una pieza del catálogo (`createMiniRack` en
+> `js/office/network.js`, categoría `📡 Red`, 33 piezas en total). Su puerta es
+> multi-instancia: cada rack (el fijo de la sala de juntas + los spawneados)
+> registra la suya en `group.js` y el ticker anima todas con estado propio; el
+> botón de la UI opera sobre el rack activo y el flag `openDoor` de las tomas
+> abre todas. Detalle en `CHANGELOG.md`.
+>
+> **Actualización 2026-08-28 (Gestos de un disparo)**: los personajes ahora
+> "actúan" con 6 gestos one-shot (señalar, saludar, encogerse de hombros, negar
+> con la cabeza, aplaudir, mirar el reloj) que se reproducen una vez y vuelven
+> solos a la acción base. Se activan desde la grilla "Gestos" del panel o con
+> eventos de waypoint `gesture:*` (`GESTURE_DEFS` en `js/characters.js`). Las
+> acciones sostenidas en bucle se mantienen intactas. Detalle en `CHANGELOG.md`.
 
 ## Arquitectura general
 
@@ -34,7 +84,7 @@ Módulos activos (`index.html` carga `js/main.js`, que importa todo en orden):
 | `js/selection.js` | 144 | Registro de objetos seleccionables + anillo de selección + `setActiveTarget`. |
 | `js/gizmo.js` | 384 | Flechas de traslación, raycasting, arrastre libre por plano. |
 | `js/characters.js` | 755 | Rigs procedurales de 3 humanos, perro y gato con animaciones por código (sin AnimationMixer). |
-| `js/office.js` | 373 | Oficina moderna con sala de servidores. |
+| `js/office/` (11 módulos) | ~3.450 | Oficina moderna con sala de servidores. Split P1: `group.js` (grupos/escalera/mini rack/LEDs), `walls.js` (tabiques, puertas, texturas), `materials.js`, `furniture.js` (fábricas de mobiliario), `serverRoom.js` (sala de sistemas), `lounge.js` (juntas, jefe, cocina), `network.js` (cableado, mini rack, APs), `city.js` (calle), `alarm.js`, `hackerHouse.js`, `index.js` (orquestador). |
 | `js/park.js` | 147 | Parque (día/atardecer/noche). |
 | `js/lights.js` | 78 | Iluminación. |
 | `js/environment.js` | 120 | Switcher de 5 ambientes (estudio, oficina, parque día/tarde/noche). |
@@ -43,6 +93,11 @@ Módulos activos (`index.html` carga `js/main.js`, que importa todo en orden):
 | `js/viewport.js` | 75 | Toggles de grilla/ejes, vistas rápidas, resize. |
 | `js/recorder.js` | 66 | Grabación de video con MediaRecorder. |
 | `js/render.js` | 127 | Loop de animación central (anima rigs, cinemáticas, LEDs, timing de grabación, HUD). |
+| `js/timeline.js` | ~490 | Secuenciador de escenas: tomas de cámara arrastrables, eventos de waypoint, grabación de escena. |
+| `js/subtitles.js` | 120 | Subtítulos dibujados dentro del canvas WebGL (visibles en pantalla y en el video grabado). |
+| `js/demoScene.js` | 87 | Escena demo de 15s con un clic (botón "🎬 Escena Demo"): recorrido + tomas + subtítulos. |
+| `js/catalog.js` | ~180 | Catálogo de piezas (P7): spawn/duplicar/borrar objetos (+ persistencia de instanciados). |
+| `js/multiselect.js` | ~230 | Selección múltiple (Ctrl+clic, marquesina), mover en bloque y borrado de grupo. |
 
 **`app.js` (3.126 líneas, ~107KB) es código muerto**: es el monolito original del cual se
 extrajeron los módulos de `js/`. No lo referencia ningún HTML (solo figura como `"main"`
@@ -98,8 +153,7 @@ escenas/tomas, y el timing depende de que no haya caídas de FPS.
    (Archivo ya es funcional desde el 2026-08-21: Abrir/Guardar/Guardar como.)
 5. **Sin persistencia**: recargar la página pierde posiciones, recorridos y acciones.
    No hay guardado/carga de proyectos (JSON).
-6. **Bug potencial en `js/render.js:94-99`**: la duración se mide con `dt` del clock;
-   si la pestaña pierde foco el reloj se congela; el video no es determinista.
+6. **~~Bug potencial en `js/render.js:94-99`~~ (mitigado 2026-08-23)**: la duración se mide con `dt` del clock; si la pestaña pierde foco el reloj se congela. Ahora `dt` está acotado a 1/20 s en el loop, por lo que los saltos ya no desincronizan la grabación (queda pendiente el reloj determinista total, ej. timestamp fijo).
 7. **Inicialización frágil**: `viewport.js:72-75` llama `onResize` con 3 timeouts como
    workaround de layout.
 8. **Toggle de vistas raro** (`js/ui.js:283-285`): clicar la vista activa vuelve a órbita,

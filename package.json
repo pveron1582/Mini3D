@@ -1,9 +1,10 @@
-{
+﻿{
   "name": "mini-3d",
   "version": "0.1.0",
   "description": "MiniStudio 3D - estudio de video con animaciones 3D (sin build; Three.js se carga desde vendor/)",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node tools/test-geo-cache.js && node tools/check-scc.js && node tools/check-imports.cjs && node tools/validate-office.cjs"
   },
   "keywords": [],
   "author": "",

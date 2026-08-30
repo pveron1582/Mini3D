@@ -1,4 +1,4 @@
-/* MiniStudio 3D - Blender Dark Theme */
+﻿/* MiniStudio 3D - Blender Dark Theme */
 :root {
   --bg-darker: #15171c;
   --bg-dark: #1e2129;
@@ -59,6 +59,33 @@ body, html {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+/* Bloque central de proyecto (guardar Â· nuevo Â· undo Â· redo) */
+.top-bar-center {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.top-bar-left { flex: 1; }
+.top-bar-right { flex: 1; justify-content: flex-end; }
+.tb-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border-color);
+}
+/* Nombre del proyecto abierto (barra superior, junto a los botones de vista) */
+.tb-project {
+  font-size: 12px;
+  color: var(--text-muted, #9aa0ab);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 3px 9px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .brand {
@@ -367,6 +394,13 @@ body, html {
   background-color: var(--accent-primary-hover);
 }
 
+.blender-btn.active {
+  background-color: var(--accent-primary);
+  border-color: var(--accent-primary-hover);
+  color: #fff;
+  font-weight: 600;
+}
+
 .cinema-hint {
   color: var(--text-muted);
   font-size: 10.5px;
@@ -413,6 +447,16 @@ body, html {
   gap: 4px;
 }
 
+/* Fila de dos (Vista Libre + AÃ©rea): simÃ©trica, cada botÃ³n ocupa la mitad */
+.view-btn-grid.duo {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.view-btn-grid.duo .view-btn {
+  padding: 8px 4px;
+  font-weight: 600;
+}
+
 .view-btn.active {
   background-color: var(--accent-primary);
   border-color: var(--accent-primary-hover);
@@ -451,6 +495,11 @@ body, html {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  /* Lista scrolleable: con muchos personajes (defaults + custom) el panel
+     no crece indefinidamente, igual que gestos y lista de objetos. */
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .cinema-char-row {
@@ -706,7 +755,7 @@ body, html {
 }
 
 /* ==========================================
-   SECUENCIADOR DE ESCENAS (LÍNEA DE TIEMPO)
+   SECUENCIADOR DE ESCENAS (LÃNEA DE TIEMPO)
    ========================================== */
 .blender-btn.danger {
   background: var(--accent-danger);
@@ -738,6 +787,18 @@ body, html {
   position: relative;
 }
 
+.tl-body::after {
+  content: '';
+  position: absolute;
+  left: 116px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-color);
+  pointer-events: none;
+  z-index: 4;
+}
+
 .tl-ruler {
   position: relative;
   height: 16px;
@@ -760,6 +821,7 @@ body, html {
   height: 44px;
   background:
     repeating-linear-gradient(90deg, transparent 0, transparent 39px, rgba(255,255,255,0.04) 39px, rgba(255,255,255,0.04) 40px);
+  background-position: 116px 0;
   overflow: hidden;
 }
 
@@ -777,7 +839,10 @@ body, html {
 
 .tl-shot.selected {
   outline: 2px solid #fff;
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.35), 0 0 10px rgba(255,255,255,0.25);
   opacity: 1;
+  z-index: 3;
 }
 
 .tl-shot-label {
@@ -804,14 +869,189 @@ body, html {
 .tl-handle-l { left: 0; }
 .tl-handle-r { right: 0; }
 
+.tl-shot-close {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+  display: none;
+  z-index: 4;
+  user-select: none;
+}
+.tl-shot.selected .tl-shot-close { display: block; }
+.tl-shot-close:hover { background: #b3455c; }
+
 .tl-playhead {
   position: absolute;
   top: 0;
-  width: 2px;
-  height: 100%;
+  bottom: 0;
+  width: 3px;
   background: #ff5252;
   pointer-events: none;
-  z-index: 5;
+  z-index: 50;
+  box-shadow: 0 0 8px rgba(255, 82, 82, 0.75);
+}
+
+/* Cabezal rojo de la cabeza de reproducciÃ³n: grande, por encima de la regla */
+.tl-playhead-knob {
+  position: absolute;
+  top: -9px;
+  left: -12px;
+  width: 27px;
+  height: 27px;
+  background: #ff5252;
+  border: 2px solid #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.65);
+  cursor: ew-resize;
+  pointer-events: auto;
+  touch-action: none;
+}
+.tl-playhead-knob:hover { background: #ff7070; }
+
+/* ===== Modal de inicio / proyecto nuevo ===== */
+.startup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 12, 16, 0.82);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.startup-card {
+  background: #23262e;
+  border: 1px solid #3a4050;
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  padding: 28px 36px;
+  min-width: 380px;
+  max-width: 480px;
+  text-align: center;
+  color: #dfe3ea;
+}
+
+.startup-logo { font-size: 44px; }
+.startup-card h1 {
+  margin: 6px 0 2px;
+  font-size: 22px;
+  color: #fff;
+}
+.startup-sub {
+  margin: 0 0 14px;
+  font-size: 12px;
+  color: #8b93a3;
+}
+.startup-card p { margin: 8px 0; }
+
+.startup-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+.startup-label {
+  display: block;
+  text-align: left;
+  font-size: 11px;
+  color: #9aa3b2;
+  margin: 10px 0 4px;
+}
+
+#suName {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-radius: 5px;
+  border: 1px solid #3a4050;
+  background: #1a1d24;
+  color: #fff;
+  font-size: 14px;
+}
+#suName:focus { outline: 1px solid #4772b3; }
+
+.startup-envs {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+/* Pista de subtÃ­tulos debajo de las tomas: mismo alto y formato que la
+   pista de cinemÃ¡tica */
+.tl-sub-lane {
+  position: relative;
+  height: 44px;
+  margin-top: 2px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,207,92,0.03) 0, rgba(255,207,92,0.03) 39px, rgba(255,207,92,0.08) 39px, rgba(255,207,92,0.08) 40px);
+  background-position: 116px 0;
+  overflow: hidden;
+}
+
+/* Bloques de subtÃ­tulo: misma forma/tamaÃ±o que los clips de cinemÃ¡tica
+   (.tl-shot), pero con UN SOLO color fijo */
+.tl-sub {
+  position: absolute;
+  top: 5px;
+  height: 34px;
+  border-radius: 4px;
+  opacity: 0.92;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  border: 1px solid rgba(0,0,0,0.35);
+  background: #a8822e; /* Ãºnico color de la pista de subtÃ­tulos */
+}
+
+.tl-sub:hover {
+  opacity: 1;
+}
+
+.tl-sub.selected {
+  outline: 2px solid #fff;
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.35), 0 0 10px rgba(255,255,255,0.25);
+  opacity: 1;
+  z-index: 3;
+}
+
+/* Pista 📋 QUIZ: mismos bloques que los subtítulos (clase .tl-sub), con color
+   propio (violeta) para distinguir el cartel de pregunta del texto normal. */
+.tl-quiz {
+  background: #7a4fd0;
+}
+
+/* Nombre de la pista, adelante de todo */
+.tl-lane-name {
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 6;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #dfe4ec;
+  background: rgba(10, 12, 16, 0.72);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 2px 7px;
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 .tl-shot-editor {
@@ -824,6 +1064,34 @@ body, html {
   border: 1px solid var(--border-color);
   border-radius: 4px;
   background: rgba(0,0,0,0.15);
+}
+
+/* (Se quitó el bloqueo visual de edición de tomas/subtítulos — "recuadros
+   blancos" y oscurecimiento: ahora la UI es por secciones de edición y la
+   selección de un bloque se suelta sola al hacer click fuera de su sección.) */
+
+/* ---------- SubmenÃº de subtÃ­tulos --------------------------------------- */
+.sub-icon-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin: 2px 0 4px;
+}
+
+.sub-icon-btn {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-main);
+  font-size: 13px;
+  line-height: 1;
+  padding: 3px 5px;
+  cursor: pointer;
+}
+
+.sub-icon-btn:hover {
+  background: var(--bg-hover);
+  border-color: #555;
 }
 
 .tl-input {
@@ -840,7 +1108,7 @@ body, html {
   font-size: 11px;
 }
 
-/* Panel de eventos de waypoint (cinemática) */
+/* Panel de eventos de waypoint (cinemÃ¡tica) */
 .waypoint-event-panel {
   margin-top: 8px;
   padding: 8px;
@@ -852,7 +1120,7 @@ body, html {
   gap: 6px;
 }
 
-/* Menú Archivo (dropdown) */
+/* MenÃº Archivo (dropdown) */
 .top-menu .has-dropdown {
   position: relative;
   cursor: pointer;
@@ -886,7 +1154,7 @@ body, html {
 .menu-option:hover { background: var(--accent-primary); color: #fff; }
 .menu-option.disabled { color: var(--text-muted); pointer-events: none; opacity: 0.5; }
 
-/* Aviso flotante de snap (ángulos / escala) */
+/* Aviso flotante de snap (Ã¡ngulos / escala) */
 .snap-badge {
   position: absolute;
   top: 14px;
@@ -904,3 +1172,114 @@ body, html {
   z-index: 400;
 }
 .snap-badge.visible { opacity: 1; }
+
+/* Arranque diferido (boot.js): hasta elegir proyecto nuevo/abrir, solo se ve el modal de inicio */
+body.booting #app-container > *:not(#startupModal) { display: none !important; }
+
+
+/* =========================================
+   Pantalla de arranque: fondo + escena decorativa (solo #startupModal;
+   el wizard usa .startup-overlay y debe seguir dejando ver el editor)
+   ========================================= */
+#startupModal.startup-overlay {
+  background:
+    radial-gradient(1100px 500px at 15% -10%, rgba(88, 101, 242, 0.28), transparent 60%),
+    radial-gradient(900px 480px at 90% 110%, rgba(0, 200, 160, 0.22), transparent 60%),
+    radial-gradient(700px 420px at 80% 0%, rgba(255, 120, 80, 0.14), transparent 55%),
+    linear-gradient(160deg, #0b1020 0%, #141031 45%, #071f2e 100%);
+  overflow: hidden;
+}
+
+/* Grilla tenue tipo viewport 3D */
+#startupModal.startup-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(120, 140, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 140, 255, 0.055) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(ellipse at 50% 60%, #000 30%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 60%, #000 30%, transparent 78%);
+  pointer-events: none;
+}
+
+/* Escena decorativa abajo del pop-up */
+.startup-scene {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+  opacity: 0.95;
+}
+
+.su-led { animation: suBlink 1.6s steps(2, start) infinite; }
+.su-char { animation: suBob 2.6s ease-in-out infinite; transform-origin: center bottom; }
+.su-char-b { animation-delay: 1.3s; }
+.su-prim { animation: suFloat 5s ease-in-out infinite; transform-origin: center; }
+.su-prim2 { animation-duration: 6.5s; animation-delay: 1.2s; }
+.su-prim3 { animation-duration: 4.2s; animation-delay: 2.1s; }
+.su-screen { animation: suFlicker 4s ease-in-out infinite; }
+
+@keyframes suBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.15; }
+}
+@keyframes suBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes suFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-14px) rotate(8deg); }
+}
+@keyframes suFlicker {
+  0%, 100% { opacity: 0.95; }
+  45% { opacity: 0.75; }
+  55% { opacity: 0.9; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .su-led, .su-char, .su-char-b, .su-prim, .su-prim2, .su-prim3, .su-screen { animation: none; }
+}
+
+/* La tarjeta siempre por encima de la escena decorativa */
+#startupModal .startup-card { position: relative; z-index: 2; }
+#startupModal .startup-scene { z-index: 1; }
+
+/* Gestos: buscador + lista scrollable (una animación por fila) */
+.gesture-search {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 4px 0 6px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-main);
+}
+.gesture-search:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+.gesture-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 170px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.gesture-list .action-btn {
+  width: 100%;
+  text-align: left;
+}
+
+/* Subir el pop-up de inicio: queda un poco por encima del centro vertical
+   (la escena decorativa ocupa la base, así el card se ve mejor arriba) */
+#startupModal .startup-card {
+  transform: translateY(-7vh);
+}

@@ -1,16 +1,25 @@
-import { canvas } from './core.js';
+import * as THREE from 'three';
+import { byId, qs, qsa } from './dom.js';
+import { canvas, renderer, camera } from './core.js';
 import { store, recorderState } from './state.js';
 
 // ==========================================
 // VIDEO RECORDER & EXPORT
 // ==========================================
+// El botón ⬇ Exportar genera el video de la película completa (la escena se
+// reproduce desde el inicio mientras se graba). Formato único por ahora:
+// 1080p (1920×1080) a 60 fps; más adelante se agregarán opciones.
+const EXPORT_W = 1920;
+const EXPORT_H = 1080;
+const EXPORT_FPS = 60;
+
 let mediaRecorder = null;
 let recordedChunks = [];
+let savedSize = null;       // tamaño del viewport antes de exportar
+let savedPixelRatio = 1;
 
-const exportBtn = document.getElementById('exportBtn');
-const durationInput = document.getElementById('durationInput');
-const fpsInput = document.getElementById('fpsInput');
-const statusEl = document.getElementById('status');
+const exportBtn = byId('exportBtn');
+const statusEl = byId('status');
 
 export function setStatus(s) { if (statusEl) statusEl.textContent = s; }
 
@@ -22,28 +31,48 @@ function pickMime() {
   return '';
 }
 
-export function startRecording(durationOverride) {
+// Durante la exportación el canvas se fuerza a 1920×1080 para que el video
+// salga siempre en 1080p, sin importar el tamaño de la ventana. Al terminar
+// se restaura el tamaño original del viewport.
+function enterExportResolution() {
+  savedSize = renderer.getSize(new THREE.Vector2());
+  savedPixelRatio = renderer.getPixelRatio();
+  renderer.setPixelRatio(1);
+  renderer.setSize(EXPORT_W, EXPORT_H, false);
+  camera.aspect = EXPORT_W / EXPORT_H;
+  camera.updateProjectionMatrix();
+}
+
+function exitExportResolution() {
+  if (!savedSize) return;
+  renderer.setPixelRatio(savedPixelRatio);
+  renderer.setSize(savedSize.x, savedSize.y, false);
+  camera.aspect = savedSize.x / savedSize.y;
+  camera.updateProjectionMatrix();
+  savedSize = null;
+}
+
+export function startRecording(durationOverride, fileName) {
   recordedChunks = [];
   recorderState.recordTime = 0;
-  recorderState.recordDuration = durationOverride !== undefined
-    ? durationOverride
-    : (parseFloat(durationInput.value) || 5);
-  const fps = parseInt(fpsInput.value) || 30;
+  recorderState.recordDuration = durationOverride !== undefined ? durationOverride : 5;
+  enterExportResolution();
 
-  const stream = canvas.captureStream(fps);
+  const stream = canvas.captureStream(EXPORT_FPS);
   const mime = pickMime();
   mediaRecorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
   mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
   mediaRecorder.onstop = () => {
+    exitExportResolution();
     const blob = new Blob(recordedChunks, { type: 'video/webm' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `animacion_${store.currentEnv}.webm`;
+    a.download = fileName || ('pelicula_' + store.currentEnv + '.webm');
     a.click();
     URL.revokeObjectURL(url);
-    setStatus(`Video descargado: animacion_${store.currentEnv}.webm`);
-    exportBtn.textContent = '⬇ Grabar & Exportar Video';
+    setStatus(`Video exportado: ${a.download} (1080p ${EXPORT_FPS} fps).`);
+    exportBtn.textContent = '⬇ Exportar';
     exportBtn.classList.remove('danger');
     exportBtn.classList.add('primary');
     recorderState.isRecording = false;
@@ -51,18 +80,10 @@ export function startRecording(durationOverride) {
 
   mediaRecorder.start();
   recorderState.isRecording = true;
-  exportBtn.textContent = '⏹ Grabando...';
+  exportBtn.textContent = '⏹ Exportando...';
   exportBtn.classList.remove('primary');
   exportBtn.classList.add('danger');
-  setStatus(`Grabando video (${recorderState.recordDuration}s)...`);
+  setStatus(`Exportando video (${recorderState.recordDuration.toFixed(1)}s a 1080p ${EXPORT_FPS} fps)...`);
 }
-
-exportBtn.addEventListener('click', () => {
-  if (recorderState.isRecording) {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-  } else {
-    startRecording();
-  }
-});
 
 export { mediaRecorder };

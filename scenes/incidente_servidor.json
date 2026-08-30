@@ -1,0 +1,74 @@
+{
+  "app": "MiniStudio 3D",
+  "version": 1,
+  "env": "office",
+  "description": "Incidente en el servidor (15s): dos técnicos discuten en la sala de sistemas, suena la alarma, corren a la sala de reuniones donde el jefe les señala el mini rack. Con subtítulos.",
+  "objects": {
+    "human1": { "pos": [-9.0, 0, -6.8], "rotY": -0.7, "action": "talk" },
+    "human2": { "pos": [-10.2, 0, -7.6], "rotY": 2.4, "action": "talk" },
+    "human3": { "pos": [10.6, 0, -8.6], "rotY": -0.3, "action": "idle" }
+  },
+  "paths": {
+    "human1": {
+      "waypoints": [
+        [-9.0, 0, -6.8],
+        [-9.15, 0, -6.5],
+        [-9.2, 0, -5.0],
+        [-9.2, 0, -3.6],
+        [0.5, 0, -3.2],
+        [9.2, 0, -3.6],
+        [9.25, 0, -5.0],
+        [9.6, 0, -5.5]
+      ],
+      "planeY": 0,
+      "speed": 3.6,
+      "events": {
+        "1": { "action": "talk", "wait": 4.5 },
+        "7": { "action": "idle", "wait": 0 }
+      }
+    },
+    "human2": {
+      "waypoints": [
+        [-10.2, 0, -7.6],
+        [-10.05, 0, -7.3],
+        [-9.5, 0, -5.0],
+        [-9.4, 0, -3.4],
+        [-0.5, 0, -3.0],
+        [8.9, 0, -3.4],
+        [9.3, 0, -5.2],
+        [10.2, 0, -5.3]
+      ],
+      "planeY": 0,
+      "speed": 3.6,
+      "events": {
+        "1": { "action": "talk", "wait": 4.6 },
+        "7": { "action": "idle", "wait": 0 }
+      }
+    }
+  },
+  "subtitles": [
+    { "start": 0.3, "end": 3.3, "text": "Sala de sistemas — Alex y Carlos revisan tráfico raro en la red..." },
+    { "start": 3.5, "end": 4.9, "text": "\ud83d\udea8 \u00a1SUENA LA ALARMA! Intrusi\u00f3n detectada" },
+    { "start": 5.1, "end": 8.8, "text": "\u00a1Corren a la sala de reuniones!" },
+    { "start": 9.1, "end": 10.9, "text": "Jefe: Chicos... el ataque entr\u00f3 justo por ac\u00e1." },
+    { "start": 11.1, "end": 13.1, "text": "\ud83d\udd0e El mini rack del switch principal" },
+    { "start": 13.3, "end": 14.9, "text": "Alex: El cable del patch panel... estaba suelto." }
+  ],
+  "timeline": {
+    "time": 0,
+    "shots": [
+      { "start": 0.0, "duration": 3.5, "camMode": "fixed",
+        "camPos": [-10.4, 1.5, -7.9], "target": [-9.3, 1.2, -6.8] },
+      { "start": 3.5, "duration": 1.4, "camMode": "fixed",
+        "camPos": [-12.2, 2.3, -10.1], "target": [-9.6, 1.0, -7.0] },
+      { "start": 4.9, "duration": 4.1, "camMode": "third", "subjectId": "human1" },
+      { "start": 9.0, "duration": 2.0, "camMode": "cine2", "subjectId": "human3" },
+      { "start": 11.0, "duration": 1.1, "camMode": "fixed",
+        "camPos": [10.6, 2.1, -6.6], "target": [14.2, 1.5, -10.4] },
+      { "start": 12.1, "duration": 1.1, "camMode": "fixed",
+        "camPos": [12.6, 1.7, -8.8], "target": [14.2, 1.55, -10.42] },
+      { "start": 13.2, "duration": 1.8, "camMode": "fixed",
+        "camPos": [8.7, 2.0, -9.9], "target": [10.1, 1.2, -6.2] }
+    ]
+  }
+}

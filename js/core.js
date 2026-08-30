@@ -1,8 +1,9 @@
 import * as THREE from 'three';
+import { byId, qs, qsa } from './dom.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-export const canvas = document.getElementById('view');
+export const canvas = byId('view');
 
 export const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true, alpha: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -15,7 +16,7 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.15;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap;
 
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1a1c23);
@@ -56,7 +57,7 @@ controls.target.set(0, 0.5, 0);
 // desplazamiento propio a velocidad constante (~0.02 m por píxel), en el
 // plano de la pantalla: un arrastre cruza la oficina entera sin importar
 // el nivel de zoom.
-const FLY_SPEED = 0.02; // metros por píxel de arrastre
+const FLY_SPEED = 0.07; // metros por píxel de arrastre (bien ágil para recorrer la escena)
 
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 

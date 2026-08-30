@@ -15,7 +15,7 @@
   }
   </script>
 </head>
-<body>
+<body class="booting">
   <div id="app-container">
     <!-- 1. Header Toolbar -->
     <header id="top-bar">
@@ -28,42 +28,497 @@
           <div class="menu-item has-dropdown" id="menuArchivo">
             Archivo ▾
             <div class="menu-dropdown" id="menuArchivoDropdown">
+              <div class="menu-option" id="mnuNew">📄 Nuevo…</div>
               <div class="menu-option" id="mnuOpen">📂 Abrir…</div>
               <div class="menu-option" id="mnuSaveAs">💾 Guardar como…</div>
               <div class="menu-option disabled" id="mnuSave">💾 Guardar</div>
             </div>
           </div>
-          <div class="menu-item">Editar</div>
+          <div class="menu-item has-dropdown" id="menuEditar">
+            Editar ▾
+            <div class="menu-dropdown" id="menuEditarDropdown">
+              <div class="menu-option" id="mnuEditEdificio">🏗️ Edificio</div>
+              <div class="menu-option" id="mnuEditObjetos">📦 Objetos</div>
+              <div class="menu-option" id="mnuEditPersonajes">🧍 Personajes</div>
+              <div class="menu-option" id="mnuEditSubtitulos">📝 Textos (subtítulos y carteles)</div>
+              <div class="menu-option" id="mnuEditCinematica">🎬 Cinemática</div>
+            </div>
+          </div>
           <div class="menu-item">Agregar</div>
           <div class="menu-item">Vista</div>
         </nav>
       </div>
 
-      <!-- Environment Selector -->
-      <div class="env-selector-container">
-        <button class="env-btn active" data-env="office" id="envOfficeBtn" title="Oficina moderna con escritorios y sala de servidores">🏢 Oficina</button>
-        <button class="env-btn" data-env="studio" id="envStudioBtn" title="Estudio neutro con grilla">🎬 Estudio 3D</button>
-        <button class="env-btn" data-env="day" id="envDayBtn" title="Parque con luz diurna">☀️ Parque Día</button>
-        <button class="env-btn" data-env="sunset" id="envSunsetBtn" title="Parque con atardecer dorado">🌅 Parque Tarde</button>
-        <button class="env-btn" data-env="night" id="envNightBtn" title="Parque nocturno con farolas">🌙 Parque Noche</button>
+      <!-- Bloque central de proyecto: guardar · nuevo · deshacer · rehacer -->
+      <div class="top-bar-center">
+        <button class="viewport-toggle-btn" id="btnSaveQuick" title="Guardar cambios (Ctrl+S)" disabled>💾</button>
+        <button class="viewport-toggle-btn" id="btnNewBlank" title="Proyecto nuevo">📄</button>
+        <span class="tb-sep"></span>
+        <button class="viewport-toggle-btn" id="undoBtn" title="Deshacer (Ctrl+Z)" disabled>↩</button>
+        <button class="viewport-toggle-btn" id="redoBtn" title="Rehacer (Ctrl+Y)" disabled>↪</button>
       </div>
 
       <div class="top-bar-right">
-        <button class="viewport-toggle-btn" id="undoBtn" title="Deshacer (Ctrl+Z)" disabled>↩ Deshacer</button>
-        <button class="viewport-toggle-btn" id="redoBtn" title="Rehacer (Ctrl+Y)" disabled>↪ Rehacer</button>
+        <span id="projectNameLabel" class="tb-project" style="display:none;"></span>
+        <span class="tb-sep"></span>
         <button class="viewport-toggle-btn active" id="toggleGridBtn" title="Alternar Grilla">🌐 Grilla</button>
         <button class="viewport-toggle-btn active" id="toggleAxesBtn" title="Alternar Ejes">🧭 Ejes</button>
         <button class="viewport-toggle-btn" id="resetCamBtn" title="Restablecer Vista">🎯 Reset Vista</button>
       </div>
     </header>
 
+    <!-- Modal de inicio: proyecto nuevo o cargar -->
+    <div id="startupModal" class="startup-overlay" style="display:none;">
+      <div class="startup-card">
+        <div class="startup-logo">🎬</div>
+        <h1>MiniStudio 3D</h1>
+        <p class="startup-sub">Estudio de video con animaciones 3D</p>
+
+        <div id="suHome">
+          <p>¿Cómo querés empezar?</p>
+          <div class="startup-actions">
+            <button class="blender-btn primary" id="suNew">📄 Proyecto nuevo</button>
+            <button class="blender-btn" id="suLoad">📂 Cargar proyecto…</button>
+          </div>
+        </div>
+
+        <div id="suNewForm" style="display:none;">
+          <label class="startup-label" for="suName">Nombre del proyecto (archivo .json)</label>
+          <input type="text" id="suName" placeholder="mi_proyecto" autocomplete="off" />
+          <p class="startup-label">Elegí el escenario:</p>
+          <div class="env-selector-container startup-envs">
+            <button class="env-btn active" data-env="office" title="Oficina moderna con escritorios y sala de servidores">🏢 Oficina</button>
+            <button class="env-btn" data-env="studio" title="Estudio neutro con grilla">🎬 Estudio 3D</button>
+            <button class="env-btn" data-env="day" title="Parque con luz diurna">☀️ Parque Día</button>
+            <button class="env-btn" data-env="sunset" title="Parque con atardecer dorado">🌅 Parque Tarde</button>
+            <button class="env-btn" data-env="night" title="Parque nocturno con farolas">🌙 Parque Noche</button>
+            <button class="env-btn" data-env="terrain" title="Lote vacío con césped para construir desde cero (Modo Construcción)">🌱 Terreno</button>
+          </div>
+          <div class="startup-actions">
+            <button class="blender-btn primary" id="suCreate">✔ Crear proyecto</button>
+            <button class="blender-btn" id="suBack">↩ Volver</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Escena decorativa: objetos y personajes al estilo del programa -->
+      <svg class="startup-scene" viewBox="0 0 1000 230" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+        <!-- piso -->
+        <rect x="0" y="204" width="1000" height="26" fill="#0d1322"/>
+        <rect x="0" y="203" width="1000" height="2" fill="#2a3550" opacity="0.7"/>
+
+        <!-- primitivas 3D flotantes -->
+        <rect class="su-prim" x="70" y="28" width="30" height="30" rx="4" fill="#5865f2" opacity="0.55" transform="rotate(12 85 43)"/>
+        <circle class="su-prim su-prim2" cx="470" cy="40" r="16" fill="#00c8a0" opacity="0.5"/>
+        <polygon class="su-prim su-prim3" points="880,58 900,26 920,58" fill="#ff7850" opacity="0.55"/>
+        <circle class="su-prim su-prim2" cx="210" cy="60" r="7" fill="#ffd166" opacity="0.45"/>
+        <rect class="su-prim su-prim3" x="650" y="20" width="20" height="20" rx="3" fill="#b48cff" opacity="0.5" transform="rotate(-14 660 30)"/>
+
+        <!-- rack de servidores con LEDs -->
+        <g>
+          <rect x="105" y="82" width="80" height="122" rx="4" fill="#1b2233" stroke="#303a55" stroke-width="2"/>
+          <line x1="105" y1="102" x2="185" y2="102" stroke="#303a55" stroke-width="2"/>
+          <line x1="105" y1="122" x2="185" y2="122" stroke="#303a55" stroke-width="2"/>
+          <line x1="105" y1="142" x2="185" y2="142" stroke="#303a55" stroke-width="2"/>
+          <line x1="105" y1="162" x2="185" y2="162" stroke="#303a55" stroke-width="2"/>
+          <line x1="105" y1="182" x2="185" y2="182" stroke="#303a55" stroke-width="2"/>
+          <circle class="su-led" cx="120" cy="93" r="3" fill="#4aff8f"/>
+          <circle class="su-led" cx="132" cy="93" r="3" fill="#ffc14d" style="animation-delay:.4s"/>
+          <circle class="su-led" cx="120" cy="113" r="3" fill="#4ac8ff" style="animation-delay:.8s"/>
+          <circle class="su-led" cx="132" cy="133" r="3" fill="#ff5d7a" style="animation-delay:1.1s"/>
+          <circle class="su-led" cx="120" cy="153" r="3" fill="#4aff8f" style="animation-delay:.2s"/>
+          <circle class="su-led" cx="132" cy="173" r="3" fill="#4ac8ff" style="animation-delay:.6s"/>
+          <rect x="148" y="88" width="26" height="3" rx="1.5" fill="#26304a"/>
+          <rect x="148" y="94" width="26" height="3" rx="1.5" fill="#26304a"/>
+          <rect x="148" y="108" width="26" height="3" rx="1.5" fill="#26304a"/>
+          <rect x="148" y="114" width="26" height="3" rx="1.5" fill="#26304a"/>
+        </g>
+
+        <!-- personaje saludando -->
+        <g class="su-char">
+          <rect x="225" y="128" width="30" height="76" rx="6" fill="#4772b3"/>
+          <rect x="221" y="96" width="38" height="34" rx="8" fill="#e8b087"/>
+          <rect x="221" y="92" width="38" height="12" rx="5" fill="#3a2c22"/>
+          <rect x="234" y="104" width="3.5" height="3.5" rx="1.5" fill="#22293a"/>
+          <rect x="243" y="104" width="3.5" height="3.5" rx="1.5" fill="#22293a"/>
+          <rect x="253" y="100" width="9" height="26" rx="4.5" fill="#4772b3" transform="rotate(-38 257 104)"/>
+          <rect x="251" y="76" width="11" height="11" rx="5" fill="#e8b087"/>
+          <rect x="218" y="132" width="10" height="30" rx="5" fill="#4772b3"/>
+          <rect x="226" y="200" width="12" height="6" rx="2" fill="#22293a"/>
+          <rect x="244" y="200" width="12" height="6" rx="2" fill="#22293a"/>
+        </g>
+
+        <!-- escritorio con monitor -->
+        <g>
+          <rect x="300" y="150" width="200" height="10" rx="3" fill="#8a5a33"/>
+          <rect x="310" y="160" width="9" height="44" fill="#5d3d23"/>
+          <rect x="481" y="160" width="9" height="44" fill="#5d3d23"/>
+          <rect x="372" y="118" width="8" height="32" fill="#3a4152"/>
+          <rect x="360" y="112" width="32" height="6" rx="3" fill="#3a4152"/>
+          <rect x="340" y="72" width="92" height="52" rx="4" fill="#11141c" stroke="#39415a" stroke-width="2"/>
+          <rect class="su-screen" x="346" y="78" width="80" height="40" rx="2" fill="#173a5e"/>
+          <polygon points="356,112 380,84 396,112" fill="#4ac8ff" opacity="0.5"/>
+          <rect x="398" y="140" width="52" height="8" rx="3" fill="#d8dbe2"/>
+          <rect x="458" y="140" width="16" height="9" rx="4" fill="#d8dbe2"/>
+        </g>
+
+        <!-- personaje sentado frente al monitor -->
+        <g class="su-char su-char-b">
+          <rect x="415" y="112" width="30" height="40" rx="6" fill="#b3573f"/>
+          <rect x="411" y="82" width="38" height="34" rx="8" fill="#c68a5d"/>
+          <rect x="411" y="78" width="38" height="12" rx="5" fill="#241d18"/>
+          <rect x="424" y="90" width="3.5" height="3.5" rx="1.5" fill="#22293a"/>
+          <rect x="433" y="90" width="3.5" height="3.5" rx="1.5" fill="#22293a"/>
+        </g>
+
+        <!-- planta -->
+        <g>
+          <polygon points="560,196 596,196 590,160 566,160" fill="#8a5a33"/>
+          <ellipse cx="578" cy="140" rx="9" ry="22" fill="#3f9d6f"/>
+          <ellipse cx="564" cy="148" rx="8" ry="17" fill="#4aa578" transform="rotate(-28 564 148)"/>
+          <ellipse cx="592" cy="148" rx="8" ry="17" fill="#357e59" transform="rotate(28 592 148)"/>
+        </g>
+
+        <!-- cámara de video en trípode -->
+        <g>
+          <line x1="740" y1="204" x2="722" y2="150" stroke="#5d3d23" stroke-width="4"/>
+          <line x1="740" y1="204" x2="740" y2="150" stroke="#5d3d23" stroke-width="4"/>
+          <line x1="740" y1="204" x2="758" y2="150" stroke="#5d3d23" stroke-width="4"/>
+          <rect x="716" y="122" width="48" height="28" rx="4" fill="#2a3140"/>
+          <circle cx="740" cy="136" r="8" fill="#11141c" stroke="#4ac8ff" stroke-width="2"/>
+          <rect class="su-led" x="756" y="127" width="4" height="4" rx="2" fill="#ff5d7a"/>
+        </g>
+      </svg>
+    </div>
+
+    <!-- Wizard de escenas (🪄) -->
+    <div id="wizardModal" class="startup-overlay" style="display:none;">
+      <div class="startup-card" style="max-width:560px; text-align:left; max-height:90vh; overflow-y:auto;">
+        <h1 style="font-size:18px;">🪄 Asistente de escena — Diálogo a dos</h1>
+        <p class="startup-sub">Elegí los personajes, pegá el guion de cada uno y el asistente arma posiciones, tomas y subtítulos.</p>
+
+        <label class="startup-label">Personaje A</label>
+        <select id="wzCharA" class="tl-input">
+          <option value="human1" selected>🧍 Alex</option>
+          <option value="human2">👔 Carlos</option>
+          <option value="human3">👩 Elena</option>
+          <option value="human4">🕵️ Mike</option>
+          <option value="human5">🎨 Sofi</option>
+          <option value="human6">🖥️ Nico</option>
+          <option value="human7">🧮 Marta</option>
+          <option value="human8">💼 Leo</option>
+          <option value="human9">🤝 Valen</option>
+        </select>
+
+        <label class="startup-label">Personaje B</label>
+        <select id="wzCharB" class="tl-input">
+          <option value="human2" selected>👔 Carlos</option>
+          <option value="human1">🧍 Alex</option>
+          <option value="human3">👩 Elena</option>
+          <option value="human4">🕵️ Mike</option>
+          <option value="human5">🎨 Sofi</option>
+          <option value="human6">🖥️ Nico</option>
+          <option value="human7">🧮 Marta</option>
+          <option value="human8">💼 Leo</option>
+          <option value="human9">🤝 Valen</option>
+        </select>
+
+        <label class="startup-label">Guion de A — una frase por línea</label>
+        <textarea id="wzLinesA" class="tl-input" rows="4" placeholder="Hola, ¿viste lo que pasó con el servidor?&#10;Es la tercera vez esta semana."></textarea>
+
+        <label class="startup-label">Guion de B — una frase por línea (se alternan con A)</label>
+        <textarea id="wzLinesB" class="tl-input" rows="4" placeholder="Sí, y nadie avisó nada...&#10;¿Ya probaste reiniciar el switch?"></textarea>
+
+        <label class="startup-label">Cámara</label>
+        <select id="wzCamStyle" class="tl-input">
+          <option value="alternado" selected>Alterno cerrado (plano/contraplano)</option>
+          <option value="medio">Plano medio fijo por réplica</option>
+          <option value="general">General único (una sola toma)</option>
+        </select>
+
+        <label class="startup-label">
+          <input type="checkbox" id="wzGeneral" checked> Agregar plano general al inicio
+        </label>
+
+        <p class="startup-label" id="wzEstimate"></p>
+
+        <div class="startup-actions" style="justify-content:flex-start;">
+          <button class="blender-btn primary" id="wzGenerate">✔ Generar escena</button>
+          <button class="blender-btn" id="wzClose">✖ Cerrar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Creador de personajes -->
+    <div id="charCreatorModal" class="startup-overlay" style="display:none;">
+      <div class="startup-card" style="max-width:880px; text-align:left;">
+        <h1 style="font-size:18px;">🧍 Nuevo personaje</h1>
+        <p class="startup-sub">Arrastrá para rotar, usá la rueda para zoom y el botón derecho para mover la vista.</p>
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <div id="ccPreview" style="width:460px; height:420px; background:#14171d; border:1px solid #2c3340; border-radius:8px; overflow:hidden;"></div>
+          <div style="flex:1; min-width:260px; display:flex; flex-direction:column; gap:8px;">
+            <label class="startup-label">Género</label>
+            <div style="display:flex; gap:14px; align-items:center;">
+              <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
+                <input type="radio" name="ccGender" id="ccGenderM" value="m" checked /> Hombre
+              </label>
+              <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
+                <input type="radio" name="ccGender" id="ccGenderF" value="f" /> Mujer
+              </label>
+            </div>
+            <label class="startup-label">Nombre
+              <div style="display:flex; gap:6px;">
+                <input type="text" id="ccName" class="tl-input" placeholder="Personaje 1" autocomplete="off" style="flex:1;" />
+                <button class="blender-btn" id="ccNameDice" title="Generar otro nombre al azar">🎲</button>
+              </div>
+            </label>
+            <label class="startup-label">Piel
+              <input type="color" id="ccSkin" value="#ffd1a4" style="width:100%;" />
+            </label>
+            <label class="startup-label">Peinado
+              <select id="ccHairStyle" class="tl-input">
+                <option value="short" selected>Corto</option>
+                <option value="long">Largo</option>
+                <option value="cap">Gorra</option>
+                <option value="hoodie">Capucha</option>
+              </select>
+            </label>
+            <label class="startup-label">Color de pelo
+              <input type="color" id="ccHairColor" value="#2b1d14" style="width:100%;" />
+            </label>
+            <label class="startup-label">Vestimenta
+              <select id="ccOutfit" class="tl-input">
+                <option value="casual" selected>👕 Informal</option>
+                <option value="office">👔 Traje de oficina</option>
+                <option value="cleaner">🧹 Empleado de limpieza</option>
+                <option value="chef">👨‍🍳 Cocinero</option>
+                <option value="overall">🦺 Mameluco (una pieza)</option>
+              </select>
+            </label>
+            <label class="startup-label">Color de la ropa
+              <input type="color" id="ccShirt" value="#2e64d8" style="width:100%;" />
+            </label>
+            <label class="startup-label">Color de pantalón
+              <input type="color" id="ccPants" value="#232733" style="width:100%;" />
+            </label>
+            <label class="startup-label">Zapatos / zapatillas
+              <input type="color" id="ccShoes" value="#111111" style="width:100%;" />
+            </label>
+            <label class="startup-label">Accesorios</label>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <label style="display:flex; align-items:center; gap:4px; cursor:pointer;">
+                <input type="checkbox" id="ccTie" /> Corbata
+              </label>
+              <label style="display:flex; align-items:center; gap:4px; cursor:pointer;">
+                <input type="checkbox" id="ccSunglasses" /> 🕶️ Anteojos de sol
+              </label>
+              <label style="display:flex; align-items:center; gap:4px; cursor:pointer;">
+                <input type="checkbox" id="ccHat" /> 🎩 Sombrero
+              </label>
+              <label style="display:flex; align-items:center; gap:4px; cursor:pointer;">
+                <input type="checkbox" id="ccCap" /> 🧢 Gorra
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="startup-actions" style="justify-content:flex-start; margin-top:12px;">
+          <button class="blender-btn primary" id="ccAccept">✔ Aceptar y añadir</button>
+          <button class="blender-btn" id="ccCancel">✖ Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Catálogo de objetos: elegir qué añadir a la escena -->
+    <div id="objectCatalogModal" class="startup-overlay" style="display:none;">
+      <div class="startup-card" style="max-width:560px; text-align:left;">
+        <h1 style="font-size:18px;">📦 Añadir objeto</h1>
+        <p class="startup-sub">Elegí una pieza del catálogo: aparece donde mirás, seleccionada y lista para mover.</p>
+        <input type="text" id="catalogSearch" class="gesture-search" placeholder="🔎 Buscar en el catálogo…" autocomplete="off" />
+        <div class="gesture-list" id="catalogList" style="max-height:340px;"></div>
+        <div class="startup-actions" style="justify-content:flex-start; margin-top:10px;">
+          <button class="blender-btn" id="objCatClose">✖ Cerrar</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 2. Main Workspace Layout -->
     <div id="main-workspace">
       <!-- Left Panel (Sidebar) -->
       <aside id="left-panel">
 
+        <!-- Selector Editar: texto + caja de modo + flechas < > -->
+        <div class="panel-section" id="editModeSelector">
+          <div class="section-header">
+            <span>Editar</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="section-content">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; background:#2a2d36; border:1px solid #3a3d4a; border-radius:6px; padding:6px 8px;">
+              <button class="viewport-toggle-btn" id="btnEditModePrev" title="Anterior" style="min-width:28px;">‹</button>
+              <span id="editModeName" style="flex:1; text-align:center; font-weight:600;">Personajes</span>
+              <button class="viewport-toggle-btn" id="btnEditModeNext" title="Siguiente" style="min-width:28px;">›</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="editContent">
+        <!-- Panel del MODO OBJETOS: lista de la escena + añadir + transform -->
+        <div class="panel-section" id="objectsPanel" style="display:none;">
+          <div class="section-header">
+            <span>📦 Objetos de la Escena</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="section-content">
+            <button class="blender-btn primary" id="btnAddObject" style="width:100%;">➕ Añadir Objeto</button>
+            <input type="text" id="objectSearch" class="gesture-search" placeholder="🔎 Buscar objeto…" autocomplete="off" />
+            <div class="gesture-list" id="sceneObjectsList"></div>
+            <p class="cinema-hint" style="margin-top:4px;">Clic en un objeto para seleccionarlo y moverlo con el gizmo.</p>
+          </div>
+        </div>
+
+        <!-- Panel del MODO TEXTOS: subtítulos + carteles de pregunta (quiz).
+             Antes "Subtítulos". Los carteles conviven con los subtítulos:
+             mientras un cartel está en pantalla, los subtítulos de ese tramo
+             no se dibujan (el cartel los tapa). Puede haber varios carteles
+             en una misma escena. -->
+        <div class="panel-section" id="subtitlesPanel" style="display:none;">
+          <div class="section-header">
+            <span>📝 Textos</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="section-content">
+            <div id="subtitleEditPanel" class="camera-view-block">
+              <div class="camera-view-label">💬 Editar Subtítulo</div>
+              <label class="inline-label">Texto
+                <input type="text" id="subEditText" class="tl-input" style="flex:1;" maxlength="200" placeholder="Elegí un bloque de subtítulo…" disabled />
+              </label>
+              <div class="sub-icon-row" id="subIconRow">
+                <button class="sub-icon-btn" data-icon="💬" disabled>💬</button>
+                <button class="sub-icon-btn" data-icon="⚠️" disabled>⚠️</button>
+                <button class="sub-icon-btn" data-icon="✅" disabled>✅</button>
+                <button class="sub-icon-btn" data-icon="❌" disabled>❌</button>
+                <button class="sub-icon-btn" data-icon="🔔" disabled>🔔</button>
+                <button class="sub-icon-btn" data-icon="💡" disabled>💡</button>
+                <button class="sub-icon-btn" data-icon="📢" disabled>📢</button>
+                <button class="sub-icon-btn" data-icon="🔒" disabled>🔒</button>
+                <button class="sub-icon-btn" data-icon="🌐" disabled>🌐</button>
+                <button class="sub-icon-btn" data-icon="➡️" disabled>➡️</button>
+              </div>
+              <label class="inline-label">Fuente
+                <select id="subEditFont" class="tl-input" style="flex:1;" disabled>
+                  <option value='"Segoe UI", Arial, sans-serif'>Segoe UI</option>
+                  <option value='Arial, sans-serif'>Arial</option>
+                  <option value='Georgia, serif'>Georgia</option>
+                  <option value='"Courier New", monospace'>Courier New</option>
+                  <option value='Impact, sans-serif'>Impact</option>
+                  <option value='Verdana, sans-serif'>Verdana</option>
+                </select>
+              </label>
+              <label class="inline-label">Tamaño
+                <input type="range" id="subEditSize" min="16" max="64" step="1" value="30" style="flex:1; accent-color: var(--accent-primary);" disabled />
+                <span id="subEditSizeVal">30</span> px
+              </label>
+              <label class="inline-label">Color
+                <input type="color" id="subEditColor" value="#ffffff" style="width:42px; height:22px; padding:0; border:none; background:none; cursor:pointer;" disabled />
+              </label>
+              <div class="btn-grid">
+                <label class="inline-label">Inicio
+                  <input type="number" id="subEditStart" class="tl-input" min="0" step="0.1" value="0" style="width:52px;" disabled />s
+                </label>
+                <label class="inline-label">Fin
+                  <input type="number" id="subEditEnd" class="tl-input" min="0" step="0.1" value="2" style="width:52px;" disabled />s
+                </label>
+              </div>
+              <div class="btn-grid" style="margin-top:4px;">
+                <button class="blender-btn danger" id="subEditDelete" disabled>🗑 Borrar</button>
+                <button class="blender-btn" id="subEditNew" title="Crea un subtítulo nuevo que arranca en la cabeza de reproducción">➕ Nuevo en el cabezal</button>
+              </div>
+              <p class="cinema-hint" style="margin-top:4px;">Todo se guarda solo mientras escribís o ajustás.</p>
+            </div>
+            <p class="cinema-hint" style="margin-top:6px;">Los bloques se eligen en la pista de subtítulos de la línea de tiempo (abajo del viewport).</p>
+
+            <!-- Cartel de pregunta (quiz): se elige un bloque de la pista 📋
+                 QUIZ y acá se edita. Puede haber varios en la misma escena;
+                 mientras un cartel está en pantalla, no se dibujan subtítulos. -->
+            <div id="quizEditPanel" class="camera-view-block" style="margin-top:10px;">
+              <div class="camera-view-label">📋 Cartel de Pregunta</div>
+              <label class="inline-label">Pregunta
+                <input type="text" id="quizEditQuestion" class="tl-input" style="flex:1;" maxlength="160" placeholder="Elegí un bloque de la pista QUIZ…" disabled />
+              </label>
+              <label class="inline-label">Opción A
+                <input type="text" id="quizEditOptA" class="tl-input" style="flex:1;" maxlength="90" disabled />
+              </label>
+              <label class="inline-label">Opción B
+                <input type="text" id="quizEditOptB" class="tl-input" style="flex:1;" maxlength="90" disabled />
+              </label>
+              <label class="inline-label">Opción C
+                <input type="text" id="quizEditOptC" class="tl-input" style="flex:1;" maxlength="90" disabled />
+              </label>
+              <label class="inline-label">Correcta
+                <select id="quizEditCorrect" class="tl-input" style="flex:1;" disabled>
+                  <option value="0">A</option>
+                  <option value="1">B</option>
+                  <option value="2">C</option>
+                </select>
+              </label>
+              <label class="inline-label">Tiempo (s)
+                <input type="number" id="quizEditDuration" class="tl-input" min="1" max="120" step="1" value="10" style="width:52px;" disabled />
+              </label>
+              <label class="inline-label">Inicio
+                <input type="number" id="quizEditStart" class="tl-input" min="0" step="0.1" style="width:52px;" disabled />s
+              </label>
+              <label class="inline-label">Fin
+                <input type="number" id="quizEditEnd" class="tl-input" min="0" step="0.1" style="width:52px;" disabled />s
+              </label>
+              <div class="btn-grid" style="margin-top:4px;">
+                <button class="blender-btn danger" id="quizEditDelete" disabled>🗑 Borrar</button>
+                <button class="blender-btn" id="quizEditNew" title="Crea un cartel nuevo que arranca en la cabeza de reproducción">➕ Nuevo cartel</button>
+              </div>
+              <p class="cinema-hint" style="margin-top:4px;">Mientras un cartel está en pantalla, los subtítulos de ese tramo no se ven. Todo se guarda solo mientras escribís.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel del MODO CONSTRUCCIÓN: reemplaza el resto del menú al activarse -->
+        <div class="panel-section" id="constructionPanel" style="display:none;">
+          <div class="section-header">
+            <span>🏗️ Modo Construcción</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="section-content">
+            <button class="blender-btn" id="btnConExit" style="width:100%;">↩ Salir del Modo Construcción</button>
+
+            <div class="target-category-label" style="margin-top:10px;">🟫 PISO</div>
+            <label class="inline-label" style="margin-top:4px;">Tipo
+              <select id="conFloorTexture" class="tl-input" style="flex:1;"></select>
+            </label>
+            <div class="btn-grid" style="margin-top:4px;">
+              <button class="blender-btn primary" id="btnConAddFloor" style="flex:1;">➕ Añadir piso</button>
+            </div>
+            <p class="cinema-hint" style="margin-top:2px;">Añadí una losa; seleccionála para cambiar su tipo.</p>
+
+            <div class="target-category-label" style="margin-top:10px;">🧱 PAREDES</div>
+            <div class="btn-grid" style="margin-top:4px;">
+              <button class="blender-btn primary" id="btnConAddWall" style="flex:1;">➕ Añadir pared</button>
+            </div>
+            <p class="cinema-hint" style="margin-top:2px;">Seleccioná una pared para editar largo, alto, espesor, textura y tipo.</p>
+
+            <div class="target-category-label" style="margin-top:10px;">🚪 ABERTURAS</div>
+            <div class="btn-grid" style="margin-top:4px;">
+              <button class="blender-btn" id="btnConAddDoor" style="flex:1;">🚪 Añadir puerta</button>
+              <button class="blender-btn" id="btnConAddWindow" style="flex:1;">🪟 Añadir ventana</button>
+            </div>
+            <p class="cinema-hint" style="margin-top:2px;">Puertas y ventanas aparecen frente a la vista: movelas y rotalas con el gizmo para apoyarlas en una pared.</p>
+
+            <div class="target-category-label" style="margin-top:10px;">👁️ VER</div>
+            <div class="btn-grid" style="margin-top:4px;">
+              <button class="blender-btn" id="btnConOnly" style="flex:1;">👁️ Solo edificio: OFF</button>
+            </div>
+          </div>
+        </div>
+
         <!-- Selector de Objetos y Personajes -->
-        <div class="panel-section">
+        <div class="panel-section" id="section-target">
           <div class="section-header">
             <span>Objetivo Seleccionado</span>
             <span class="arrow">▼</span>
@@ -74,50 +529,29 @@
               <button class="target-btn active" id="targetHuman1Btn" data-target="human1">🧍 Alex</button>
               <button class="target-btn" id="targetHuman2Btn" data-target="human2">👔 Carlos</button>
               <button class="target-btn" id="targetHuman3Btn" data-target="human3">👩 Elena</button>
+              <button class="target-btn" id="targetHuman4Btn" data-target="human4">🕵️ Mike</button>
+              <button class="target-btn" id="targetHuman5Btn" data-target="human5">🎨 Sofi</button>
+              <button class="target-btn" id="targetHuman6Btn" data-target="human6">🖥️ Nico</button>
+              <button class="target-btn" id="targetHuman7Btn" data-target="human7">🧮 Marta</button>
+              <button class="target-btn" id="targetHuman8Btn" data-target="human8">💼 Leo</button>
+              <button class="target-btn" id="targetHuman9Btn" data-target="human9">🤝 Valen</button>
               <button class="target-btn" id="targetDogBtn" data-target="dog">🐕 Perro</button>
               <button class="target-btn" id="targetCatBtn" data-target="cat">🐱 Gato</button>
             </div>
+            <div class="target-selector-box" id="customCharBox" style="grid-template-columns: repeat(3, 1fr); margin-top:4px; display:none;"></div>
+            <button class="blender-btn primary" id="btnAddCharacter" style="width:100%; margin-top:8px;">➕ Añadir Personaje</button>
 
-            <button class="blender-btn" id="btnEditObjects" style="width:100%; margin-top:8px;">✏️ Editar Objetos: OFF</button>
-            <p class="cinema-hint" style="margin-top:2px;">Con ON podés hacer click y mover muebles/objetos. Los personajes siempre se pueden mover.</p>
-          </div>
-        </div>
-
-        <!-- Section: Acciones y Poses en Vivo (Para personajes) -->
-        <div class="panel-section" id="section-actions">
-          <div class="section-header">
-            <span id="actionsSectionTitle">Animaciones en Bucle (Personaje)</span>
-            <span class="arrow">▼</span>
-          </div>
-          <div class="section-content">
-            <!-- Botones de Acción para Humanos -->
-            <div class="action-grid" id="humanActionsGrid">
-              <button class="action-btn" data-action="talk">🗣️ Hablando</button>
-              <button class="action-btn" data-action="sit_typing">💻 Tecleando</button>
-              <button class="action-btn" data-action="sit">🪑 Sentado</button>
-              <button class="action-btn" data-action="lay">🛌 Tirado en piso</button>
-              <button class="action-btn active" data-action="idle">🧍 De pie</button>
-              <button class="action-btn" data-action="walk">🚶 Caminar</button>
-              <button class="action-btn" data-action="run">🏃 Correr</button>
-            </div>
-
-            <!-- Botones de Acción para Perro y Gato -->
-            <div class="action-grid" id="petActionsGrid" style="display: none;">
-              <button class="action-btn" data-action="sit">🐕 / 🐱 Sentado</button>
-              <button class="action-btn" data-action="lay">🛌 Acostado</button>
-              <button class="action-btn active" data-action="idle">🧍 De pie</button>
-              <button class="action-btn" data-action="walk">🚶 Caminar</button>
-              <button class="action-btn" data-action="run">🏃 Correr</button>
-            </div>
-
-            <!-- Controles para Muebles / Equipos IT -->
-            <div id="propControlsGrid" style="display: none; flex-direction: column; gap: 4px;">
-              <p class="cinema-hint">Mové el objeto con el gizmo o el anillo; el imán lo deja a la altura de mesa o piso.</p>
+            <div id="catalogPanel" style="display:none;">
+              <div class="target-category-label" style="margin-top:8px;">➕ AGREGAR OBJETO</div>
+              <div id="catalogGrid" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:4px; margin-top:4px;"></div>
+              <p class="cinema-hint" style="margin-top:4px;">Clic en una pieza: aparece donde mirás, seleccionada y lista para mover / rotar / escalar con el gizmo.</p>
             </div>
           </div>
         </div>
 
-        <!-- Section: Posición 3D con Barras Deslizantes (Sliders XYZ) -->
+        <!-- Section: Posición 3D con Barras Deslizantes (Sliders XYZ + Escala).
+             Va justo después de los personajes: primero quién es (y dónde/
+             cómo está), recién después las animaciones. -->
         <div class="panel-section" id="section-transform">
           <div class="section-header">
             <span id="transformSectionTitle">Transformación 3D</span>
@@ -172,11 +606,90 @@
                   <input type="number" id="numRotY" step="5" value="0" />
                 </div>
               </div>
+
+              <!-- Escala (único lugar para escalar; el gizmo ya no escala) -->
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span>Escala</span>
+                </div>
+                <div class="slider-ctrl">
+                  <span class="axis-tag r">⇲</span>
+                  <input type="range" id="sliderScale" min="0.5" max="2" step="0.05" value="1" />
+                  <input type="number" id="numScale" step="0.05" value="1.00" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Acciones y Poses en Vivo (Para personajes) -->
+        <div class="panel-section" id="section-actions">
+          <div class="section-header">
+            <span id="actionsSectionTitle">Animaciones en Bucle (Personaje)</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div class="section-content">
+            <!-- Botones de Acción para Humanos -->
+            <div class="action-grid" id="humanActionsGrid">
+              <button class="action-btn" data-action="talk">🗣️ Hablando</button>
+              <button class="action-btn" data-action="sit_typing">💻 Tecleando</button>
+              <button class="action-btn" data-action="sit">🪑 Sentado</button>
+              <button class="action-btn" data-action="lay">🛌 Tirado en piso</button>
+              <button class="action-btn active" data-action="idle">🧍 De pie</button>
+              <button class="action-btn" data-action="walk">🚶 Caminar</button>
+              <button class="action-btn" data-action="run">🏃 Correr</button>
+              <button class="action-btn" data-action="wave">👋 Saludar</button>
+              <button class="action-btn" data-action="clap">👏 Aplaudir</button>
+              <button class="action-btn" data-action="point">👉 Señalar</button>
+              <button class="action-btn" data-action="hold">📦 Llevar objeto</button>
+              <button class="action-btn" data-action="grab_ladder">🪜 Agarrar escalera</button>
+              <button class="action-btn" data-action="carry_ladder">🪜 Llevar escalera</button>
+              <button class="action-btn" data-action="drop_ladder">🪜 Dejar escalera</button>
+              <button class="action-btn" data-action="climb_ladder">🪜 Subir escalera</button>
+              <button class="action-btn" data-action="shoulder_lift">🪜 Cargar al hombro</button>
+              <button class="action-btn" data-action="shoulder_carry">🪜 Caminar con escalera</button>
+              <button class="action-btn" data-action="shoulder_drop">🪜 Bajar del hombro</button>
             </div>
 
-            <div class="btn-grid" style="margin-top: 4px;">
-              <button class="blender-btn" id="btnFaceCamera">👀 Mirar Cámara</button>
-              <button class="blender-btn" id="btnResetTargetPos">⌖ Reset Posición</button>
+            <!-- Gestos de un disparo: se ejecutan una vez y vuelven a la acción base.
+     Lista scrollable con buscador (filtra mientras se escribe). -->
+<div class="target-category-label" id="humanGesturesLabel" style="margin-top:6px;">Gestos (se ejecutan una vez)</div>
+<input type="text" id="gestureSearch" class="gesture-search" placeholder="🔎 Buscar gesto…" autocomplete="off" />
+<div class="gesture-list" id="humanGesturesGrid">
+  <button class="action-btn gesture-btn" data-action="gesture:point">👉 Señalar</button>
+  <button class="action-btn gesture-btn" data-action="gesture:wave">👋 Saludar</button>
+  <button class="action-btn gesture-btn" data-action="gesture:shrug">🤷 Encogerse de hombros</button>
+  <button class="action-btn gesture-btn" data-action="gesture:yes">✅ Asentir con la cabeza</button>
+  <button class="action-btn gesture-btn" data-action="gesture:no">🙅 Negar con la cabeza</button>
+  <button class="action-btn gesture-btn" data-action="gesture:clap">👏 Aplaudir</button>
+  <button class="action-btn gesture-btn" data-action="gesture:watch">⌚ Mirar el reloj</button>
+  <button class="action-btn gesture-btn" data-action="gesture:facepalm">🤦 Facepalm</button>
+  <button class="action-btn gesture-btn" data-action="gesture:celebrate">🎉 Festejo</button>
+</div>
+
+            <!-- Estado de ánimo (expresión facial) para Humanos:
+                 misma grilla de 2 columnas que las animaciones -->
+            <div class="action-grid mood-grid" id="humanMoodGrid">
+              <button class="action-btn mood-btn active" data-mood="neutral">😐 Neutral</button>
+              <button class="action-btn mood-btn" data-mood="happy">😊 Contento</button>
+              <button class="action-btn mood-btn" data-mood="angry">😠 Enojado</button>
+              <button class="action-btn mood-btn" data-mood="sad">😢 Triste</button>
+              <button class="action-btn mood-btn" data-mood="worried">😰 Preocupado</button>
+            </div>
+
+            <!-- Botones de Acción para Perro y Gato -->
+            <div class="action-grid" id="petActionsGrid" style="display: none;">
+              <button class="action-btn" data-action="sit">🐕 / 🐱 Sentado</button>
+              <button class="action-btn" data-action="lay">🛌 Acostado</button>
+              <button class="action-btn active" data-action="idle">🧍 De pie</button>
+              <button class="action-btn" data-action="walk">🚶 Caminar</button>
+              <button class="action-btn" data-action="run">🏃 Correr</button>
+            </div>
+
+            <!-- Controles para Muebles / Equipos IT -->
+            <div id="propControlsGrid" style="display: none; flex-direction: column; gap: 4px;">
+              <p class="cinema-hint">Mové el objeto con el gizmo o el anillo; el imán lo deja a la altura de mesa o piso.</p>
+              <button id="btnMiniRackDoor" style="display:none">🚪 Abrir / Cerrar puerta</button>
             </div>
           </div>
         </div>
@@ -194,7 +707,23 @@
             <label class="inline-label" style="margin-top:4px;">Textura
               <select id="wallTexture" class="tl-input" style="flex:1;"></select>
             </label>
-            <p class="cinema-hint" style="margin-top:4px;">La pared se mueve con el gizmo o los sliders de posición. Largo/espesor siguen su rotación.</p>
+            <label class="inline-label" style="margin-top:4px;">Tipo de panel
+              <select id="wallKind" class="tl-input" style="flex:1;">
+                <option value="glass">🪟 Vidrio (translúcido)</option>
+                <option value="solid">🧱 Sólido (textura)</option>
+              </select>
+            </label>
+            <label class="inline-label">Estado de puerta
+              <select id="doorState" class="tl-input" style="flex:1; display:none;">
+                <option value="cerrado">🚪 Cerrado</option>
+                <option value="entreabierto">🚪➖ Entreabierto</option>
+                <option value="abierto">🚪➡️ Abierto</option>
+              </select>
+            </label>
+            <div class="btn-grid" style="margin-top:4px;">
+              <button class="blender-btn primary" id="btnAddWall" style="flex:1;">➕ Añadir pared</button>
+            </div>
+            <p class="cinema-hint" style="margin-top:4px;">La pared se mueve con el gizmo o los sliders de posición. Largo/espesor siguen su rotación. Cambios solo en modo "🏢 Editar Edificio".</p>
           </div>
         </div>
 
@@ -226,8 +755,8 @@
                 <button class="blender-btn view-btn" data-view="cine2">🎬 Cine 2</button>
                 <button class="blender-btn view-btn" data-view="cine3">🎬 Cine 3</button>
               </div>
-              <div class="view-btn-grid" style="margin-top:4px;">
-                <button class="blender-btn view-btn active" data-view="orbit">🎥 Libre (Órbita)</button>
+              <div class="view-btn-grid duo" style="margin-top:4px;">
+                <button class="blender-btn view-btn active" data-view="orbit">🌐 Vista Libre</button>
                 <button class="blender-btn view-btn" data-view="aerial">🚁 Aérea</button>
               </div>
             </div>
@@ -252,6 +781,16 @@
                   <option value="lay">Acostarse</option>
                   <option value="walk">Caminar</option>
                   <option value="run">Correr</option>
+                  <option value="wave">Saludar</option>
+                  <option value="clap">Aplaudir</option>
+                  <option value="point">Señalar</option>
+                  <option value="hold">Llevar objeto</option>
+                  <option value="gesture:point">👉 Gesto: Señalar (1 vez)</option>
+                  <option value="gesture:wave">👋 Gesto: Saludar (1 vez)</option>
+                  <option value="gesture:shrug">🤷 Gesto: Encogerse (1 vez)</option>
+                  <option value="gesture:no">🙅 Gesto: Negar (1 vez)</option>
+                  <option value="gesture:clap">👏 Gesto: Aplaudir (1 vez)</option>
+                  <option value="gesture:watch">⌚ Gesto: Mirar reloj (1 vez)</option>
                 </select>
               </label>
               <label class="inline-label">Espera <input type="number" id="waypointEventWait" class="tl-input" min="0" step="0.5" value="0" style="width:52px;" /> s</label>
@@ -275,6 +814,7 @@
               <!-- Dynamically populated / organized -->
             </ul>
           </div>
+        </div>
         </div>
       </aside>
 
@@ -314,32 +854,44 @@
     <!-- 2b. Secuenciador de escenas: línea de tiempo de tomas -->
     <section id="scene-timeline">
       <div class="tl-toolbar">
-        <button class="blender-btn primary" id="btnPlayScene" title="Reproduce todos los recorridos y aplica las tomas de cámara">▶ Reproducir Escena</button>
-        <button class="blender-btn danger" id="btnRecordScene" title="Reproduce la escena y la graba como un único video">⏺ Grabar Escena</button>
-        <button class="blender-btn" id="btnStopScene" disabled>⏹ Detener</button>
-        <button class="blender-btn" id="btnAddShot" title="Agrega una toma de 3s al final de la línea">＋ Nueva toma</button>
+        <button class="blender-btn" id="btnBack10" title="Retroceder 10 segundos">⏪</button>
+        <button class="blender-btn" id="btnStepBack" title="Retroceder 1 frame">⏴</button>
+        <button class="blender-btn" id="btnStopScene" disabled title="Detener y volver al comienzo">⏹</button>
+        <button class="blender-btn primary" id="btnPlayScene" title="Reproducir / Pausar">▶</button>
+        <button class="blender-btn" id="btnLoopScene" title="Repetir la escena al terminar">🔁</button>
+        <button class="blender-btn" id="btnStepFwd" title="Avanzar 1 frame">⏵</button>
+        <button class="blender-btn" id="btnFwd10" title="Avanzar 10 segundos">⏩</button>
+        <button class="blender-btn" id="btnWizard" title="Asistente para armar escenas con guion">🪄</button>
+        <span class="tl-clock" title="Velocidad de reproducción de la escena">⏱
+          <input type="range" id="rateSlider" min="0.25" max="2" step="0.05" value="1" style="width:90px; vertical-align:middle;">
+          <span id="rateVal">1.0×</span>
+        </span>
         <span id="timelineClock" class="tl-clock">0.0s / 0.0s</span>
       </div>
       <div class="tl-body">
         <div id="timelineRuler" class="tl-ruler"></div>
         <div id="timelineTrack" class="tl-track">
-          <div id="tlPlayhead" class="tl-playhead" style="display:none;"></div>
+          <div class="tl-lane-name">🎬 CINEMÁTICA</div>
         </div>
+        <div id="subtitleLane" class="tl-sub-lane" title="Subtítulos de la escena — click en un bloque para editarlo">
+          <div class="tl-lane-name">💬 SUBTÍTULOS</div>
+        </div>
+        <div id="quizLane" class="tl-sub-lane tl-quiz-lane" title="Carteles de pregunta (quiz) — click en un bloque para editarlo">
+          <div class="tl-lane-name">📋 QUIZ</div>
+        </div>
+        <div id="tlPlayhead" class="tl-playhead" style="display:none;"><div class="tl-playhead-knob" title="Arrastrá para mover la cabeza de reproducción"></div></div>
       </div>
-      <div id="shotEditor" class="tl-shot-editor" style="display:none;"></div>
     </section>
 
     <!-- 3. Bottom Animation Timeline Bar (Video Recorder) -->
     <footer id="bottom-timeline">
       <div class="timeline-header">
         <div class="transport-controls">
-          <button class="blender-btn primary" id="exportBtn" style="padding: 4px 14px;" title="Exportar animación en bucle como video WebM">⬇ Grabar & Exportar Video</button>
-          <span style="color: var(--text-muted); font-size: 11px; margin-left: 8px;">(Graba la escena con todas las animaciones activas)</span>
+          <button class="blender-btn primary" id="exportBtn" style="padding: 4px 14px;" title="Genera el video de la película completa (1080p a 60 fps)">⬇ Exportar</button>
+          <span style="color: var(--text-muted); font-size: 11px; margin-left: 8px;">(Genera el video de toda la escena en 1080p a 60 fps)</span>
         </div>
 
         <div class="timeline-settings">
-          <label class="inline-label">Duración video <input type="number" id="durationInput" value="5" step="1" min="1" max="60" />s</label>
-          <label class="inline-label">FPS <input type="number" id="fpsInput" value="30" step="1" min="1" max="60" /></label>
           <span id="status">Listo - Modo Oficina Activo</span>
         </div>
       </div>
@@ -358,6 +910,6 @@
       if (el) el.textContent = 'Error: ' + (e.reason && e.reason.message ? e.reason.message : e.reason) + ' — abre F12 (Consola).';
     });
   </script>
-  <script type="module" src="js/main.js?v=11"></script>
+  <script type="module" src="js/boot.js?v=1"></script>
 </body>
 </html>

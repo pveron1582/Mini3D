@@ -1,12 +1,14 @@
 import * as THREE from 'three';
+import { byId, qs, qsa } from './dom.js';
 import { scene } from './core.js';
 import { store, cinema, view, interactiveRegistry } from './state.js';
-import { updateGizmoPosition } from './gizmo.js';
+
 import {
   cinemaStorePath, cinemaLoadTarget, updateCameraViewVisibility,
   refreshCinemaUI, setCamView
 } from './cinematics.js';
-import { updateActionButtonsState, syncSlidersFromTarget, refreshWallPanel } from './ui.js';
+// P5: los paneles de UI se actualizan vía onTargetSelected (registrado en ui.js),
+// en vez de que selection.js importe ui.js (rompe el ciclo selection → ui).
 
 // ==========================================
 // OBJECT REGISTRY & SELECTION SYSTEM
@@ -18,6 +20,16 @@ export function registerSelectable(id, name, group, type, rig = null) {
     child.userData.selectableRoot = group;
   });
   interactiveRegistry.set(id, { id, name, group, type, rig });
+}
+
+// Quita un objeto del registro de seleccionables (lo usa la capa de
+// construcción al recrearse desde el JSON: borra las piezas viejas primero).
+export function unregisterSelectable(id) {
+  const entry = interactiveRegistry.get(id);
+  if (!entry) return;
+  if (store.activeTarget === id) store.activeTarget = null;
+  entry.group.traverse((child) => { delete child.userData.selectableRoot; });
+  interactiveRegistry.delete(id);
 }
 
 function createSelectionRing() {
@@ -56,6 +68,16 @@ export function getActiveEntry() {
   return interactiveRegistry.get(store.activeTarget) || null;
 }
 
+// Hooks que se notifican cuando cambia el objeto activo (ej. para mostrar
+// botones de propiedades dependientes del tipo, como la puerta del mini rack).
+const targetListeners = [];
+export function onTargetSelected(cb) {
+  targetListeners.push(cb);
+}
+function notifyTargetSelected(id) {
+  targetListeners.forEach(cb => cb(id));
+}
+
 export function getActiveObject() {
   const entry = getActiveEntry();
   return entry ? entry.group : null;
@@ -63,58 +85,73 @@ export function getActiveObject() {
 
 export function setActiveTarget(id) {
   if (!interactiveRegistry.has(id)) return;
-  store.activeTarget = id;
   const entry = interactiveRegistry.get(id);
+  // Los objetos borrados (soft-delete del catálogo) no son seleccionables
+  if (entry.deleted) return;
+  // Paredes, puertas y ventanas SOLO seleccionables en modo "Editar Edificio".
+  if ((entry.type === 'wall' || entry.type === 'door' || entry.type === 'window' || entry.type === 'floor') && !store.editBuilding) return;
+  store.activeTarget = id;
 
   // Update Buttons & Outliner
-  document.querySelectorAll('.target-btn').forEach(btn => {
+  qsa('.target-btn').forEach(btn => {
     btn.classList.toggle('active', btn.getAttribute('data-target') === id);
   });
-  document.querySelectorAll('.outliner-item').forEach(item => {
+  qsa('.outliner-item').forEach(item => {
     item.classList.toggle('selected', item.getAttribute('data-id') === id);
   });
 
-  const humanActions = document.getElementById('humanActionsGrid');
-  const petActions = document.getElementById('petActionsGrid');
-  const propControls = document.getElementById('propControlsGrid');
-  const actionsTitle = document.getElementById('actionsSectionTitle');
-  const transformTitle = document.getElementById('transformSectionTitle');
-  const badge = document.getElementById('hudSelectedBadge');
+  const humanActions = byId('humanActionsGrid');
+  const petActions = byId('petActionsGrid');
+  const propControls = byId('propControlsGrid');
+  const moodGrid = byId('humanMoodGrid');
+  const humanGestures = byId('humanGesturesGrid');
+  const humanGesturesLabel = byId('humanGesturesLabel');
+  const gestureSearchInput = byId('gestureSearch');
+  const actionsTitle = byId('actionsSectionTitle');
+  const transformTitle = byId('transformSectionTitle');
+  const badge = byId('hudSelectedBadge');
 
   if (entry.type === 'human') {
     if (humanActions) humanActions.style.display = 'grid';
     if (petActions) petActions.style.display = 'none';
     if (propControls) propControls.style.display = 'none';
+    if (moodGrid) moodGrid.style.display = 'grid';
+    if (humanGestures) humanGestures.style.display = '';
+    if (gestureSearchInput) gestureSearchInput.style.display = '';
+    if (humanGesturesLabel) humanGesturesLabel.style.display = '';
     if (actionsTitle) actionsTitle.textContent = `Animaciones (${entry.name})`;
     if (transformTitle) transformTitle.textContent = `Posición 3D (${entry.name})`;
     if (badge) badge.textContent = `🧍 Enfocado: ${entry.name}`;
-    updateActionButtonsState(entry.rig ? entry.rig.currentAction : 'idle');
   } else if (entry.type === 'pet') {
     if (humanActions) humanActions.style.display = 'none';
     if (petActions) petActions.style.display = 'grid';
     if (propControls) propControls.style.display = 'none';
+    if (moodGrid) moodGrid.style.display = 'none';
+    if (humanGestures) humanGestures.style.display = 'none';
+  if (gestureSearchInput) gestureSearchInput.style.display = 'none';
+    if (humanGesturesLabel) humanGesturesLabel.style.display = 'none';
     if (actionsTitle) actionsTitle.textContent = `Animaciones (${entry.name})`;
     if (transformTitle) transformTitle.textContent = `Posición 3D (${entry.name})`;
     if (badge) badge.textContent = `🐾 Enfocado: ${entry.name}`;
-    updateActionButtonsState(entry.rig ? entry.rig.currentAction : 'idle');
   } else {
     if (humanActions) humanActions.style.display = 'none';
     if (petActions) petActions.style.display = 'none';
     if (propControls) propControls.style.display = 'flex';
+    if (moodGrid) moodGrid.style.display = 'none';
+    if (humanGestures) humanGestures.style.display = 'none';
+  if (gestureSearchInput) gestureSearchInput.style.display = 'none';
+    if (humanGesturesLabel) humanGesturesLabel.style.display = 'none';
     if (actionsTitle) actionsTitle.textContent = `Objeto (${entry.name})`;
     if (transformTitle) transformTitle.textContent = `Posición 3D (${entry.name})`;
     if (badge) badge.textContent = `📦 Enfocado: ${entry.name}`;
   }
 
   updateSelectionRing();
-  syncSlidersFromTarget();
-  refreshWallPanel();
 
   // Guardar el recorrido del objetivo anterior si la cinemática está activa
   if (cinema.active && cinema.targetId && cinema.targetId !== id) {
     cinemaStorePath(cinema.targetId);
   }
-  updateGizmoPosition();
   updateCameraViewVisibility();
   if (cinema.active) {
     cinemaLoadTarget(id);
@@ -125,6 +162,54 @@ export function setActiveTarget(id) {
     }
   }
   refreshCinemaUI();
+  notifyTargetSelected(id);
+}
+
+// Deseleccionar el objeto activo (personaje / objeto / pared). Por defecto, al
+// hacer click fuera del objeto en el viewport, éste deja de estar seleccionado.
+export function clearActiveTarget() {
+  const had = !!store.activeTarget;
+  store.activeTarget = null;
+
+  // Guardar el recorrido del objetivo si la cinemática está activa
+  if (cinema.active && cinema.targetId) {
+    cinemaStorePath(cinema.targetId);
+  }
+
+  selectionRing.visible = false;
+
+  qsa('.target-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  qsa('.outliner-item').forEach(item => {
+    item.classList.remove('selected');
+  });
+
+  const humanActions = byId('humanActionsGrid');
+  const petActions = byId('petActionsGrid');
+  const propControls = byId('propControlsGrid');
+  const moodGrid = byId('humanMoodGrid');
+  const humanGestures = byId('humanGesturesGrid');
+  const humanGesturesLabel = byId('humanGesturesLabel');
+  const gestureSearchInput = byId('gestureSearch');
+  const actionsTitle = byId('actionsSectionTitle');
+  const transformTitle = byId('transformSectionTitle');
+  const badge = byId('hudSelectedBadge');
+  if (humanActions) humanActions.style.display = 'none';
+  if (petActions) petActions.style.display = 'none';
+  if (propControls) propControls.style.display = 'none';
+  if (moodGrid) moodGrid.style.display = 'none';
+  if (humanGestures) humanGestures.style.display = 'none';
+  if (gestureSearchInput) gestureSearchInput.style.display = 'none';
+  if (humanGesturesLabel) humanGesturesLabel.style.display = 'none';
+  if (actionsTitle) actionsTitle.textContent = 'Animaciones';
+  if (transformTitle) transformTitle.textContent = 'Posición 3D';
+  if (badge) badge.textContent = '';
+
+  updateCameraViewVisibility();
+  refreshCinemaUI();
+  notifyTargetSelected(null);
+  return had;
 }
 
 export function updateSelectionRing() {

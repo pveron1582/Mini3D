@@ -26,3 +26,8 @@ coverage/
 *.bak
 *.swp
 *~
+
+# Logs sueltos del servidor local (serve.py redirige output acá a veces)
+*.log
+server_err.txt
+server_out.txt

@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { interactiveRegistry } from './state.js';
-import { getWallColliders, officeGroup } from './office.js';
+import { getWallColliders } from './office/walls.js';
+import { officeGroup } from './office/group.js';
+import { parkGroup } from './park.js';
+import { studioGroup } from './lights.js';
 import { entryRadius } from './collision.js';
 
 // ==========================================
@@ -82,8 +85,33 @@ const DIRS = [
   [1, 1], [1, -1], [-1, 1], [-1, -1]
 ];
 
+// Límites de la grilla derivados de la geometría del ambiente activo (P4).
+// Antes eran fijos (-14.5..14.5 / -10.5..10.5) y rompían en el parque/casa del
+// hacker (que está en z≈-27). Se calcula la caja del grupo visible + margen.
+function getNavBounds() {
+  // Cache: solo se recalcula cuando cambia el set de grupos visibles.
+  const sig = (officeGroup.visible ? 'o' : '') + (parkGroup.visible ? 'p' : '') + (studioGroup.visible ? 's' : '');
+  if (getNavBounds._sig === sig && getNavBounds._box) return getNavBounds._box;
+  const box = new THREE.Box3();
+  const groups = [];
+  if (officeGroup.visible) groups.push(officeGroup);
+  if (parkGroup.visible) groups.push(parkGroup);
+  if (studioGroup.visible) groups.push(studioGroup);
+  let any = false;
+  groups.forEach(g => g.traverse(o => {
+    if (o.isMesh) { box.expandByObject(o); any = true; }
+  }));
+  let out;
+  if (!any) out = { minX: -15, maxX: 15, minZ: -11, maxZ: 11 };
+  else out = { minX: box.min.x - 2, maxX: box.max.x + 2, minZ: box.min.z - 2, maxZ: box.max.z + 2 };
+  getNavBounds._sig = sig;
+  getNavBounds._box = out;
+  return out;
+}
+
 function aStar(sx, sz, gx, gz, obs) {
-  const minX = -14.5, maxX = 14.5, minZ = -10.5, maxZ = 10.5;
+  const B = getNavBounds();
+  const minX = B.minX, maxX = B.maxX, minZ = B.minZ, maxZ = B.maxZ;
   const W = Math.floor((maxX - minX) / CELL) + 1;
   const H = Math.floor((maxZ - minZ) / CELL) + 1;
   const idx = (ix, iz) => ix + iz * W;

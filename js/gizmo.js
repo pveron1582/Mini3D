@@ -1,11 +1,14 @@
 import * as THREE from 'three';
+import { byId, qs, qsa } from './dom.js';
 import { scene, camera, canvas, controls } from './core.js';
 import { cinema, view, interactiveRegistry, store } from './state.js';
-import { getActiveObject, getActiveEntry, setActiveTarget, updateSelectionRing, selectionRing } from './selection.js';
+import { getActiveObject, getActiveEntry, setActiveTarget, updateSelectionRing, selectionRing, clearActiveTarget, onTargetSelected } from './selection.js';
 import { syncSlidersFromTarget, refreshWallPanel } from './ui.js';
 import { pushHistory } from './undo.js';
-import { getWallColliders, officeGroup } from './office.js';
-import { entryRadius } from './collision.js';
+import { getWallColliders } from './office/walls.js';
+import { officeGroup } from './office/group.js';
+import { entryRadius, resolveDropAfterDrag } from './collision.js';
+import { multi, toggleInMulti, hasMulti, isInMulti, multiCount, clearMulti, beginGroupDrag, updateGroupDrag, endGroupDrag, beginMarquee, updateMarquee, endMarquee } from './multiselect.js';
 
 // ==========================================
 // GIZMO DE TRANSFORMACIÓN (Flechas XYZ estilo Blender)
@@ -33,6 +36,7 @@ export const gizmoState = {
   dragStartPos: new THREE.Vector3(),
   pointerDownTime: 0,
   pointerDownPos: { x: 0, y: 0 },
+  pendingDeselect: false,   // click en vacío del viewport: deseleccionar objeto
   freeDragStarted: false,
   freeDragPlaneY: 0,
   freeDragOffset: new THREE.Vector3(),
@@ -159,6 +163,16 @@ export function updateGizmoPosition() {
   transformGizmo.rotation.set(0, 0, 0);
 }
 
+// P5: el gizmo se auto-posiciona cuando cambia la selección, en vez de que
+// selection.js lo llame (rompe el ciclo selection → gizmo). selection.js solo
+// notifica el cambio vía onTargetSelected.
+// Se difiere el registro con queueMicrotask: al evaluarse este módulo durante la
+// carga (hay ciclo selection→cinematics→gizmo→selection), llamar onTargetSelected()
+// en línea top-level dispara el TDZ de `targetListeners` en selection.js. El microtask
+// corre tras terminar de evaluar todo el grafo de módulos, cuando ya está inicializado.
+// (render.js además re-posiciona el gizmo cada frame, así que no hay regresión.)
+queueMicrotask(() => onTargetSelected(() => updateGizmoPosition()));
+
 export function setGizmoAxisHighlight(axis) {
   gizmoState.arrows.forEach(({ axis: a, group }) => {
     const isActive = a === axis;
@@ -216,9 +230,13 @@ export function getIntersectedObjectId(e) {
   const testList = [];
   interactiveRegistry.forEach((entry) => {
     if (!entry.group || !entry.group.visible) return;
-    // Personajes siempre clickeables; el resto solo con "Editar Objetos" ON
+    // Personajes siempre clickeables.
     const isChar = entry.type === 'human' || entry.type === 'pet';
-    if (!isChar && !store.editObjects) return;
+    // Paredes, puertas y ventanas SOLO en modo "Editar Edificio".
+    const isBuilding = entry.type === 'wall' || entry.type === 'door' || entry.type === 'window' || entry.type === 'floor';
+    if (isBuilding && !store.editBuilding) return;
+    // El resto del mobiliario/equipos solo con "Editar Objetos" ON.
+    if (!isChar && !isBuilding && !store.editObjects) return;
     testList.push(entry.group);
   });
 
@@ -323,16 +341,20 @@ function updateGizmoRingRotation(e) {
 function startAirDrag(e) {
   const obj = getActiveObject();
   if (!obj) return;
+  // Marcar el arrastre: collision.js no lo empuja contra paredes mientras se
+  // mueve (se puede cruzar de un lado al otro); al soltar se resuelve.
+  store.dragTargetId = obj.userData.id;
   gizmoState.isAirDrag = true;
   gizmoState.isDragging = true;
   gizmoState.activeAxis = null;
-  // Plano perpendicular a la cámara que pasa por el objeto: el mouse mueve
-  // la pieza libremente en ese plano (X, Y y Z a la vez)
-  const camDir = camera.getWorldDirection(new THREE.Vector3());
-  gizmoState.dragPlane.setFromNormalAndCoplanarPoint(camDir, obj.position);
+  // Plano HORIZONTAL a la altura del objeto: el anillo azul se comporta como
+  // el "piso" del objeto — arrastrarlo lo mueve por el suelo (X/Z) sin perder
+  // su altura de apoyo (personajes siguen con su groundY, objetos con la suya).
+  gizmoState.dragPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 1, 0), obj.position);
   const hit = new THREE.Vector3();
   if (projectPointerToPlane(e, gizmoState.dragPlane, hit)) {
     gizmoState.dragOffset.copy(hit).sub(obj.position);
+    gizmoState.dragOffset.y = 0;   // solo desplazamiento lateral
   }
   controls.enabled = false;
   canvas.style.cursor = 'grabbing';
@@ -344,14 +366,49 @@ function updateAirDrag(e) {
   const hit = new THREE.Vector3();
   if (!projectPointerToPlane(e, gizmoState.dragPlane, hit)) return;
   const newPos = hit.sub(gizmoState.dragOffset);
-  const minY = groundMinY();
-  if (newPos.y < minY) newPos.y = minY;
+
+  // Personajes: se mantienen APOYADOS — piso, o encima del mueble que quede
+  // debajo (mesa/silla/sillón). No vuelan: el drag mueve en XZ y la altura
+  // se resuelve sola según lo que hay debajo. Objetos: conservan su Y.
+  const entry = getActiveEntry();
+  if (entry && entry.rig) {
+    const seated = (entry.rig.currentAction || '').startsWith('sit') || entry.rig.currentAction === 'lay';
+    if (!seated) {
+      newPos.y = supportHeightAt(newPos.x, newPos.z, obj) + (entry.rig.groundY || 0.17);
+    } else {
+      newPos.y = obj.position.y;
+    }
+  } else {
+    newPos.y = obj.position.y;
+  }
+
   applySnapXZ(newPos, obj);
-  applySnapY(newPos, obj);
   obj.position.copy(newPos);
   updateSelectionRing();
   updateGizmoPosition();
   syncSlidersFromTarget();
+}
+
+// Altura de apoyo para un personaje en (x,z): la tapa del mueble más alto
+// que quede debajo de él (mesa/silla/sillón/estante). Busca el objeto cuyo
+// XZ contenga al personaje y devuelve la Y de su "tapa"; 0 si es el piso.
+// Los personajes no se apoyan en otros personajes ni en cosas montadas en
+// pared (APs, mini rack): esas van a altura de persona y no son "muebles".
+function supportHeightAt(x, z, selfObj) {
+  let best = 0;
+  interactiveRegistry.forEach(entry => {
+    if (!entry.group || entry.deleted || entry.rig) return;          // solo muebles/objetos
+    if (entry.group === selfObj) return;
+    if (entry.type === 'wall' || entry.type === 'door' || entry.type === 'window' || entry.type === 'floor') return;
+    const p = entry.group.position;
+    if (p.y > 1.0) return;                                           // montado en pared: no es apoyo
+    const he = entryHalfExtents(entry);
+    if (Math.abs(x - p.x) > he.hx + 0.15 || Math.abs(z - p.z) > he.hz + 0.15) return;
+    // "Tapa" aproximada del mueble: su Y + radio*escala (mesa ≈0.76, silla ≈0.5)
+    const top = p.y + entryRadius(entry) * (entry.group.scale.x || 1);
+    if (top > best && top < 1.35) best = top;
+  });
+  return best;
 }
 
 // --- Escalado con la banda del anillo azul ---
@@ -393,7 +450,9 @@ function updateScaleDrag(e) {
 // Piso mínimo del objeto activo (los personajes tienen su propio nivel)
 function groundMinY() {
   const entry = getActiveEntry();
-  return entry && entry.rig && entry.rig.groundY ? entry.rig.groundY : 0;
+  const act = entry && entry.rig ? (entry.rig.currentAction || '') : '';
+  const seated = act.startsWith('sit') || act === 'lay';
+  return entry && entry.rig && entry.rig.groundY && !seated ? entry.rig.groundY : 0;
 }
 
 // Proyectar punto del mouse a un plano
@@ -411,6 +470,9 @@ function startAxisDrag(e, axis) {
   const obj = getActiveObject();
   if (!obj) return;
 
+  // Marcar el arrastre (collision.js no lo empuja contra paredes mientras
+  // arrastra; al soltar se resuelve al lado más cercano).
+  store.dragTargetId = obj.userData.id;
   gizmoState.activeAxis = axis;
   gizmoState.isDragging = true;
   gizmoState.isFreeDrag = false;
@@ -525,6 +587,10 @@ function endDrag() {
   hideSnapGuides();
   hideSnapBadge();
   endWallEdgeDrag();
+  // Al soltar: si el personaje/objeto quedó atravesando una pared o puerta,
+  // el sistema lo acomoda pegado al lado más cercano (sin quedar a medias).
+  resolveDropAfterDrag();
+  syncSlidersFromTarget();
   pushHistory();
 }
 
@@ -606,7 +672,7 @@ function showSnapBadge(text) {
   if (!snapBadge) {
     snapBadge = document.createElement('div');
     snapBadge.className = 'snap-badge';
-    const container = document.getElementById('viewport-container');
+    const container = byId('viewport-container');
     if (container) container.appendChild(snapBadge);
   }
   snapBadge.textContent = text;
@@ -801,6 +867,7 @@ function endWallEdgeDrag() {
 // Eventos del mouse
 canvas.addEventListener('pointerdown', (e) => {
   if (cinema.active && cinema.mode !== 'play') return;
+  if (store.trayDrawing) return;   // dibujando canaleta: no seleccionar/deseleccionar
   const now = performance.now();
   gizmoState.pointerDownTime = now;
   gizmoState.pointerDownPos = { x: e.clientX, y: e.clientY };
@@ -826,13 +893,10 @@ canvas.addEventListener('pointerdown', (e) => {
     return;
   }
 
-  // 4. Anillo azul de selección: banda = escalar, círculo interior = mover.
-  //    La rotación se hace solo con los anillos del gizmo (doble click en flecha)
+  // 4. Anillo azul de selección: el círculo interior = mover. La banda exterior
+  //    (escalar) está DESHABILITADA: la escala se controla solo desde el
+  //    panel izquierdo, para no molestar al mover (se usa poco).
   const selHit = getSelectionRingHit(e);
-  if (selHit === 'band') {
-    startScaleDrag(e);
-    return;
-  }
   if (selHit === 'inner') {
     startAirDrag(e);
     return;
@@ -841,9 +905,36 @@ canvas.addEventListener('pointerdown', (e) => {
   // 4. Verificar si se hizo clic en un objeto
   const objId = getIntersectedObjectId(e);
   if (objId) {
+    // Ctrl+clic: suma/quita de la selección múltiple (no pierde la previa)
+    if (e.ctrlKey || e.metaKey) {
+      toggleInMulti(objId);
+      setActiveTarget(objId);
+      updateGizmoPosition();
+      return;
+    }
+    // Con 2+ seleccionados, arrastrar sobre uno de ellos mueve el bloque
+    if (hasMulti() && isInMulti(objId) && multiCount() >= 2) {
+      if (beginGroupDrag(e, objId)) {
+        controls.enabled = false;
+        return;
+      }
+    }
+    // Selección normal sobre un objeto: limpia la multiselección
+    if (hasMulti()) clearMulti();
     setActiveTarget(objId);
     updateGizmoPosition();
+    return;
   }
+
+  // Clic en vacío: con Ctrl (o con selección activa) comienza la marquesina;
+  // si no, queda pendiente la deselección (confirmada en pointerup).
+  if (e.ctrlKey || e.metaKey) {
+    beginMarquee(e);
+    controls.enabled = false;
+    return;
+  }
+  if (hasMulti()) clearMulti();
+  gizmoState.pendingDeselect = true;
 });
 
 // Doble click en una flecha → mostrar/ocultar su anillo de rotación
@@ -857,6 +948,12 @@ canvas.addEventListener('dblclick', (e) => {
 
 canvas.addEventListener('pointermove', (e) => {
   if (cinema.active && cinema.mode !== 'play') return;
+  if (store.trayDrawing) return;   // dibujando canaleta: el ghost lo maneja trayDraw
+
+  // Movimiento del bloque seleccionado (multiselección)
+  if (multi.dragging) { updateGroupDrag(e); return; }
+  // Marquesina: redimensionar el rectángulo de selección
+  if (multi.marqueeActive) { updateMarquee(e); return; }
 
   // Arrastre de borde de pared
   if (wallEdgeDrag) {
@@ -935,8 +1032,27 @@ canvas.addEventListener('pointermove', (e) => {
 
 canvas.addEventListener('pointerup', (e) => {
   if (cinema.active && cinema.mode !== 'play') return;
+  if (store.trayDrawing) return;   // dibujando canaleta: el click lo maneja trayDraw
+  // Terminar el movimiento del bloque (multiselección)
+  if (multi.dragging) {
+    updateGroupDrag(e);
+    endGroupDrag();
+    controls.enabled = true;
+    return;
+  }
+  if (multi.marqueeActive) {
+    endMarquee(e);
+    controls.enabled = true;
+    return;
+  }
   if (gizmoState.isDragging) {
     endDrag();
   }
+  // Click simple en vacío (sin arrastre de cámara) → deseleccionar el objeto
+  if (gizmoState.pendingDeselect && !gizmoState.isDragging) {
+    const moved = Math.abs(e.clientX - gizmoState.pointerDownPos.x) + Math.abs(e.clientY - gizmoState.pointerDownPos.y);
+    if (moved < 6) clearActiveTarget();
+  }
+  gizmoState.pendingDeselect = false;
   gizmoState.pointerDownTime = 0;
 });

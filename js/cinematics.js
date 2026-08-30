@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { byId, qs, qsa } from './dom.js';
 import { scene, camera, canvas, controls } from './core.js';
 import { cinema, cinemaPaths, playbackInstances, view, interactiveRegistry } from './state.js';
 import { getActiveObject, getActiveEntry, setActiveTarget } from './selection.js';
@@ -6,6 +7,7 @@ import { raycaster, getPointerNDC, projectPointerToPlane } from './gizmo.js';
 import { setStatus } from './recorder.js';
 import { solvePath } from './navigation.js';
 import { pushHistory } from './undo.js';
+import { stepLadder, STEP_LADDER_ORIGIN } from './office/group.js';
 
 // ==========================================
 // SISTEMA DE CINEMÁTICA (RECORRIDO ANIMADO)
@@ -131,9 +133,9 @@ function cinemaPointerToGround(e, out) {
 
 function cinemaSetMode(mode) {
   cinema.mode = mode;
-  const hint = document.getElementById('cinemaHint');
-  const editCtrls = document.getElementById('cinemaEditControls');
-  const banner = document.getElementById('cinemaBanner');
+  const hint = byId('cinemaHint');
+  const editCtrls = byId('cinemaEditControls');
+  const banner = byId('cinemaBanner');
   if (hint) {
     if (mode === 'pickStart') hint.textContent = 'Paso 1: haz clic en el escenario para fijar el punto de INICIO (círculo verde).';
     else if (mode === 'pickEnd') hint.textContent = 'Paso 2: haz clic para fijar el punto FINAL (círculo rojo).';
@@ -152,10 +154,14 @@ function cinemaSetMode(mode) {
 function cinemaStorePath(id) {
   if (!id) return;
   if (cinema.waypoints.length === 0) { cinemaPaths.delete(id); return; }
+  const prev = cinemaPaths.get(id);
   cinemaPaths.set(id, {
     waypoints: cinema.waypoints.map(v => v.clone()),
     planeY: cinema.planeY,
-    events: Object.assign({}, cinema.events)
+    events: Object.assign({}, cinema.events),
+    loop: prev ? prev.loop : undefined,
+    delay: prev ? prev.delay : undefined,
+    speed: prev ? prev.speed : undefined
   });
 }
 
@@ -384,25 +390,38 @@ export function startPlayback(id, opts = {}) {
     waypoints = stored.waypoints;
     planeY = stored.planeY;
     events = stored.events || {};
+    var storedSpeed = stored.speed; // velocidad guardada con el recorrido (ej. correr)
+    var storedDelay = stored.delay; // segundos que espera antes de arrancar (ej. sale cuando lo llaman)
   }
+  const baseSpeed = opts.speed !== undefined ? opts.speed : (typeof storedSpeed === 'number' ? storedSpeed : cinema.speed);
+  const delay = opts.delay !== undefined ? opts.delay : (typeof storedDelay === 'number' ? storedDelay : 0);
   // Camino con esquivado automático: si un tramo cruza paredes u objetos,
   // se insertan puntos intermedios para rodearlos (el destino no cambia)
   const solved = solvePath(waypoints, planeY);
   const curve = cinemaBuildCurveFrom(solved);
   if (!curve) return false;
   const entry = interactiveRegistry.get(id);
+  if (entry && solved.length > 0) {
+    const p0 = opts.reversed ? solved[solved.length - 1] : solved[0];
+    entry.group.position.set(p0.x, planeY, p0.z);
+  }
   let savedAction = 'idle';
   let moveAction = 'walk';
+  let cadence = 1;
   if (entry && entry.rig) {
     savedAction = entry.rig.currentAction;
     // Velocidad constante en m/s: la duración crece con el recorrido.
     // La animación se adapta: por encima de ~3.5 m/s corre, y la cadencia
     // de las zancadas se sincroniza con la velocidad real.
-    moveAction = opts.speed !== undefined && opts.speed >= 3.5 ? 'run' : 'walk';
-    entry.rig.setAction(moveAction);
-    const spd = opts.speed !== undefined ? opts.speed : cinema.speed;
+    moveAction = baseSpeed >= 3.5 ? 'run' : 'walk';
     const natural = moveAction === 'run' ? (entry.rig.naturalRun || 4.5) : (entry.rig.naturalWalk || 1.8);
-    entry.rig.cadence = THREE.MathUtils.clamp(spd / natural, 0.6, 2.0);
+    cadence = THREE.MathUtils.clamp(baseSpeed / natural, 0.6, 2.0);
+    // Con delay el personaje arranca con la acción que ya tenía (ej. quieto
+    // trabajando); el walk/run se aplica al terminarse la espera (render.js).
+    if (!(delay > 0)) {
+      entry.rig.setAction(moveAction);
+      entry.rig.cadence = cadence;
+    }
   }
   // Eventos de waypoint: acción al llegar + espera, con su u en la curva
   const evts = [];
@@ -414,20 +433,30 @@ export function startPlayback(id, opts = {}) {
     evts.push({ u: cinemaWaypointU(curve, waypoints[i]), action: ev.action || null, wait: ev.wait || 0, done: false });
   });
   evts.sort((a, b) => a.u - b.u);
+  // Acción final: si hay un evento sobre el último punto (u cercano a 1) con
+  // acción, esa acción PERSISTE al terminar el recorrido en vez de volver a
+  // la previa. Permite "camina hasta el escritorio y queda hablando/sentado".
+  let endAction = null;
+  if (evts.length > 0 && evts[evts.length - 1].u > 0.9 && evts[evts.length - 1].action) {
+    endAction = evts[evts.length - 1].action;
+  }
   playbackInstances.set(id, {
     curve,
     length: curve.getLength(),
     planeY: planeY,
     reversed: !!opts.reversed,
-    speed: opts.speed !== undefined ? opts.speed : cinema.speed,
+    speed: baseSpeed,
     loop: opts.loop !== undefined ? !!opts.loop : cinema.loop,
     progress: 0,
     savedAction,
     moveAction,
-    cadence: entry && entry.rig ? entry.rig.cadence : 1,
+    cadence: cadence,
     events: evts,
-    waiting: 0,
-    lastU: null
+    endAction,
+    waiting: delay > 0 ? delay : 0,
+    // Arranca en el extremo de la curva (0 al avanzar, 1 al revés) para que un
+    // evento situado justo en el primer punto (u=0) se dispare en el 1er frame.
+    lastU: opts.reversed ? 1 : 0
   });
   return true;
 }
@@ -466,8 +495,8 @@ function stopAllPlaybacks() {
 }
 
 function refreshCinemaUI() {
-  const allBtn = document.getElementById('btnCinemaPlayAll');
-  const editCtrls = document.getElementById('cinemaEditControls');
+  const allBtn = byId('btnCinemaPlayAll');
+  const editCtrls = byId('cinemaEditControls');
   if (allBtn) {
     allBtn.textContent = playbackInstances.size > 0 ? '⏹ Detener Todas las Cinemáticas' : '▶ Reproducir Todas las Cinemáticas';
   }
@@ -481,11 +510,12 @@ function refreshCinemaUI() {
 
 // Lista por personaje (seleccionar / reproducir individual)
 function updateCinemaCharList() {
-  const list = document.getElementById('cinemaCharList');
+  const list = byId('cinemaCharList');
   if (!list) return;
   const activeId = getActiveEntry() ? getActiveEntry().id : '';
   const entries = [];
   interactiveRegistry.forEach(entry => {
+    if (entry.deleted) return;               // personajes ocultos: fuera de la lista
     if (entry.type === 'human' || entry.type === 'pet') entries.push(entry);
   });
   entries.sort((a, b) => a.name.localeCompare(b.name));
@@ -590,7 +620,7 @@ function cinemaClearPath() {
 export function updateCameraViewVisibility() {
   const entry = getActiveEntry();
   const show = !!(entry && (entry.type === 'human' || entry.type === 'pet'));
-  const ctrls = document.getElementById('cameraViewControls');
+  const ctrls = byId('cameraViewControls');
   if (ctrls) ctrls.style.display = show ? 'flex' : 'none';
 }
 
@@ -598,7 +628,7 @@ export function setCamView(mode) {
   view.mode = mode;
   view.subjectId = null; // vista manual: sigue al objeto seleccionado
   controls.enabled = (mode === 'orbit');
-  document.querySelectorAll('.view-btn').forEach(b => {
+  qsa('.view-btn').forEach(b => {
     b.classList.toggle('active', b.getAttribute('data-view') === mode);
   });
   if (mode === 'orbit') setStatus('Vista libre (órbita).');
@@ -606,12 +636,29 @@ export function setCamView(mode) {
 }
 
 // Corte de cámara de la timeline: aplica una toma (modo + sujeto) al instante
-export function cutCameraToShot(mode, subjectId) {
+export function cutCameraToShot(mode, subjectId, shot = null) {
   if (mode === 'free') {
-    // Vista Libre: la cámara queda exactamente donde el usuario la dejó
+    // Vista Libre: si la toma guarda un encuadre (el usuario lo dejó con ✕),
+    // se restaura; si no, la cámara queda donde está.
     view.mode = 'orbit';
     view.subjectId = null;
     controls.enabled = true;
+    if (shot && Array.isArray(shot.camPos) && Array.isArray(shot.target)) {
+      camera.position.set(shot.camPos[0], shot.camPos[1], shot.camPos[2]);
+      controls.target.set(shot.target[0], shot.target[1], shot.target[2]);
+      camera.lookAt(controls.target);
+    }
+    return;
+  }
+  if (mode === 'fixed' && shot && Array.isArray(shot.camPos) && Array.isArray(shot.target)) {
+    // Toma FIJA: posición de cámara y punto objetivo definidos por la toma
+    // (planos cerrados, zooms de detalle). La cámara queda clavada ahí.
+    view.mode = 'orbit';   // el loop no la toca: orbit solo hace controls.update()
+    view.subjectId = null;
+    controls.enabled = false;
+    camera.position.set(shot.camPos[0], shot.camPos[1], shot.camPos[2]);
+    controls.target.set(shot.target[0], shot.target[1], shot.target[2]);
+    camera.lookAt(controls.target);
     return;
   }
   view.mode = mode;
@@ -687,6 +734,150 @@ export function updateCinematicCamera(snap = false) {
     controls.target.lerp(look, 0.25);
   }
   camera.lookAt(controls.target);
+}
+
+// En vista PRIMERA PERSONA ocultamos la cabeza del personaje seguido: como la
+// cámara se coloca a la altura de los ojos, de otro modo se vería la nariz,
+// la cara o el cuello del propio personaje (objetos raros en la vista FPV).
+// Al salir de FPV (o cambiar de sujeto) restauramos todas las cabezas.
+let fpvHiddenHead = null;
+function fpvHeadOf(entry) {
+  if (!entry || !entry.rig || !entry.rig.parts) return null;
+  return entry.rig.parts.h_head || entry.rig.parts.d_head || entry.rig.parts.c_head || null;
+}
+export function syncFpvHead() {
+  if (fpvHiddenHead) { fpvHiddenHead.visible = true; fpvHiddenHead = null; }
+  if (view.mode !== 'fpv') return;
+  const entry = interactiveRegistry.get(view.subjectId) || getActiveEntry();
+  const head = fpvHeadOf(entry);
+  if (head) { head.visible = false; fpvHiddenHead = head; }
+}
+
+// ==========================================
+// PREVISIÓN DETERMINISTA DE RECORRIDOS (SCRUB)
+// ==========================================
+const previewCache = new WeakMap();
+
+function getPreviewPath(stored) {
+  const speed = typeof stored.speed === 'number' ? stored.speed : cinema.speed;
+  let pv = previewCache.get(stored);
+  if (pv && pv.speedUsed === speed) return pv;
+
+  const solved = solvePath(stored.waypoints, stored.planeY);
+  const curve = cinemaBuildCurveFrom(solved);
+  if (!curve) return null;
+  let length = 0;
+  try { length = curve.getLength(); } catch (err) { length = 0; }
+  if (!(length > 0)) return null;
+
+  const delay = typeof stored.delay === 'number' ? stored.delay : 0;
+  const moveDur = length / Math.max(0.1, speed);
+  const events = [];
+  Object.keys(stored.events || {}).forEach(k => {
+    const i = parseInt(k, 10);
+    const ev = stored.events[k];
+    if (!ev || i < 0 || i >= stored.waypoints.length) return;
+    if (!ev.action && !(ev.wait > 0)) return;
+    events.push({ u: cinemaWaypointU(curve, stored.waypoints[i]), action: ev.action || null, wait: ev.wait || 0 });
+  });
+  events.sort((a, b) => a.u - b.u);
+
+  const segments = [];
+  let cursor = delay;
+  let prevU = 0;
+  let moveAction = speed >= 3.5 ? 'run' : 'walk';
+  let ladderDrop = null;
+
+  events.forEach(ev => {
+    const arrive = cursor + Math.max(0, ev.u - prevU) * moveDur;
+    if (arrive > cursor) segments.push({ type: 'move', t0: cursor, t1: arrive, u0: prevU, u1: ev.u, action: moveAction });
+    cursor = arrive;
+    if (ev.action === 'shoulder_lift') moveAction = 'shoulder_carry';
+    else if (ev.action === 'shoulder_drop') {
+      moveAction = 'walk';
+      try { ladderDrop = { time: cursor, pos: curve.getPointAt(THREE.MathUtils.clamp(ev.u, 0, 1)) }; } catch (err) { /* sin posición */ }
+    }
+    if (ev.wait > 0) {
+      segments.push({ type: 'wait', t0: cursor, t1: cursor + ev.wait, u: ev.u, action: ev.action || moveAction });
+      cursor += ev.wait;
+    }
+    prevU = ev.u;
+  });
+
+  if (prevU < 1) {
+    const end = cursor + (1 - prevU) * moveDur;
+    if (end > cursor) segments.push({ type: 'move', t0: cursor, t1: end, u0: prevU, u1: 1, action: moveAction });
+    cursor = end;
+  }
+
+  const last = events.length ? events[events.length - 1] : null;
+  pv = {
+    curve, length, speedUsed: speed, delay, moveDur, segments,
+    endAction: (last && last.u > 0.9 && last.action) ? last.action : null,
+    totalEnd: cursor, loop: !!stored.loop, ladderDrop,
+    planeY: stored.planeY || 0
+  };
+  previewCache.set(stored, pv);
+  return pv;
+}
+
+function samplePreviewPath(pv, t, entry) {
+  const initialAction = (entry && entry.initialState && entry.initialState.action) || 'idle';
+  if (!pv) return { u: 0, action: initialAction };
+  if (t < pv.delay) return { u: 0, action: initialAction };
+  let tAbs = t;
+  if (pv.loop) {
+    const cycle = Math.max(0.001, pv.totalEnd - pv.delay);
+    tAbs = pv.delay + ((t - pv.delay) % cycle);
+  } else if (t >= pv.totalEnd) {
+    return { u: 1, action: pv.endAction || initialAction };
+  }
+  for (const seg of pv.segments) {
+    if (tAbs >= seg.t0 && tAbs < seg.t1) {
+      if (seg.type === 'wait') return { u: seg.u, action: seg.action };
+      const f = (tAbs - seg.t0) / Math.max(0.0001, seg.t1 - seg.t0);
+      return { u: seg.u0 + (seg.u1 - seg.u0) * f, action: seg.action };
+    }
+  }
+  return { u: 1, action: pv.endAction || initialAction };
+}
+
+export function evaluateAllPathsAt(t) {
+  if (stepLadder) {
+    stepLadder.position.set(STEP_LADDER_ORIGIN[0], STEP_LADDER_ORIGIN[1], STEP_LADDER_ORIGIN[2]);
+    stepLadder.visible = true;
+  }
+  cinemaPaths.forEach((stored, id) => {
+    const entry = interactiveRegistry.get(id);
+    if (!entry || !stored.waypoints || stored.waypoints.length < 2) return;
+    const pv = getPreviewPath(stored);
+    const s = samplePreviewPath(pv, t, entry);
+    if (!pv) {
+      entry.group.position.set(stored.waypoints[0].x, stored.planeY || 0, stored.waypoints[0].z);
+      if (entry.rig) entry.rig.setAction(s.action);
+      return;
+    }
+    let pos, tan;
+    try {
+      const cu = THREE.MathUtils.clamp(s.u, 0, 1);
+      pos = pv.curve.getPointAt(cu);
+      tan = pv.curve.getTangentAt(cu);
+    } catch (err) {
+      pos = stored.waypoints[0];
+      tan = { x: 0, z: 1 };
+    }
+    entry.group.position.set(pos.x, pv.planeY, pos.z);
+    if (tan && (tan.x || tan.z)) entry.group.rotation.y = Math.atan2(tan.x, tan.z);
+    if (entry.rig) {
+      entry.rig.setAction(s.action || 'idle');
+      const natural = s.action === 'run' ? (entry.rig.naturalRun || 4.5) : (entry.rig.naturalWalk || 1.8);
+      entry.rig.cadence = THREE.MathUtils.clamp(pv.speedUsed / natural, 0.6, 2.0);
+    }
+    if (pv.ladderDrop && id === 'human1' && t >= pv.ladderDrop.time) {
+      stepLadder.position.set(pv.ladderDrop.pos.x, 0, pv.ladderDrop.pos.z + 0.5);
+      stepLadder.visible = true;
+    }
+  });
 }
 
 export {

@@ -1,15 +1,18 @@
 import * as THREE from 'three';
+import { byId, qs, qsa } from './dom.js';
 import { scene, camera, renderer, controls } from './core.js';
-import { cinema, playbackInstances, view, interactiveRegistry, store, recorderState } from './state.js';
+import { cinema, playbackInstances, view, interactiveRegistry, store, recorderState, timeline, playback } from './state.js';
 import { updateSelectionRing } from './selection.js';
 import { updateGizmoPosition } from './gizmo.js';
-import { updateCinematicCamera, refreshCinemaUI, cinemaSetMode } from './cinematics.js';
+import { updateCinematicCamera, refreshCinemaUI, cinemaSetMode, syncFpvHead } from './cinematics.js';
 import { syncSlidersFromTarget } from './ui.js';
-import { serverLedMaterials, officeGroup } from './office.js';
-import { human1Rig, human2Rig, human3Rig, dogRig, catRig } from './characters.js';
 import { resolveCollisions } from './collision.js';
 import { mediaRecorder } from './recorder.js';
 import { updateTimeline } from './timeline.js';
+import { renderSubtitleOverlay } from './subtitles.js';
+import { updateFlyTo } from './viewport.js';
+import { renderQuizOverlay } from './quiz.js';
+import { tickers } from './tickers.js';
 
 // ==========================================
 // CONTINUOUS RENDER LOOP (LIVE ANIMATIONS)
@@ -18,21 +21,28 @@ const clock = new THREE.Clock();
 let globalTime = 0;
 let frameCount = 0;
 let lastFpsUpdate = 0;
-const hudFps = document.getElementById('hudFps');
-const hudCamPos = document.getElementById('hudCamPos');
+const hudFps = byId('hudFps');
+const hudCamPos = byId('hudCamPos');
 
 function animate(timestamp) {
   requestAnimationFrame(animate);
   try {
-    const dt = clock.getDelta();
-    globalTime += dt;
+    const rawDt = clock.getDelta();
+    // Acotar dt: si la pestaña pierde foco o hay un drop de FPS, un dt grande
+    // desincronizaría la escena de la grabación (video no determinista).
+    const dt = Math.min(rawDt, 1 / 20);
+    // Reloj de simulación escalado por la velocidad elegida por el usuario:
+    // recorridos, esperas, timeline y animaciones corren todos al mismo ritmo.
+    // En pausa (timeline.paused) la simulación se congela por completo.
+    const simDt = timeline.paused ? 0 : dt * playback.rate;
+    globalTime += simDt;
 
-    // Run continuous animations for all characters
-    human1Rig.run(globalTime);
-    human2Rig.run(globalTime + 1.2);
-    human3Rig.run(globalTime + 2.4);
-    dogRig.run(globalTime);
-    catRig.run(globalTime + 0.8);
+    // Run continuous animations for all characters (each module registers its
+    // own rigs/tickers: characters, mini rack door, alarm, hacker house, LEDs).
+    tickers.forEach(t => t(simDt, globalTime, dt));
+
+    // Vuelo suave de cámara al objetivo (flyToTarget, js/viewport.js)
+    updateFlyTo(performance.now());
 
     // Mantener gizmo sincronizado con el objeto activo
     updateGizmoPosition();
@@ -47,15 +57,19 @@ function animate(timestamp) {
 
         // Espera en waypoint con evento: quieto hasta agotar el tiempo
         if (inst.waiting > 0) {
-          inst.waiting -= dt;
-          if (inst.waiting <= 0 && entry.rig && inst.moveAction) {
+          inst.waiting -= simDt;
+          // Al terminar la espera se retoma la caminata, salvo que la espera
+          // sea en el punto final con acción de cierre: ahí el personaje
+          // queda quieto haciendo esa acción (hablar, sentarse, etc.)
+          const atEnd = inst.lastU !== null && inst.lastU >= 0.9;
+          if (inst.waiting <= 0 && entry.rig && inst.moveAction && !(atEnd && inst.endAction)) {
             entry.rig.setAction(inst.moveAction);
             entry.rig.cadence = inst.cadence || 1;
           }
           if (inst.waiting > 0) return;
         }
 
-        inst.progress += dt;
+        inst.progress += simDt;
         const dur = inst.length / Math.max(0.1, inst.speed);
         let u = inst.progress / dur;
         let done = false;
@@ -75,6 +89,12 @@ function animate(timestamp) {
               : (inst.lastU <= ev.u && cu >= ev.u);
             if (!crossed) return;
             ev.done = true;
+            // Al cargar la escalera al hombro, mientras camina al destino la
+            // porta (usamos `shoulder_carry` como acción de movimiento en vez
+            // de walk/run, así se ve que la lleva). Al soltarla, vuelve a
+            // caminar normal (la escalera real queda en el piso).
+            if (ev.action === 'shoulder_lift') inst.moveAction = 'shoulder_carry';
+            else if (ev.action === 'shoulder_drop') inst.moveAction = 'walk';
             if (ev.action && entry.rig) entry.rig.setAction(ev.action);
             if (ev.wait > 0) inst.waiting = ev.wait;
           });
@@ -97,7 +117,8 @@ function animate(timestamp) {
           syncSlidersFromTarget();
         }
         if (done) {
-          if (entry.rig) entry.rig.setAction(inst.savedAction || 'idle');
+          // La acción final del recorrido (evento del último punto) persiste
+          if (entry.rig) entry.rig.setAction(inst.endAction || inst.savedAction || 'idle');
           finished.push(id);
         }
       });
@@ -115,23 +136,19 @@ function animate(timestamp) {
     resolveCollisions();
 
     // Secuenciador de escenas: reloj de tomas + cortes de cámara
-    updateTimeline(dt);
-
-    // Blinking server LEDs
-    if (officeGroup.visible && serverLedMaterials.length > 0) {
-      for (let i = 0; i < serverLedMaterials.length; i++) {
-        const mat = serverLedMaterials[i];
-        const blink = Math.sin(globalTime * 9 + i * 1.4) > 0.05;
-        mat.color.setHex(blink ? (i % 2 === 0 ? 0x00ff88 : 0x33aaff) : 0x002211);
-      }
-    }
+    updateTimeline(simDt);
 
     if (recorderState.isRecording) {
+      // recordDuration está en segundos REALES (duración/rate): el reloj de
+      // la grabación avanza con dt real, no con el reloj de simulación.
       recorderState.recordTime += dt;
       if (recorderState.recordTime >= recorderState.recordDuration) {
         if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
       }
     }
+
+    // Mantener la cabeza del sujeto oculta en 1ª persona (y restaurarla al salir)
+    syncFpvHead();
 
     if (view.mode === 'orbit') {
       controls.update();
@@ -139,6 +156,13 @@ function animate(timestamp) {
       updateCinematicCamera();
     }
     renderer.render(scene, camera);
+
+    // Subtítulos dibujados dentro del canvas: se ven mientras la escena
+    // corre Y también al mover la cabeza manualmente (scrub/pausa)
+    renderSubtitleOverlay(timeline.time > 0 ? timeline.time : -1);
+
+    // Cartel de cierre (pregunta + opciones + reloj) sobre el canvas
+    renderQuizOverlay(timeline.time);
 
     frameCount++;
     if (timestamp - lastFpsUpdate > 500) {
@@ -153,7 +177,7 @@ function animate(timestamp) {
     if (!window.__errShown) {
       window.__errShown = true;
       console.error(e);
-      const el = document.getElementById('err');
+      const el = byId('err');
       if (el) el.textContent = 'Error: ' + e.message;
     }
   }

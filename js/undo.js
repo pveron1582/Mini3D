@@ -1,5 +1,7 @@
-import { serializeProject, applyProject } from './projectFiles.js';
+﻿import { serializeProject, applyProject } from './projectFiles.js';
+import { byId, qs, qsa } from './dom.js';
 import { setStatus } from './recorder.js';
+import { sessionDirty } from './state.js';
 
 // ==========================================
 // UNDO / REDO (historial de escena)
@@ -13,8 +15,8 @@ let history = [];
 let index = -1;
 let restoring = false;
 
-const undoBtn = document.getElementById('undoBtn');
-const redoBtn = document.getElementById('redoBtn');
+const undoBtn = byId('undoBtn');
+const redoBtn = byId('redoBtn');
 
 function updateButtons() {
   if (undoBtn) undoBtn.disabled = index <= 0;
@@ -24,6 +26,7 @@ function updateButtons() {
 // Guardar el estado actual. Llamar al confirmar cada cambio.
 export function pushHistory() {
   if (restoring) return;
+  sessionDirty.value = true; // hay cambios sin guardar
   const snap = JSON.stringify(serializeProject());
   if (index >= 0 && history[index] === snap) return; // sin cambios
   history = history.slice(0, index + 1);

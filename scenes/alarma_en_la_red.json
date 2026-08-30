@@ -1,0 +1,2117 @@
+{
+  "app": "MiniStudio 3D",
+  "version": 1,
+  "env": "office",
+  "objects": {
+    "wall1": {
+      "pos": [
+        0,
+        1.85,
+        -11
+      ],
+      "rotY": 0,
+      "scale": 1,
+      "wall": {
+        "w": 30,
+        "h": 3.7,
+        "d": 0.2,
+        "tex": "Paneles claros"
+      }
+    },
+    "wall2": {
+      "pos": [
+        0,
+        1.85,
+        11
+      ],
+      "rotY": 0,
+      "scale": 1,
+      "wall": {
+        "w": 30,
+        "h": 3.7,
+        "d": 0.2,
+        "tex": "Paneles claros"
+      }
+    },
+    "wall3": {
+      "pos": [
+        -15,
+        1.85,
+        0
+      ],
+      "rotY": 0,
+      "scale": 1,
+      "wall": {
+        "w": 0.2,
+        "h": 3.7,
+        "d": 22,
+        "tex": "Paneles claros"
+      }
+    },
+    "wall4": {
+      "pos": [
+        15,
+        1.85,
+        0
+      ],
+      "rotY": 0,
+      "scale": 1,
+      "wall": {
+        "w": 0.2,
+        "h": 3.7,
+        "d": 22,
+        "tex": "Paneles claros"
+      }
+    },
+    "wall5": {
+      "pos": [
+        -12.5,
+        1.75,
+        -4.5
+      ],
+      "rotY": 0,
+      "scale": 1,
+      "wall": {
+        "w": 5,
+        "h": 3.5,
+        "d": 0.15,
+        "tex": "Paneles claros"
+      }
+    },
+    "wall6": {
+      "pos": [
+        -6.5,
+        1.75,
+        -4.5
+      ],
+      "rotY": 0,
+      "scale": 1,
+      "wall": {
+        "w": 4,
+        "h": 3.5,
+        "d": 0.15,
+        "tex": "Paneles claros"
+      }
+    },
+    "wall7": {
+      "pos": [
+        6.5,
+        1.75,
+        -4.5
+      ],
+      "rotY": 0,
+      "scale": 1,
+      "wall": {
+        "w": 4,
+        "h": 3.5,
+        "d": 0.15,
+        "tex": "Paneles claros"
+      }
+    },
+    "wall8": {
+      "pos": [
+        12.5,
+        1.75,
+        -4.5
+      ],
+      "rotY": 0,
+      "scale": 1,
+      "wall": {
+        "w": 5,
+        "h": 3.5,
+        "d": 0.15,
+        "tex": "Paneles claros"
+      }
+    },
+    "wall9": {
+      "pos": [
+        -12.5,
+        1.75,
+        4.5
+      ],
+      "rotY": 0,
+      "scale": 1,
+      "wall": {
+        "w": 5,
+        "h": 3.5,
+        "d": 0.15,
+        "tex": "Paneles claros"
+      }
+    },
+    "wall10": {
+      "pos": [
+        -6.5,
+        1.75,
+        4.5
+      ],
+      "rotY": 0,
+      "scale": 1,
+      "wall": {
+        "w": 4,
+        "h": 3.5,
+        "d": 0.15,
+        "tex": "Paneles claros"
+      }
+    },
+    "wall11": {
+      "pos": [
+        6.5,
+        1.75,
+        4.5
+      ],
+      "rotY": 0,
+      "scale": 1,
+      "wall": {
+        "w": 4,
+        "h": 3.5,
+        "d": 0.15,
+        "tex": "Paneles claros"
+      }
+    },
+    "wall12": {
+      "pos": [
+        12.5,
+        1.75,
+        4.5
+      ],
+      "rotY": 0,
+      "scale": 1,
+      "wall": {
+        "w": 5,
+        "h": 3.5,
+        "d": 0.15,
+        "tex": "Paneles claros"
+      }
+    },
+    "wall13": {
+      "pos": [
+        -4.5,
+        1.75,
+        -7.75
+      ],
+      "rotY": 0,
+      "scale": 1,
+      "wall": {
+        "w": 0.15,
+        "h": 3.5,
+        "d": 6.5,
+        "tex": "Paneles claros"
+      }
+    },
+    "wall14": {
+      "pos": [
+        4.5,
+        1.75,
+        -7.75
+      ],
+      "rotY": 0,
+      "scale": 1,
+      "wall": {
+        "w": 0.15,
+        "h": 3.5,
+        "d": 6.5,
+        "tex": "Paneles claros"
+      }
+    },
+    "wall15": {
+      "pos": [
+        -4.5,
+        1.75,
+        7.75
+      ],
+      "rotY": 0,
+      "scale": 1,
+      "wall": {
+        "w": 0.15,
+        "h": 3.5,
+        "d": 6.5,
+        "tex": "Paneles claros"
+      }
+    },
+    "wall16": {
+      "pos": [
+        4.5,
+        1.75,
+        7.75
+      ],
+      "rotY": 0,
+      "scale": 1,
+      "wall": {
+        "w": 0.15,
+        "h": 3.5,
+        "d": 6.5,
+        "tex": "Paneles claros"
+      }
+    },
+    "door_nw": {
+      "pos": [
+        -9.25,
+        0,
+        -4.5
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "door_ne": {
+      "pos": [
+        9.25,
+        0,
+        -4.5
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "door_so": {
+      "pos": [
+        -9.25,
+        0,
+        4.5
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "door_se": {
+      "pos": [
+        9.25,
+        0,
+        4.5
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "desk1": {
+      "pos": [
+        -1.1,
+        0,
+        -1
+      ],
+      "rotY": 3.14,
+      "scale": 1
+    },
+    "desk2": {
+      "pos": [
+        1.1,
+        0,
+        -1
+      ],
+      "rotY": 3.14,
+      "scale": 1
+    },
+    "desk3": {
+      "pos": [
+        -1.1,
+        0,
+        1
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "desk4": {
+      "pos": [
+        1.1,
+        0,
+        1
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "chair1": {
+      "pos": [
+        -1.1,
+        0,
+        -1.7
+      ],
+      "rotY": 3.14,
+      "scale": 1
+    },
+    "chair2": {
+      "pos": [
+        1.1,
+        0,
+        -1.7
+      ],
+      "rotY": 3.14,
+      "scale": 1
+    },
+    "chair3": {
+      "pos": [
+        -1.1,
+        0,
+        1.7
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "chair4": {
+      "pos": [
+        1.1,
+        0,
+        1.7
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "desk5": {
+      "pos": [
+        -3.4,
+        0,
+        -1.6
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "desk6": {
+      "pos": [
+        -3.4,
+        0,
+        1.6
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "chair5": {
+      "pos": [
+        -2.7,
+        0,
+        -1.6
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "chair6": {
+      "pos": [
+        -2.7,
+        0,
+        1.6
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "deskE1": {
+      "pos": [
+        13.35,
+        0,
+        -1.05
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "chairE1": {
+      "pos": [
+        13.35,
+        0,
+        -0.35
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "deskE2": {
+      "pos": [
+        13.35,
+        0,
+        -1.95
+      ],
+      "rotY": 3.14,
+      "scale": 1
+    },
+    "chairE2": {
+      "pos": [
+        13.35,
+        0,
+        -2.65
+      ],
+      "rotY": 3.14,
+      "scale": 1
+    },
+    "deskE3": {
+      "pos": [
+        13.35,
+        0,
+        1.95
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "chairE3": {
+      "pos": [
+        13.35,
+        0,
+        2.65
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "deskE4": {
+      "pos": [
+        13.35,
+        0,
+        1.05
+      ],
+      "rotY": 3.14,
+      "scale": 1
+    },
+    "chairE4": {
+      "pos": [
+        13.35,
+        0,
+        0.35
+      ],
+      "rotY": 3.14,
+      "scale": 1
+    },
+    "deskE5": {
+      "pos": [
+        12.4,
+        0,
+        -1.05
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "chairE5": {
+      "pos": [
+        12.4,
+        0,
+        -0.35
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "deskE6": {
+      "pos": [
+        12.4,
+        0,
+        -1.95
+      ],
+      "rotY": 3.14,
+      "scale": 1
+    },
+    "chairE6": {
+      "pos": [
+        12.4,
+        0,
+        -2.65
+      ],
+      "rotY": 3.14,
+      "scale": 1
+    },
+    "deskE7": {
+      "pos": [
+        12.4,
+        0,
+        1.95
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "chairE7": {
+      "pos": [
+        12.4,
+        0,
+        2.65
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "deskE8": {
+      "pos": [
+        12.4,
+        0,
+        1.05
+      ],
+      "rotY": 3.14,
+      "scale": 1
+    },
+    "chairE8": {
+      "pos": [
+        12.4,
+        0,
+        0.35
+      ],
+      "rotY": 3.14,
+      "scale": 1
+    },
+    "deskN1": {
+      "pos": [
+        -4,
+        0,
+        -7.5
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "chairN1": {
+      "pos": [
+        -3.3,
+        0,
+        -7.5
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "deskN2": {
+      "pos": [
+        -4,
+        0,
+        -8.5
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "chairN2": {
+      "pos": [
+        -3.3,
+        0,
+        -8.5
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "deskN3": {
+      "pos": [
+        4,
+        0,
+        -7.5
+      ],
+      "rotY": -1.57,
+      "scale": 1
+    },
+    "chairN3": {
+      "pos": [
+        3.3,
+        0,
+        -7.5
+      ],
+      "rotY": -1.57,
+      "scale": 1
+    },
+    "deskN4": {
+      "pos": [
+        4,
+        0,
+        -8.5
+      ],
+      "rotY": -1.57,
+      "scale": 1
+    },
+    "chairN4": {
+      "pos": [
+        3.3,
+        0,
+        -8.5
+      ],
+      "rotY": -1.57,
+      "scale": 1
+    },
+    "deskN5": {
+      "pos": [
+        -0.45,
+        0,
+        -7.5
+      ],
+      "rotY": -1.57,
+      "scale": 1
+    },
+    "chairN5": {
+      "pos": [
+        -1.15,
+        0,
+        -7.5
+      ],
+      "rotY": -1.57,
+      "scale": 1
+    },
+    "deskN6": {
+      "pos": [
+        -0.45,
+        0,
+        -8.5
+      ],
+      "rotY": -1.57,
+      "scale": 1
+    },
+    "chairN6": {
+      "pos": [
+        -1.15,
+        0,
+        -8.5
+      ],
+      "rotY": -1.57,
+      "scale": 1
+    },
+    "deskN7": {
+      "pos": [
+        0.45,
+        0,
+        -7.5
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "chairN7": {
+      "pos": [
+        1.15,
+        0,
+        -7.5
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "deskN8": {
+      "pos": [
+        0.45,
+        0,
+        -8.5
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "chairN8": {
+      "pos": [
+        1.15,
+        0,
+        -8.5
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "sofa1": {
+      "pos": [
+        3.6,
+        0,
+        -1.4
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "sofa2": {
+      "pos": [
+        3.6,
+        0,
+        1.4
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "sofa3": {
+      "pos": [
+        -6.5,
+        0,
+        -4.12
+      ],
+      "rotY": 3.14,
+      "scale": 1
+    },
+    "sofa4": {
+      "pos": [
+        6,
+        0,
+        4.12
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "sofa5": {
+      "pos": [
+        4.12,
+        0,
+        7.5
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "coffeeTable": {
+      "pos": [
+        3,
+        0.21,
+        0
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "plant1": {
+      "pos": [
+        -3.6,
+        0,
+        -3.6
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "plant2": {
+      "pos": [
+        3.6,
+        0,
+        -3.6
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "plant3": {
+      "pos": [
+        -3.6,
+        0,
+        3.6
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "plant4": {
+      "pos": [
+        3.6,
+        0,
+        3.6
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "cabinet1": {
+      "pos": [
+        2.9,
+        0,
+        4.05
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "cabinet2": {
+      "pos": [
+        3.7,
+        0,
+        4.05
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "serverRack1": {
+      "pos": [
+        -13.5,
+        0,
+        -9.5
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "serverRack2": {
+      "pos": [
+        -12.2,
+        0,
+        -9.5
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "serverRack3": {
+      "pos": [
+        -10.9,
+        0,
+        -9.5
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "secFirewall": {
+      "pos": [
+        -14.5,
+        0,
+        -8.2
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "kvmCart": {
+      "pos": [
+        -14,
+        0,
+        -6.4
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "fireExtinct": {
+      "pos": [
+        -10,
+        1,
+        -10.8
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "serverSign": {
+      "pos": [
+        -14.45,
+        2.2,
+        -6
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "benchSR1": {
+      "pos": [
+        -7.5,
+        0,
+        -6.8
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "benchChair1": {
+      "pos": [
+        -6.5,
+        0,
+        -6.8
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "benchSR2": {
+      "pos": [
+        -7.5,
+        0,
+        -8.8
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "benchChair2": {
+      "pos": [
+        -6.5,
+        0,
+        -8.8
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "copierSR": {
+      "pos": [
+        -14.45,
+        0,
+        -5.3
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "shelfSR1": {
+      "pos": [
+        -4.8,
+        0,
+        -7.9
+      ],
+      "rotY": -1.57,
+      "scale": 1
+    },
+    "shelfSR2": {
+      "pos": [
+        -4.8,
+        0,
+        -9.3
+      ],
+      "rotY": -1.57,
+      "scale": 1
+    },
+    "itJunkCorner": {
+      "pos": [
+        0,
+        0,
+        0
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "stepLadder": {
+      "pos": [
+        -6.6,
+        0,
+        -5.05
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "toolWall": {
+      "pos": [
+        -14.84,
+        1.6,
+        -6.8
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "confTable": {
+      "pos": [
+        11.5,
+        0,
+        -7
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "confChair1": {
+      "pos": [
+        10,
+        0,
+        -6
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "confChair2": {
+      "pos": [
+        11.5,
+        0,
+        -6
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "confChair3": {
+      "pos": [
+        13,
+        0,
+        -6
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "confChair4": {
+      "pos": [
+        10,
+        0,
+        -8
+      ],
+      "rotY": 3.14,
+      "scale": 1
+    },
+    "confChair5": {
+      "pos": [
+        11.5,
+        0,
+        -8
+      ],
+      "rotY": 3.14,
+      "scale": 1
+    },
+    "confChair6": {
+      "pos": [
+        13,
+        0,
+        -8
+      ],
+      "rotY": 3.14,
+      "scale": 1
+    },
+    "privateDesk": {
+      "pos": [
+        8.5,
+        0,
+        7.5
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "privateChair": {
+      "pos": [
+        8.5,
+        0,
+        6.8
+      ],
+      "rotY": 3.14,
+      "scale": 1
+    },
+    "execDesk": {
+      "pos": [
+        -9,
+        0,
+        8.4
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "execChair": {
+      "pos": [
+        -9,
+        0,
+        9.6
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "guestChair": {
+      "pos": [
+        -9,
+        0,
+        7.6
+      ],
+      "rotY": 3.14,
+      "scale": 1
+    },
+    "bossSofa1": {
+      "pos": [
+        -14.5,
+        0,
+        6.6
+      ],
+      "rotY": -1.57,
+      "scale": 1
+    },
+    "bossSofa2": {
+      "pos": [
+        -11.8,
+        0,
+        10.5
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "bossTable": {
+      "pos": [
+        -13,
+        0,
+        8.6
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "bossPlant": {
+      "pos": [
+        -14,
+        0,
+        10.4
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "bossClock": {
+      "pos": [
+        -4.6,
+        2.4,
+        7.6
+      ],
+      "rotY": -1.57,
+      "scale": 1
+    },
+    "bossArt1": {
+      "pos": [
+        -4.6,
+        2.1,
+        9.5
+      ],
+      "rotY": -1.57,
+      "scale": 1
+    },
+    "bossArt3": {
+      "pos": [
+        -11.5,
+        2.1,
+        4.59
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "ap4": {
+      "pos": [
+        -14.88,
+        2.25,
+        7.5
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "bossBar": {
+      "pos": [
+        -12.3,
+        0,
+        5.15
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "copier": {
+      "pos": [
+        -4.05,
+        0,
+        0
+      ],
+      "rotY": -1.57,
+      "scale": 1
+    },
+    "dispenser": {
+      "pos": [
+        -14.67,
+        0,
+        2.55
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "vendingMachine": {
+      "pos": [
+        -14.52,
+        0,
+        3.6
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "kitchenCounter": {
+      "pos": [
+        -14.52,
+        0,
+        -1.8
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "fridge": {
+      "pos": [
+        -14.45,
+        0,
+        1.6
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "lunchTable": {
+      "pos": [
+        -10.8,
+        0,
+        0.2
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "lunchChair1": {
+      "pos": [
+        -12.35,
+        0,
+        -1.4
+      ],
+      "rotY": -1.57,
+      "scale": 1
+    },
+    "lunchChair2": {
+      "pos": [
+        -12.35,
+        0,
+        0.2
+      ],
+      "rotY": -1.57,
+      "scale": 1
+    },
+    "lunchChair3": {
+      "pos": [
+        -12.35,
+        0,
+        1.8
+      ],
+      "rotY": -1.57,
+      "scale": 1
+    },
+    "lunchChair4": {
+      "pos": [
+        -9.25,
+        0,
+        -1.4
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "lunchChair5": {
+      "pos": [
+        -9.25,
+        0,
+        0.2
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "lunchChair6": {
+      "pos": [
+        -9.25,
+        0,
+        1.8
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "it_pc": {
+      "pos": [
+        -6.6,
+        0.79,
+        -6.8
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "it_laptop": {
+      "pos": [
+        -1.1,
+        0.79,
+        -0.6
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "mainDoor": {
+      "pos": [
+        0,
+        0,
+        10.85
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "miniRack": {
+      "pos": [
+        14.48,
+        2.3,
+        -9.45
+      ],
+      "rotY": -1.57,
+      "scale": 1
+    },
+    "floorOutlet1": {
+      "pos": [
+        -0.55,
+        0,
+        -1.05
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "floorOutlet2": {
+      "pos": [
+        1.65,
+        0,
+        -1.05
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "floorOutlet3": {
+      "pos": [
+        -1.95,
+        0,
+        1.05
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "floorOutlet4": {
+      "pos": [
+        0.55,
+        0,
+        1.05
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "floorOutlet5": {
+      "pos": [
+        -3.05,
+        0,
+        -0.88
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "floorOutlet6": {
+      "pos": [
+        -3.2,
+        0,
+        2.32
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "floorOutlet7": {
+      "pos": [
+        -3.7,
+        0,
+        0
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "floorOutlet8": {
+      "pos": [
+        13.35,
+        0,
+        -1.05
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "floorOutlet9": {
+      "pos": [
+        13.35,
+        0,
+        -1.95
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "floorOutlet10": {
+      "pos": [
+        13.35,
+        0,
+        1.95
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "floorOutlet11": {
+      "pos": [
+        13.35,
+        0,
+        1.05
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "floorOutlet12": {
+      "pos": [
+        12.4,
+        0,
+        -1.05
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "floorOutlet13": {
+      "pos": [
+        12.4,
+        0,
+        -1.95
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "floorOutlet14": {
+      "pos": [
+        12.4,
+        0,
+        1.95
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "floorOutlet15": {
+      "pos": [
+        12.4,
+        0,
+        1.05
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "elecPanel": {
+      "pos": [
+        -9,
+        1.5,
+        -10.82
+      ],
+      "rotY": 0,
+      "scale": 1
+    },
+    "ap1": {
+      "pos": [
+        2.6,
+        2.25,
+        10.85
+      ],
+      "rotY": 3.14,
+      "scale": 1
+    },
+    "ap2": {
+      "pos": [
+        4.57,
+        2.25,
+        -6.5
+      ],
+      "rotY": -1.57,
+      "scale": 1
+    },
+    "ap3": {
+      "pos": [
+        -4.57,
+        2.25,
+        -8.5
+      ],
+      "rotY": 1.57,
+      "scale": 1
+    },
+    "human1": {
+      "pos": [
+        -9,
+        0,
+        -6.8
+      ],
+      "rotY": -2.23,
+      "scale": 1,
+      "action": "talk"
+    },
+    "human2": {
+      "pos": [
+        10.77,
+        0.17,
+        -9.09
+      ],
+      "rotY": 2.02,
+      "scale": 1,
+      "action": "talk"
+    },
+    "human3": {
+      "pos": [
+        -9.9,
+        0,
+        -7.5
+      ],
+      "rotY": 0.91,
+      "scale": 1,
+      "action": "talk"
+    },
+    "dog": {
+      "pos": [
+        -1.66,
+        0.05,
+        2.87
+      ],
+      "rotY": 2.25,
+      "scale": 1,
+      "action": "sit"
+    },
+    "cat": {
+      "pos": [
+        0.89,
+        0.02,
+        3.2
+      ],
+      "rotY": -1.9,
+      "scale": 1,
+      "action": "sit"
+    }
+  },
+  "paths": {
+    "human1": {
+      "waypoints": [
+        [
+          -9,
+          0,
+          -6.8
+        ],
+        [
+          -9.15,
+          0,
+          -6.5
+        ],
+        [
+          -9.2,
+          0,
+          -5
+        ],
+        [
+          -9.2,
+          0,
+          -3.6
+        ],
+        [
+          0.5,
+          0,
+          -3.2
+        ],
+        [
+          9.2,
+          0,
+          -3.6
+        ],
+        [
+          9.25,
+          0,
+          -5
+        ],
+        [
+          9.6,
+          0,
+          -5.5
+        ],
+        [
+          9.25,
+          0,
+          -4.85
+        ],
+        [
+          9.2,
+          0,
+          -3.7
+        ],
+        [
+          0.5,
+          0,
+          -3.2
+        ],
+        [
+          -9.2,
+          0,
+          -3.7
+        ],
+        [
+          -8.55,
+          0,
+          -4.85
+        ],
+        [
+          -7.35,
+          0,
+          -5.05
+        ],
+        [
+          -8.55,
+          0,
+          -4.9
+        ],
+        [
+          -9.3,
+          0,
+          -3.7
+        ],
+        [
+          0.5,
+          0,
+          -3.2
+        ],
+        [
+          9.2,
+          0,
+          -3.7
+        ],
+        [
+          9.3,
+          0,
+          -4.85
+        ],
+        [
+          13.7,
+          0,
+          -9.55
+        ],
+        [
+          14.1,
+          0,
+          -9.6
+        ]
+      ],
+      "planeY": 0,
+      "events": {
+        "0": {
+          "action": "talk",
+          "wait": 2.95
+        },
+        "7": {
+          "action": "idle",
+          "wait": 6.8
+        },
+        "13": {
+          "action": "shoulder_lift",
+          "wait": 1.5
+        },
+        "19": {
+          "action": "shoulder_drop",
+          "wait": 0
+        },
+        "20": {
+          "action": "idle",
+          "wait": 0
+        }
+      },
+      "speed": 4.5
+    },
+    "human3": {
+      "waypoints": [
+        [
+          -9.9,
+          0,
+          -7.5
+        ],
+        [
+          -9.75,
+          0,
+          -7.2
+        ],
+        [
+          -9.5,
+          0,
+          -5
+        ],
+        [
+          -9.4,
+          0,
+          -3.4
+        ],
+        [
+          -0.5,
+          0,
+          -3
+        ],
+        [
+          8.9,
+          0,
+          -3.4
+        ],
+        [
+          9.3,
+          0,
+          -5.2
+        ],
+        [
+          10.2,
+          0,
+          -5.3
+        ]
+      ],
+      "planeY": 0,
+      "events": {
+        "0": {
+          "action": "talk",
+          "wait": 2.95
+        },
+        "7": {
+          "action": "idle",
+          "wait": 0
+        }
+      },
+      "speed": 4.5
+    },
+    "human2": {
+      "waypoints": [
+        [
+          10.6,
+          0,
+          -8.6
+        ],
+        [
+          10.62,
+          0,
+          -8.62
+        ],
+        [
+          10.89,
+          0,
+          -8.75
+        ]
+      ],
+      "planeY": 0,
+      "events": {
+        "1": {
+          "action": "idle",
+          "wait": 6.5
+        },
+        "2": {
+          "action": "talk",
+          "wait": 0
+        }
+      },
+      "speed": 1
+    },
+    "dog": {
+      "waypoints": [
+        [
+          -2.2,
+          0,
+          2.4
+        ],
+        [
+          -0.4,
+          0,
+          2.4
+        ],
+        [
+          -0.4,
+          0,
+          3.4
+        ],
+        [
+          -2.2,
+          0,
+          3.4
+        ],
+        [
+          -1.7,
+          0,
+          2.9
+        ],
+        [
+          -1.4,
+          0,
+          2.7
+        ]
+      ],
+      "planeY": 0,
+      "events": {
+        "4": {
+          "action": "sit",
+          "wait": 6
+        },
+        "5": {
+          "action": "lay",
+          "wait": 0
+        }
+      },
+      "speed": 1.2
+    },
+    "cat": {
+      "waypoints": [
+        [
+          0.6,
+          0,
+          2.6
+        ],
+        [
+          2.2,
+          0,
+          2.6
+        ],
+        [
+          2.2,
+          0,
+          3.4
+        ],
+        [
+          0.9,
+          0,
+          3.2
+        ],
+        [
+          0.7,
+          0,
+          2.9
+        ]
+      ],
+      "planeY": 0,
+      "events": {
+        "3": {
+          "action": "sit",
+          "wait": 6
+        },
+        "4": {
+          "action": "lay",
+          "wait": 0
+        }
+      },
+      "speed": 1
+    }
+  },
+  "subtitles": [
+    {
+      "start": 0.2,
+      "end": 1.5,
+      "text": "Sala de sistemas — lunes a la mañana"
+    },
+    {
+      "start": 1.6,
+      "end": 2.3,
+      "text": "Alex: Elena... el switch está tirando paquetes otra vez."
+    },
+    {
+      "start": 2.4,
+      "end": 3.1,
+      "text": "Elena: Sí, y el enlace principal sigue al 100%..."
+    },
+    {
+      "start": 3.2,
+      "end": 4.3,
+      "text": "🚨 ¡ALARMA! Intrusión detectada en la red"
+    },
+    {
+      "start": 4.4,
+      "end": 6.4,
+      "text": "¡Corren a la sala de reuniones!"
+    },
+    {
+      "start": 6.6,
+      "end": 8.2,
+      "text": "Jefe: Ya los vi... vengan, miren esto."
+    },
+    {
+      "start": 8.4,
+      "end": 11.4,
+      "text": "🔎 El mini rack del switch principal — ahí entró el ataque"
+    },
+    {
+      "start": 11.7,
+      "end": 14.7,
+      "text": "Alex: El cable del patch panel estaba desconectado... otra vez."
+    },
+    {
+      "start": 15,
+      "end": 16.4,
+      "text": "Jefe: Bien. Traé la llave del rack y la escalera de la sala de sistemas."
+    },
+    {
+      "start": 17,
+      "end": 19.3,
+      "text": "🚜 Alex vuelve corriendo a buscar la escalera"
+    },
+    {
+      "start": 19.9,
+      "end": 21.3,
+      "text": "La agarra y regresa a la sala de juntas"
+    },
+    {
+      "start": 23.4,
+      "end": 26.7,
+      "text": "🔑 Abre la puerta de vidrio del mini rack con la llave"
+    },
+    {
+      "start": 27.2,
+      "end": 29,
+      "text": "🔧 Reconecta el patchcord del switch principal..."
+    },
+    {
+      "start": 29.4,
+      "end": 31,
+      "text": "✅ Alex: Listo, jefe. Enlace restaurado."
+    }
+  ],
+  "timeline": {
+    "time": 6.02,
+    "shots": [
+      {
+        "start": 0,
+        "duration": 1.6,
+        "camMode": "fixed",
+        "subjectId": null,
+        "camPos": [
+          -6,
+          3,
+          -9.5
+        ],
+        "target": [
+          -10,
+          1,
+          -7.2
+        ]
+      },
+      {
+        "start": 1.6,
+        "duration": 0.8,
+        "camMode": "free",
+        "subjectId": null,
+        "camPos": [
+          -13.957364460501852,
+          1.5089872236191662,
+          -7.352224875148135
+        ],
+        "target": [
+          -12.037969843000013,
+          1.2420520622653672,
+          -7.509291491390973
+        ]
+      },
+      {
+        "start": 2.4,
+        "duration": 0.8,
+        "camMode": "cine2",
+        "subjectId": "human3"
+      },
+      {
+        "start": 3.2,
+        "duration": 1.1,
+        "camMode": "fixed",
+        "subjectId": null,
+        "camPos": [
+          -10.9,
+          1.6,
+          -8.9
+        ],
+        "target": [
+          -9.4,
+          1.2,
+          -6.8
+        ],
+        "alarm": true
+      },
+      {
+        "start": 4.3,
+        "duration": 1,
+        "camMode": "aerial",
+        "subjectId": null
+      },
+      {
+        "start": 5.3,
+        "duration": 1.2,
+        "camMode": "fpv",
+        "subjectId": "human1"
+      },
+      {
+        "start": 6.5,
+        "duration": 1.8,
+        "camMode": "cine2",
+        "subjectId": "human2"
+      },
+      {
+        "start": 8.3,
+        "duration": 1.2,
+        "camMode": "fixed",
+        "subjectId": null,
+        "camPos": [
+          10.6,
+          2.1,
+          -6.6
+        ],
+        "target": [
+          14.48,
+          2.2,
+          -9.45
+        ]
+      },
+      {
+        "start": 9.5,
+        "duration": 2,
+        "camMode": "fixed",
+        "subjectId": null,
+        "camPos": [
+          12.6,
+          1.7,
+          -8.8
+        ],
+        "target": [
+          14.48,
+          2.3,
+          -9.45
+        ]
+      },
+      {
+        "start": 11.5,
+        "duration": 3.5,
+        "camMode": "fixed",
+        "subjectId": null,
+        "camPos": [
+          8.7,
+          2,
+          -9.9
+        ],
+        "target": [
+          10.1,
+          1.1,
+          -6.4
+        ]
+      },
+      {
+        "start": 15,
+        "duration": 1.5,
+        "camMode": "cine2",
+        "subjectId": "human2"
+      },
+      {
+        "start": 16.5,
+        "duration": 3.1,
+        "camMode": "fpv",
+        "subjectId": "human1"
+      },
+      {
+        "start": 19.6,
+        "duration": 1.8,
+        "camMode": "fixed",
+        "subjectId": null,
+        "camPos": [
+          -4.9,
+          1.8,
+          -6.6
+        ],
+        "target": [
+          -6.65,
+          0.9,
+          -5.05
+        ]
+      },
+      {
+        "start": 21.4,
+        "duration": 1.6,
+        "camMode": "aerial",
+        "subjectId": null
+      },
+      {
+        "start": 23,
+        "duration": 4,
+        "camMode": "cine2",
+        "subjectId": "human1"
+      },
+      {
+        "start": 27,
+        "duration": 2.2,
+        "camMode": "fixed",
+        "subjectId": null,
+        "camPos": [
+          12.75,
+          2.55,
+          -8.65
+        ],
+        "target": [
+          14.48,
+          2.45,
+          -9.45
+        ]
+      },
+      {
+        "start": 29.2,
+        "duration": 2,
+        "camMode": "fixed",
+        "subjectId": null,
+        "camPos": [
+          10.9,
+          2.2,
+          -6.3
+        ],
+        "target": [
+          14.48,
+          2.35,
+          -9.45
+        ],
+        "alarm": false
+      },
+      {
+        "start": 31.2,
+        "duration": 2.6,
+        "camMode": "fixed",
+        "subjectId": null,
+        "camPos": [
+          11.8,
+          2.7,
+          -9.5
+        ],
+        "target": [
+          14.48,
+          2.4,
+          -9.45
+        ],
+        "openDoor": true
+      },
+      {
+        "start": 33.8,
+        "duration": 12,
+        "camMode": "fixed",
+        "subjectId": null,
+        "camPos": [
+          13.1,
+          2.45,
+          -9.45
+        ],
+        "target": [
+          14.48,
+          2.35,
+          -9.45
+        ],
+        "quiz": {
+          "question": "Alex reconectó el patchcord, pero el ataque entró por la red. ¿Qué debemos hacer PRIMERO para que no vuelva a pasar?",
+          "options": [
+            "Apagar el router de la sala de juntas y esperar",
+            "Cambiar las contraseñas y aislar el switch comprometido",
+            "Borrar los logs del servidor para que nadie lo vea"
+          ],
+          "correct": 1,
+          "duration": 10
+        }
+      }
+    ]
+  }
+}
