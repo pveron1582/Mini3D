@@ -4,13 +4,13 @@
 // serialización de proyectos (serializeProject/applyProject via syncSpawned).
 import { controls } from './core.js';
 import { interactiveRegistry, store } from './state.js';
-import { getActiveEntry, setActiveTarget, clearActiveTarget } from './selection.js';
+import { getActiveEntry, setActiveTarget, clearActiveTarget } from './ui/selection.js';
 import {
   createDesk, createChair, createSofa, createPlant, createFileCabinet,
   createCopier, createEmptyTable, createPCTower, createLaptop
 } from './office/furniture.js';
 import { pushHistory } from './undo.js';
-import { setStatus } from './recorder.js';
+import { setStatus } from './media/recorder.js';
 
 // ==========================================
 // CATÁLOGO DE PIEZAS

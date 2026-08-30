@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import * as geo from './geoCache.js';
 import { officeGroup } from './group.js';
 import { lampLights, lampMeshes } from '../state.js';
-import { registerSelectable } from '../selection.js';
+import { registerSelectable } from '../ui/selection.js';
 
 export function buildCity() {
 // ============================================================

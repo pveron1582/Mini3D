@@ -2,10 +2,10 @@
 // Permite Ctrl+clico, marquesina con rectángulo y mover el bloque seleccionado
 // juntos; Supr/Borrar borra toda la selección.
 import * as THREE from 'three';
-import { scene, camera, canvas } from './core.js';
-import { interactiveRegistry } from './state.js';
+import { scene, camera, canvas } from '../core.js';
+import { interactiveRegistry } from '../state.js';
 import { setActiveTarget, clearActiveTarget } from './selection.js';
-import { pushHistory } from './undo.js';
+import { pushHistory } from '../undo.js';
 
 export const multi = {
   ids: new Set(),

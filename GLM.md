@@ -53,6 +53,14 @@
 > en pantalla / screencast" y el capstone "AI Director local (Ollama)". Detalle
 > en `CHANGELOG.md`.
 >
+> **Actualización 2026-08-28 (reorganización Fases 1 y 2)**: la raíz quedó
+> limpia (15 archivos; logs borrados y reglas consolidadas en `AGENTS.md`) y
+> `js/` se organizó en capas: `characters/`, `cinema/`, `ui/` y `media/`
+> junto al núcleo (core/state/render/collision/etc.) y `office/` que ya
+> existía. ~120 imports reescritos; validadores `check-imports`, `check-scc`,
+> `p7-test`, `p7-loadtest` y `test-geo-cache` en verde. Detalle en
+> `CHANGELOG.md`.
+>
 > **Actualización 2026-08-28 (Lote 3b — Mini Rack, cierra el Lote 3)**: el mini
 > rack de pared ahora es una pieza del catálogo (`createMiniRack` en
 > `js/office/network.js`, categoría `📡 Red`, 33 piezas en total). Su puerta es

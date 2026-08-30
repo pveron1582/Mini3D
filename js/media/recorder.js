@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { byId, qs, qsa } from './dom.js';
-import { canvas, renderer, camera } from './core.js';
-import { store, recorderState } from './state.js';
+import { byId, qs, qsa } from '../dom.js';
+import { canvas, renderer, camera } from '../core.js';
+import { store, recorderState } from '../state.js';
 
 // ==========================================
 // VIDEO RECORDER & EXPORT

@@ -7,11 +7,11 @@
 // Compatibilidad: los proyectos viejos traían shot.quiz anclado a una toma;
 // al abrirlos, projectFiles.js lo migra a esta pista.
 
-import { quizTrack, timeline } from './state.js';
-import { byId } from './dom.js';
-import { showQuiz, resetQuiz, quizIsActive } from './quiz.js';
-import { pushHistory } from './undo.js';
-import { setStatus } from './recorder.js';
+import { quizTrack, timeline } from '../state.js';
+import { byId } from '../dom.js';
+import { showQuiz, resetQuiz, quizIsActive } from '../media/quiz.js';
+import { pushHistory } from '../undo.js';
+import { setStatus } from '../media/recorder.js';
 
 let quizCounter = 0;
 export function bumpQuizCounter(n) { quizCounter = Math.max(quizCounter, n); }

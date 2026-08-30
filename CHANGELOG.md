@@ -2,6 +2,27 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-08-28] — Fase 2 de reorganización: js/ en subcarpetas por capa
+
+- **`js/` pasa de 34 archivos sueltos a 4 subcarpetas + núcleo** (18 módulos
+  core quedan en la raíz de js/):
+  - `js/characters/` — characters.js, characterCreator.js, anchors.js
+  - `js/cinema/` — cinematics.js, timeline.js, quizTrack.js, wizard.js, navigation.js
+  - `js/ui/` — ui.js, gizmo.js, selection.js, multiselect.js, viewport.js
+  - `js/media/` — recorder.js, subtitles.js, quiz.js
+- **~120 imports reescritos** en 28 archivos (rutas relativas recalculadas
+  según el origen: misma carpeta `./`, hermana `../sub/`, raíz `../`).
+  `index.html` no cambió (entra por `js/boot.js`, que no se movió).
+- **`tools/p7-test.mjs`**: paths de import actualizados a las subcarpetas.
+- **`tools/validate-office.cjs` borrado** (deprecado): analizaba nombres por
+  regex sin resolver rutas — daba falsos positivos (un comentario que
+  mencionaba `createMiniRack` lo rompía). `check-imports.cjs` (resolución real
+  de rutas, recursivo), `check-scc.js` y `p7-test.mjs` cubren todo.
+- **`SKILL.md`**: sección "Estructura del código" reescrita con el árbol nuevo
+  por capas (y limpieza de entradas de archivos ya inexistentes).
+- Validadores en verde: `check-imports`, `check-scc`, `p7-test`, `p7-loadtest`,
+  `test-geo-cache`.
+
 ## [2026-08-28] — Fase 1 de reorganización: limpieza de la raíz
 
 - **Borrados**: `server_err.txt` / `server_out.txt` (logs vacíos de serve.py;

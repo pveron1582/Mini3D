@@ -27,39 +27,50 @@ La filosofía del proyecto:
 
 ## Estructura del código
 
+> Fase 2 de reorganización (2026-08-28): `js/` pasó de 34 archivos sueltos a
+> 4 subcarpetas por capa + el núcleo en la raíz de js/.
+
 - `index.html` — UI principal (import map, paneles, menús).
 - `js/boot.js` — punto de entrada: muestra solo el pop-up de inicio (nuevo /
   cargar) y carga el editor (`main.js`) recién después de elegir.
 - `js/main.js` — orquestador del editor: importa e inicializa todo.
 - `js/core.js` — renderer, escena, cámara, OrbitControls.
 - `js/state.js` — estado central compartido.
-- `js/characters.js` — rigs procedurales (humanos y mascotas) y sus animaciones.
-- `js/office/` — entorno oficina, dividido por subsistema (split P1):
-  `group.js` (grupos compartidos: officeGroup, escalera, mini rack, LEDs),
-  `walls.js` (tabiques, puertas, texturas de pared), `materials.js` (materiales),
-  `furniture.js` (fábricas de escritorios/sillas/sillones/PCs), `serverRoom.js`
-  (sala de servidores + escalera + rincón de recambio), `lounge.js` (sala de
-  juntas, oficina del jefe, bar, cocina), `network.js` (mini rack, canales de
-  cableado, APs WiFi), `city.js` (calle/vereda exterior), `alarm.js` (balizas),
-  `hackerHouse.js` (casa del hacker), `geoCache.js` (caché de primitivas
-  compartidas, P9) e `index.js` (orquestador del layout).
-- `js/catalog.js` — catálogo de piezas (P7): spawn/duplicar/borrar objetos del
-  panel "➕ Agregar Objeto" y su persistencia en el JSON de proyecto.
-- `js/multiselect.js` — selección múltiple: Ctrl+clic, marquesina, mover en
-  bloque y borrado de grupo.
-- `js/park.js`, `js/lights.js`, `js/environment.js` — escenarios y luces.
-- `js/cinematics.js` — recorridos por waypoints y vistas de cámara.
-- `js/timeline.js` — secuenciador de escenas: línea de tiempo de tomas de
-  cámara, eventos de waypoint (acción + espera) y grabación de la escena.
-- `js/subtitles.js` — subtítulos dibujados dentro del canvas WebGL (salen en
-  el video grabado); pista de cues `{ start, end, text }`.
-- `js/demoScene.js` — escena de ejemplo de 15s (botón "🎬 Escena Demo").
 - `js/dom.js` — lookups DOM centralizados (`byId` memoizado + `qs`/`qsa`).
-- `js/gizmo.js`, `js/selection.js`, `js/ui.js`, `js/viewport.js` — interacción y UI.
-- `js/render.js` — loop de animación central.
-- `js/recorder.js` — grabación de video.
-- `js/startup.js` — modal de arranque (nuevo/cargar proyecto) y accesos
-  rápidos de la barra superior (guardar, nuevo, undo/redo).
+- `js/render.js` — loop de animación central; `js/tickers.js` — registro de
+  animaciones por frame; `js/collision.js` — colisiones y ley del piso;
+  `js/undo.js` — historial (snapshots JSON); `js/trayDraw.js` — dibujo de
+  canaletas punto a punto; `js/anchors.js` (en characters/) — anclas de asiento.
+- `js/characters/` — personajes: `characters.js` (rigs procedurales humanos y
+  mascotas + gestos one-shot), `characterCreator.js` (modal de creación con
+  género/vestimenta/accesorios) y `anchors.js`.
+- `js/cinema/` — narrativa temporal: `cinematics.js` (recorridos por waypoints
+  y vistas de cámara), `timeline.js` (secuenciador de tomas + eventos de
+  waypoint), `quizTrack.js` (pista de carteles de pregunta), `wizard.js`
+  (asistente de escenas) y `navigation.js` (A* de recorridos).
+- `js/ui/` — interacción: `ui.js` (paneles y selector Editar), `gizmo.js`
+  (flechas/anillo de transformación), `selection.js` (registro de
+  seleccionables), `multiselect.js` (Ctrl+clic, marquesina, grupo) y
+  `viewport.js` (vistas de cámara + vuelo al objetivo).
+- `js/media/` — capas sobre el video: `recorder.js` (grabación/export),
+  `subtitles.js` (subtítulos en canvas WebGL) y `quiz.js` (cartel de pregunta
+  con reloj).
+- `js/office/` — entorno oficina, dividido por subsistema (split P1):
+  `group.js` (grupos compartidos: officeGroup, escalera, registro de mini
+  racks), `walls.js` (tabiques, puertas, texturas de pared), `materials.js`
+  (materiales), `furniture.js` (fábricas de escritorios/sillas/sillones/PCs),
+  `serverRoom.js` (sala de servidores + escalera + rincón de recambio),
+  `lounge.js` (sala de juntas, oficina del jefe, bar, cocina), `network.js`
+  (mini rack con puerta multi-instancia, canaletas, APs WiFi), `city.js`
+  (calle/vereda exterior), `alarm.js` (balizas), `hackerHouse.js` (casa del
+  hacker), `geoCache.js` (caché de primitivas, P9) e `index.js` (orquestador).
+- `js/catalog.js` — catálogo de piezas (P7): spawn/duplicar/borrar objetos y su
+  persistencia en el JSON de proyecto.
+- `js/park.js`, `js/lights.js`, `js/terrain.js`, `js/environment.js` —
+  escenarios y luces.
+- `js/construction.js` — capa de construcción (pisos/paredes/aberturas).
+- `js/projectFiles.js` — guardar/abrir proyectos JSON.
+- `js/startup.js` — modal de arranque y accesos de la barra superior.
 - `vendor/` — Three.js local (única copia en uso).
 - `GLM.md` — informe de revisión del estado del proyecto.
 - `CHANGELOG.md` — registro de cambios (ver abajo).

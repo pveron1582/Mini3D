@@ -1,10 +1,10 @@
 import * as THREE from 'three';
-import { byId, qs, qsa } from './dom.js';
-import { interactiveRegistry, cinemaPaths, timeline } from './state.js';
+import { byId, qs, qsa } from '../dom.js';
+import { interactiveRegistry, cinemaPaths, timeline } from '../state.js';
 import { refreshTimelineUI } from './timeline.js';
-import { setSubtitles } from './subtitles.js';
-import { initUndo } from './undo.js';
-import { setStatus } from './recorder.js';
+import { setSubtitles } from '../media/subtitles.js';
+import { initUndo } from '../undo.js';
+import { setStatus } from '../media/recorder.js';
 
 // ==========================================
 // ASISTENTE DE ESCENAS (🪅) — Diálogo a dos

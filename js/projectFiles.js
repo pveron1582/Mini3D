@@ -3,24 +3,24 @@ import { byId, qs, qsa } from './dom.js';
 import { store, cinema, cinemaPaths, interactiveRegistry, timeline, recorderState, sessionDirty, view } from './state.js';
 import { controls } from './core.js';
 import { setEnvironment } from './environment.js';
-import { updateCinemaCharList, cinemaDeactivate, cutCameraToShot, stopAllPlaybacks, cinemaStorePath } from './cinematics.js';
+import { updateCinemaCharList, cinemaDeactivate, cutCameraToShot, stopAllPlaybacks, cinemaStorePath } from './cinema/cinematics.js';
 import { getWallTexture, wallTextureNames } from './office/walls.js';
 import { windowGroups, syncWindows } from './office/walls.js';
 import { getFloorTextureName, applyFloorTexture } from './office/floor.js';
 import { serializeConstruction, syncConstruction, clearConstruction } from './construction.js';
 import { setAlarm } from './office/alarm.js';
-import { refreshTimelineUI, setShotCounter } from './timeline.js';
-import { setStatus, mediaRecorder } from './recorder.js';
-import { subtitleTrack, setSubtitles } from './subtitles.js';
+import { refreshTimelineUI, setShotCounter } from './cinema/timeline.js';
+import { setStatus, mediaRecorder } from './media/recorder.js';
+import { subtitleTrack, setSubtitles } from './media/subtitles.js';
 import { quizTrack as quizLaneData } from './state.js';
-import { bumpQuizCounter, renderQuizLane, clearQuizSelection } from './quizTrack.js';
+import { bumpQuizCounter, renderQuizLane, clearQuizSelection } from './cinema/quizTrack.js';
 import { syncSpawned } from './catalog.js';
 import {
   clearDefaultCharacters, restoreDefaultCharacters, areDefaultCharactersHidden,
   syncCustomCharacters, clearCustomCharacters
-} from './characters.js';
-import { populateOutliner } from './ui.js';
-import { clearActiveTarget } from './selection.js';
+} from './characters/characters.js';
+import { populateOutliner } from './ui/ui.js';
+import { clearActiveTarget } from './ui/selection.js';
 
 // ==========================================
 // GUARDAR / ABRIR PROYECTO (JSON)

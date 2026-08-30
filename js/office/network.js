@@ -6,7 +6,7 @@ import { officeGroup, registerMiniRack, serverLedMaterials } from './group.js';
 import { createAlarmBeacon } from './alarm.js';
 import { rackMat, metalDeskMat, glassMat, steelMat, goldMat } from './materials.js';
 import { createCopier } from './furniture.js';
-import { registerSelectable } from '../selection.js';
+import { registerSelectable } from '../ui/selection.js';
 import { registerCatalogEntry } from '../catalog.js';
 
 // Materiales de canaletas/cables a nivel de módulo: los reutiliza la fábrica

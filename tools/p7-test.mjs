@@ -79,7 +79,7 @@ const t0 = Date.now();
 const { CATALOG, spawnCatalogItem, deleteActiveObject, duplicateActiveObject, syncSpawned } =
   await import(pathToFileURL('./js/catalog.js'));
 const { toggleInMulti, hasMulti, multi, beginGroupDrag, updateGroupDrag, endGroupDrag, deleteMultiSelection } =
-  await import(pathToFileURL('./js/multiselect.js'));
+  await import(pathToFileURL('./js/ui/multiselect.js'));
 // Importar office/index.js para ejecutar buildServerRoom(), que registra las
 // 5 piezas de equipamiento IT en el catálogo (igual que main.js en el navegador).
 await import(pathToFileURL('./js/office/index.js'));
@@ -234,7 +234,7 @@ const n2 = nearestOnSegment({ x: -1, z: 0 }, { x: 0, z: 0 }, { x: 5, z: 0 });
 assert(n2.t === 0 && Math.abs(n2.x) < 1e-6, 'nearestOnSegment se limita al extremo (imán a punta)');
 
 // --- gestos de un disparo (se reproducen una vez y vuelven a la acción base) ---
-const { GESTURE_DEFS, addHumanCharacter } = await import(pathToFileURL('./js/characters.js'));
+const { GESTURE_DEFS, addHumanCharacter } = await import(pathToFileURL('./js/characters/characters.js'));
 const gnames = ['point', 'wave', 'shrug', 'no', 'clap', 'watch'];
 assert(gnames.every(n => GESTURE_DEFS[n] && GESTURE_DEFS[n].duration > 0 && typeof GESTURE_DEFS[n].animate === 'function'), 'GESTURE_DEFS: 6 gestos con duración y animación');
 const gestoRig = addHumanCharacter('gestoTestChar', 'Gesto Test', 0, 0, 0, {});
@@ -248,7 +248,7 @@ assert(gestoRig.gesture === 'wave', 'playGesture("wave") inicia el gesto');
 gestoRig.setAction('idle');
 
 const { newProject } = await import(pathToFileURL('./js/projectFiles.js'));
-const { areDefaultCharactersHidden } = await import(pathToFileURL('./js/characters.js'));
+const { areDefaultCharactersHidden } = await import(pathToFileURL('./js/characters/characters.js'));
 newProject('proyecto_test');
 assert(areDefaultCharactersHidden() === true, 'proyecto nuevo oculta personajes por defecto');
 assert(interactiveRegistry.get('human1').deleted === true && interactiveRegistry.get('human1').group.visible === false, 'human1 oculto en proyecto nuevo');

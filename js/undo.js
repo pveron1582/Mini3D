@@ -1,6 +1,6 @@
-﻿import { serializeProject, applyProject } from './projectFiles.js';
+import { serializeProject, applyProject } from './projectFiles.js';
 import { byId, qs, qsa } from './dom.js';
-import { setStatus } from './recorder.js';
+import { setStatus } from './media/recorder.js';
 import { sessionDirty } from './state.js';
 
 // ==========================================

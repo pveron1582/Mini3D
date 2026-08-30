@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { scene } from './core.js';
 import { store } from './state.js';
-import { registerSelectable, unregisterSelectable } from './selection.js';
+import { registerSelectable, unregisterSelectable } from './ui/selection.js';
 import {
   addWall, addDoor, createWindow, getWallTexture, setDoorState,
   wallGroups, doorGroups, windowGroups, wallTextureNames

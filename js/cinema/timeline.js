@@ -1,15 +1,15 @@
-import { timeline, cinema, cinemaPaths, interactiveRegistry, recorderState, playback, view, store } from './state.js';
-import { byId, qs, qsa } from './dom.js';
-import { camera, controls } from './core.js';
-import { stepLadder, STEP_LADDER_ORIGIN, openAllRackDoors } from './office/group.js';
-import { setAlarm } from './office/alarm.js';
-import { resetQuiz, quizTick } from './quiz.js';
+import { timeline, cinema, cinemaPaths, interactiveRegistry, recorderState, playback, view, store } from '../state.js';
+import { byId, qs, qsa } from '../dom.js';
+import { camera, controls } from '../core.js';
+import { stepLadder, STEP_LADDER_ORIGIN, openAllRackDoors } from '../office/group.js';
+import { setAlarm } from '../office/alarm.js';
+import { resetQuiz, quizTick } from '../media/quiz.js';
 import { quizPlayTick, renderQuizLane, clearQuizSelection } from './quizTrack.js';
-import { subtitleTrack, refreshSubtitles } from './subtitles.js';
+import { subtitleTrack, refreshSubtitles } from '../media/subtitles.js';
 import { startPlayback, stopAllPlaybacks, cutCameraToShot, setCamView, cinemaStorePath, updateCameraViewVisibility, evaluateAllPathsAt } from './cinematics.js';
-import { startRecording, mediaRecorder, setStatus } from './recorder.js';
-import { pushHistory } from './undo.js';
-import { setActiveTarget } from './selection.js';
+import { startRecording, mediaRecorder, setStatus } from '../media/recorder.js';
+import { pushHistory } from '../undo.js';
+import { setActiveTarget } from '../ui/selection.js';
 
 // ==========================================
 // SECUENCIADOR DE ESCENAS (LÍNEA DE TIEMPO DE TOMAS)

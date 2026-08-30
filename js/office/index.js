@@ -14,7 +14,7 @@ import { buildLounge } from './lounge.js';
 import { buildNetwork } from './network.js';
 import { buildCity } from './city.js';
 import { buildHackerHouseInterior } from './hackerHouse.js';
-import { registerSelectable } from '../selection.js';
+import { registerSelectable } from '../ui/selection.js';
 
 
 

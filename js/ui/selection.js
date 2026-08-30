@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { byId, qs, qsa } from './dom.js';
-import { scene } from './core.js';
-import { store, cinema, view, interactiveRegistry } from './state.js';
+import { byId, qs, qsa } from '../dom.js';
+import { scene } from '../core.js';
+import { store, cinema, view, interactiveRegistry } from '../state.js';
 
 import {
   cinemaStorePath, cinemaLoadTarget, updateCameraViewVisibility,
   refreshCinemaUI, setCamView
-} from './cinematics.js';
+} from '../cinema/cinematics.js';
 // P5: los paneles de UI se actualizan vía onTargetSelected (registrado en ui.js),
 // en vez de que selection.js importe ui.js (rompe el ciclo selection → ui).
 

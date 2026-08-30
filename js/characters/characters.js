@@ -1,11 +1,11 @@
 import * as THREE from 'three';
-import { scene } from './core.js';
-import { registerSelectable } from './selection.js';
-import { stepLadder } from './office/group.js';
-import { updateActionButtonsState, updateMoodButtonsState } from './ui.js';
-import { setStatus } from './recorder.js';
-import { store, interactiveRegistry } from './state.js';
-import { registerTicker } from './tickers.js';
+import { scene } from '../core.js';
+import { registerSelectable } from '../ui/selection.js';
+import { stepLadder } from '../office/group.js';
+import { updateActionButtonsState, updateMoodButtonsState } from '../ui/ui.js';
+import { setStatus } from '../media/recorder.js';
+import { store, interactiveRegistry } from '../state.js';
+import { registerTicker } from '../tickers.js';
 import { anchorPose } from './anchors.js';
 
 // ==========================================

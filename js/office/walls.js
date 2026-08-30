@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import * as geo from './geoCache.js';
 import { renderer } from '../core.js';
 import { officeGroup } from './group.js';
-import { registerSelectable } from '../selection.js';
+import { registerSelectable } from '../ui/selection.js';
 
 // Colisionadores AABB de las paredes (derivados de los grupos de pared)
 export const wallGroups = [];

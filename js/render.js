@@ -2,16 +2,16 @@ import * as THREE from 'three';
 import { byId, qs, qsa } from './dom.js';
 import { scene, camera, renderer, controls } from './core.js';
 import { cinema, playbackInstances, view, interactiveRegistry, store, recorderState, timeline, playback } from './state.js';
-import { updateSelectionRing } from './selection.js';
-import { updateGizmoPosition } from './gizmo.js';
-import { updateCinematicCamera, refreshCinemaUI, cinemaSetMode, syncFpvHead } from './cinematics.js';
-import { syncSlidersFromTarget } from './ui.js';
+import { updateSelectionRing } from './ui/selection.js';
+import { updateGizmoPosition } from './ui/gizmo.js';
+import { updateCinematicCamera, refreshCinemaUI, cinemaSetMode, syncFpvHead } from './cinema/cinematics.js';
+import { syncSlidersFromTarget } from './ui/ui.js';
 import { resolveCollisions } from './collision.js';
-import { mediaRecorder } from './recorder.js';
-import { updateTimeline } from './timeline.js';
-import { renderSubtitleOverlay } from './subtitles.js';
-import { updateFlyTo } from './viewport.js';
-import { renderQuizOverlay } from './quiz.js';
+import { mediaRecorder } from './media/recorder.js';
+import { updateTimeline } from './cinema/timeline.js';
+import { renderSubtitleOverlay } from './media/subtitles.js';
+import { updateFlyTo } from './ui/viewport.js';
+import { renderQuizOverlay } from './media/quiz.js';
 import { tickers } from './tickers.js';
 
 // ==========================================

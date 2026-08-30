@@ -1,13 +1,13 @@
 import * as THREE from 'three';
-import { byId, qs, qsa } from './dom.js';
-import { scene, camera, canvas, controls } from './core.js';
-import { cinema, cinemaPaths, playbackInstances, view, interactiveRegistry } from './state.js';
-import { getActiveObject, getActiveEntry, setActiveTarget } from './selection.js';
-import { raycaster, getPointerNDC, projectPointerToPlane } from './gizmo.js';
-import { setStatus } from './recorder.js';
+import { byId, qs, qsa } from '../dom.js';
+import { scene, camera, canvas, controls } from '../core.js';
+import { cinema, cinemaPaths, playbackInstances, view, interactiveRegistry } from '../state.js';
+import { getActiveObject, getActiveEntry, setActiveTarget } from '../ui/selection.js';
+import { raycaster, getPointerNDC, projectPointerToPlane } from '../ui/gizmo.js';
+import { setStatus } from '../media/recorder.js';
 import { solvePath } from './navigation.js';
-import { pushHistory } from './undo.js';
-import { stepLadder, STEP_LADDER_ORIGIN } from './office/group.js';
+import { pushHistory } from '../undo.js';
+import { stepLadder, STEP_LADDER_ORIGIN } from '../office/group.js';
 
 // ==========================================
 // SISTEMA DE CINEMÁTICA (RECORRIDO ANIMADO)

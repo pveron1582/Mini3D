@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { renderer } from './core.js';
+import { renderer } from '../core.js';
 
 // ==========================================
 // QUIZ DE CIERRE (cartel con pregunta y opciones)

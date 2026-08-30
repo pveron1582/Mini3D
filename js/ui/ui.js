@@ -1,24 +1,24 @@
 import * as THREE from 'three';
-import { byId, qs, qsa } from './dom.js';
-import { camera, canvas, controls } from './core.js';
-import { store, cinema, view, playbackInstances, interactiveRegistry } from './state.js';
+import { byId, qs, qsa } from '../dom.js';
+import { camera, canvas, controls } from '../core.js';
+import { store, cinema, view, playbackInstances, interactiveRegistry } from '../state.js';
 import { getActiveEntry, getActiveObject, setActiveTarget, updateSelectionRing, clearActiveTarget } from './selection.js';
 import {
   setCamView, cinemaDeactivate, startAllPlaybacks, stopAllPlaybacks, refreshCinemaUI
-} from './cinematics.js';
-import { setEnvironment } from './environment.js';
+} from '../cinema/cinematics.js';
+import { setEnvironment } from '../environment.js';
 import { flyToTarget } from './viewport.js';
-import { setStatus } from './recorder.js';
-import { pushHistory } from './undo.js';
-import { applyViewToSelectedShot, clearSubSelection as clearSubtitleSelection, clearSelection as clearShotSelection } from './timeline.js';
-import { clearQuizSelection } from './quizTrack.js';
-import { getWallTexture, wallTextureNames, setWallKind, addWall, setDoorState, addWindow, addDoor } from './office/walls.js';
-import { floorTextureNames, getFloorTextureName, applyFloorTexture } from './office/floor.js';
-import { addConFloor, addConWall, addConDoor, addConWindow, setConFloorTexture, updateConstructionVisibility } from './construction.js';
+import { setStatus } from '../media/recorder.js';
+import { pushHistory } from '../undo.js';
+import { applyViewToSelectedShot, clearSubSelection as clearSubtitleSelection, clearSelection as clearShotSelection } from '../cinema/timeline.js';
+import { clearQuizSelection } from '../cinema/quizTrack.js';
+import { getWallTexture, wallTextureNames, setWallKind, addWall, setDoorState, addWindow, addDoor } from '../office/walls.js';
+import { floorTextureNames, getFloorTextureName, applyFloorTexture } from '../office/floor.js';
+import { addConFloor, addConWall, addConDoor, addConWindow, setConFloorTexture, updateConstructionVisibility } from '../construction.js';
 import { onTargetSelected } from './selection.js';
-import { CATALOG, spawnCatalogItem, deleteActiveObject, duplicateActiveObject } from './catalog.js';
+import { CATALOG, spawnCatalogItem, deleteActiveObject, duplicateActiveObject } from '../catalog.js';
 import { deleteMultiSelection, multiCount } from './multiselect.js';
-import { startTrayDraw, onTrayCreated } from './trayDraw.js';
+import { startTrayDraw, onTrayCreated } from '../trayDraw.js';
 
 // ==========================================
 // OUTLINER / JERARQUÍA COMPLETA

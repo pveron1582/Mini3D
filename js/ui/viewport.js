@@ -1,9 +1,9 @@
-import { camera, controls, renderer } from './core.js';
-import { byId, qs, qsa } from './dom.js';
-import { gridHelper, subGrid, axesGroup, cursor3D } from './lights.js';
-import { setEnvironment } from './environment.js';
-import { recorderState, interactiveRegistry } from './state.js';
-import { setCamView } from './cinematics.js';
+import { camera, controls, renderer } from '../core.js';
+import { byId, qs, qsa } from '../dom.js';
+import { gridHelper, subGrid, axesGroup, cursor3D } from '../lights.js';
+import { setEnvironment } from '../environment.js';
+import { recorderState, interactiveRegistry } from '../state.js';
+import { setCamView } from '../cinema/cinematics.js';
 
 // ==========================================
 // DOM & VIEWPORT CONTROLS

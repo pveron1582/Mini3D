@@ -7,7 +7,7 @@ import { officeGroup } from './office/group.js';
 import { terrainGroup } from './terrain.js';
 import { updateConstructionVisibility } from './construction.js';
 import { store, lampLights, lampMeshes } from './state.js';
-import { setStatus } from './recorder.js';
+import { setStatus } from './media/recorder.js';
 
 // ==========================================
 // ENVIRONMENT SYSTEM (SWITCHER) — P3 data-driven

@@ -1,10 +1,10 @@
 import * as THREE from 'three';
-import { interactiveRegistry } from './state.js';
-import { getWallColliders } from './office/walls.js';
-import { officeGroup } from './office/group.js';
-import { parkGroup } from './park.js';
-import { studioGroup } from './lights.js';
-import { entryRadius } from './collision.js';
+import { interactiveRegistry } from '../state.js';
+import { getWallColliders } from '../office/walls.js';
+import { officeGroup } from '../office/group.js';
+import { parkGroup } from '../park.js';
+import { studioGroup } from '../lights.js';
+import { entryRadius } from '../collision.js';
 
 // ==========================================
 // NAVEGACIÓN AUTOMÁTICA DE RECORRIDOS (A*)

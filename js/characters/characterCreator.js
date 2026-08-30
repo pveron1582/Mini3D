@@ -1,13 +1,13 @@
-ï»¿import * as THREE from 'three';
-import { byId, qs, qsa } from './dom.js';
+import * as THREE from 'three';
+import { byId, qs, qsa } from '../dom.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { controls } from './core.js';
-import { interactiveRegistry } from './state.js';
+import { controls } from '../core.js';
+import { interactiveRegistry } from '../state.js';
 import { createHumanPreview, addHumanCharacter } from './characters.js';
-import { setActiveTarget } from './selection.js';
-import { populateOutliner } from './ui.js';
-import { pushHistory } from './undo.js';
-import { setStatus } from './recorder.js';
+import { setActiveTarget } from '../ui/selection.js';
+import { populateOutliner } from '../ui/ui.js';
+import { pushHistory } from '../undo.js';
+import { setStatus } from '../media/recorder.js';
 
 const modal = byId('charCreatorModal');
 const previewBox = byId('ccPreview');
@@ -25,22 +25,22 @@ const ccHat = byId('ccHat');
 const ccCapAcc = byId('ccCap');
 const ccGenderF = byId('ccGenderF');
 
-// Nombres al azar por gÃ©nero (listas del sistema). El botÃ³n ðŸŽ² elige otro.
-const MALE_NAMES = ['Alejandro', 'Bruno', 'Carlos', 'Diego', 'Emiliano', 'Facundo', 'Gonzalo', 'HernÃ¡n', 'Ignacio', 'Javier', 'Lucas', 'MartÃ­n', 'NicolÃ¡s', 'Ã“scar', 'Pablo', 'Ramiro', 'Santiago', 'TomÃ¡s', 'ValentÃ­n', 'Mateo'];
-const FEMALE_NAMES = ['Ana', 'Bianca', 'Camila', 'Daniela', 'Elena', 'Florencia', 'Guadalupe', 'Hilda', 'Isabel', 'Julia', 'LucÃ­a', 'Marta', 'Natalia', 'Olga', 'Paula', 'RocÃ­o', 'Silvana', 'Tamara', 'Valentina', 'Micaela'];
+// Nombres al azar por género (listas del sistema). El botón ?? elige otro.
+const MALE_NAMES = ['Alejandro', 'Bruno', 'Carlos', 'Diego', 'Emiliano', 'Facundo', 'Gonzalo', 'Hernán', 'Ignacio', 'Javier', 'Lucas', 'Martín', 'Nicolás', 'Óscar', 'Pablo', 'Ramiro', 'Santiago', 'Tomás', 'Valentín', 'Mateo'];
+const FEMALE_NAMES = ['Ana', 'Bianca', 'Camila', 'Daniela', 'Elena', 'Florencia', 'Guadalupe', 'Hilda', 'Isabel', 'Julia', 'Lucía', 'Marta', 'Natalia', 'Olga', 'Paula', 'Rocío', 'Silvana', 'Tamara', 'Valentina', 'Micaela'];
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-// Nombre aleatorio acorde al gÃ©nero, evitando los ya usados en la escena
-// (si los 20 estÃ¡n tomados, cae en uno cualquiera y la validaciÃ³n avisa).
+// Nombre aleatorio acorde al género, evitando los ya usados en la escena
+// (si los 20 están tomados, cae en uno cualquiera y la validación avisa).
 function randomName() {
   const isF = ccGenderF && ccGenderF.checked;
   const pool = (isF ? FEMALE_NAMES : MALE_NAMES).filter(n => !isNameTaken(n));
   return pick(pool.length ? pool : (isF ? FEMALE_NAMES : MALE_NAMES));
 }
 
-// Presets por gÃ©nero: al elegir Mujer el modelo viene YA configurado con un
-// look femenino claramente distinto al del hombre (pelo largo castaÃ±o, ropa
+// Presets por género: al elegir Mujer el modelo viene YA configurado con un
+// look femenino claramente distinto al del hombre (pelo largo castaño, ropa
 // de colores, zapatillas claras); el hombre arranca con el look por defecto.
-// Todo sigue editable despuÃ©s.
+// Todo sigue editable después.
 const FEMALE_PRESET = {
   hairStyle: 'long', skin: '#f5cfae', hairColor: '#6b3d1f',
   outfit: 'casual', shirt: '#e056fd', pants: '#2f3640', shoes: '#d94f70'
@@ -84,7 +84,7 @@ function readColors() {
   const style = ccHairStyle ? ccHairStyle.value : 'short';
   const outfit = ccOutfit ? ccOutfit.value : 'casual';
   // Paletas sugeridas por vestimenta (colores de oficina/limpieza/cocina);
-  // el usuario las puede cambiar despuÃ©s con los color-pickers.
+  // el usuario las puede cambiar después con los color-pickers.
   const OUTFIT_COLORS = {
     casual: { shirt: '#2e64d8', pants: '#232733', shoes: '#111111' },
     office: { shirt: '#f8f9fa', pants: '#1a202c', shoes: '#1a1a1a' },
@@ -111,7 +111,7 @@ function readColors() {
 }
 
 // Aplica la paleta sugerida de la vestimenta a los color-pickers (sin pisar
-// lo que el usuario ya eligiÃ³ a mano: solo al CAMBIAR el select de outfit).
+// lo que el usuario ya eligió a mano: solo al CAMBIAR el select de outfit).
 let lastOutfit = 'casual';
 function applyOutfitPalette() {
   const outfit = ccOutfit ? ccOutfit.value : 'casual';
@@ -195,7 +195,7 @@ function stopLoop() {
 function openCreator() {
   if (!modal) return;
   initPreview();
-  // Arranca SIEMPRE con los valores por defecto (no conserva el Ãºltimo
+  // Arranca SIEMPRE con los valores por defecto (no conserva el último
   // configurado) + nombre aleatorio masculino (hombre marcado por defecto).
   resetCreator();
   if (ccName) ccName.value = randomName();
@@ -218,21 +218,21 @@ function nextCustomId() {
 }
 
 byId('btnAddCharacter')?.addEventListener('click', openCreator);
-// Cerrar el creador PREGUNTA si quiere abandonar sin crear (asÃ­ no se pierde
-// una configuraciÃ³n a medias por un click afuera). Cancelar sigue editando.
+// Cerrar el creador PREGUNTA si quiere abandonar sin crear (así no se pierde
+// una configuración a medias por un click afuera). Cancelar sigue editando.
 byId('ccCancel')?.addEventListener('click', () => {
-  const ok = window.confirm('Â¿Abandonar la creaciÃ³n del personaje sin guardar los cambios?');
+  const ok = window.confirm('¿Abandonar la creación del personaje sin guardar los cambios?');
   if (ok) closeCreator();
 });
-// Click en el fondo del modal: misma confirmaciÃ³n (no cierra por accidente).
+// Click en el fondo del modal: misma confirmación (no cierra por accidente).
 modal?.addEventListener('click', (e) => {
   if (e.target !== modal) return;
-  const ok = window.confirm('Â¿Abandonar la creaciÃ³n del personaje sin guardar los cambios?');
+  const ok = window.confirm('¿Abandonar la creación del personaje sin guardar los cambios?');
   if (ok) closeCreator();
 });
 byId('ccNameDice')?.addEventListener('click', () => { if (ccName) ccName.value = randomName(); });
 
-// Cambiar gÃ©nero: aplica el PRESET de ese gÃ©nero (la mujer llega con look
+// Cambiar género: aplica el PRESET de ese género (la mujer llega con look
 // femenino ya configurado: pelo largo, ropa de colores, zapatillas claras),
 // regenera el nombre acorde y refresca la vista previa. Todo editable.
 [byId('ccGenderM'), ccGenderF].forEach(r => {
@@ -252,7 +252,7 @@ byId('ccNameDice')?.addEventListener('click', () => { if (ccName) ccName.value =
   if (el) el.addEventListener('input', rebuildPreview);
 });
 
-// Â¿Ya existe un personaje/objeto con ese nombre en la escena? (los nombres
+// ¿Ya existe un personaje/objeto con ese nombre en la escena? (los nombres
 // son la etiqueta visible: no pueden repetirse para no confundir dos piezas).
 function isNameTaken(name) {
   let taken = false;
@@ -269,9 +269,9 @@ byId('ccAccept')?.addEventListener('click', () => {
   let name = (ccName && ccName.value || '').trim();
   const id = nextCustomId();
   if (!name) name = 'Personaje ' + id.replace('customChar', '');
-  // Nombre Ãºnico: si ya existe en la escena, se pide otro (no se crea nada).
+  // Nombre único: si ya existe en la escena, se pide otro (no se crea nada).
   if (isNameTaken(name)) {
-    setStatus(`Ya existe "${name}" en la escena: elegÃ­ otro nombre.`);
+    setStatus(`Ya existe "${name}" en la escena: elegí otro nombre.`);
     if (ccName) {
       ccName.focus();
       ccName.select();
@@ -286,8 +286,8 @@ byId('ccAccept')?.addEventListener('click', () => {
   setActiveTarget(id);
   pushHistory();
   setStatus(`Personaje "${name}" agregado.`);
-  // Crear â†’ reiniciar el formulario a los valores por defecto (queda listo
-  // para el prÃ³ximo personaje, sin arrastrar la config reciÃ©n usada).
+  // Crear ? reiniciar el formulario a los valores por defecto (queda listo
+  // para el próximo personaje, sin arrastrar la config recién usada).
   resetCreator();
   closeCreator();
 });

@@ -1,13 +1,13 @@
 import * as THREE from 'three';
-import { byId, qs, qsa } from './dom.js';
-import { scene, camera, canvas, controls } from './core.js';
-import { cinema, view, interactiveRegistry, store } from './state.js';
+import { byId, qs, qsa } from '../dom.js';
+import { scene, camera, canvas, controls } from '../core.js';
+import { cinema, view, interactiveRegistry, store } from '../state.js';
 import { getActiveObject, getActiveEntry, setActiveTarget, updateSelectionRing, selectionRing, clearActiveTarget, onTargetSelected } from './selection.js';
 import { syncSlidersFromTarget, refreshWallPanel } from './ui.js';
-import { pushHistory } from './undo.js';
-import { getWallColliders } from './office/walls.js';
-import { officeGroup } from './office/group.js';
-import { entryRadius, resolveDropAfterDrag } from './collision.js';
+import { pushHistory } from '../undo.js';
+import { getWallColliders } from '../office/walls.js';
+import { officeGroup } from '../office/group.js';
+import { entryRadius, resolveDropAfterDrag } from '../collision.js';
 import { multi, toggleInMulti, hasMulti, isInMulti, multiCount, clearMulti, beginGroupDrag, updateGroupDrag, endGroupDrag, beginMarquee, updateMarquee, endMarquee } from './multiselect.js';
 
 // ==========================================

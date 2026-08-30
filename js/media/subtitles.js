@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { renderer } from './core.js';
-import { subtitlesHiddenAt } from './quizTrack.js';
+import { renderer } from '../core.js';
+import { subtitlesHiddenAt } from '../cinema/quizTrack.js';
 
 // ==========================================
 // SUBTÍTULOS SOBRE EL CANVAS 3D

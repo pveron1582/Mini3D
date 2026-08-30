@@ -24,9 +24,9 @@ import * as THREE from 'three';
 import { scene, camera, renderer } from './core.js';
 import { createCableTrayRun, getFixedTraySegments } from './office/network.js';
 import { interactiveRegistry, store } from './state.js';
-import { setActiveTarget } from './selection.js';
+import { setActiveTarget } from './ui/selection.js';
 import { pushHistory } from './undo.js';
-import { setStatus } from './recorder.js';
+import { setStatus } from './media/recorder.js';
 import { CATALOG } from './catalog.js';
 
 const canvas = renderer.domElement;

@@ -4,8 +4,8 @@ import * as THREE from 'three';
 import * as geo from './geoCache.js';
 import { officeGroup, serverLedMaterials } from './group.js';
 import { woodDeskMat, darkWoodMat, metalDeskMat, chairMat, screenMat } from './materials.js';
-import { registerSelectable } from '../selection.js';
-import { registerAnchor } from '../anchors.js';
+import { registerSelectable } from '../ui/selection.js';
+import { registerAnchor } from '../characters/anchors.js';
 
 // 3. Independent Desks & Chairs (Improved scale: 1.9m width x 0.95m depth)
 export function createDesk(id, name, x, z, rotY = 0, isWood = false) {

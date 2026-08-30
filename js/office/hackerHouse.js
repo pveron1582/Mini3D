@@ -5,7 +5,7 @@ import * as geo from './geoCache.js';
 import { officeGroup, serverLedMaterials } from './group.js';
 import { wallMat } from './walls.js';
 import { glassMat, screenMat } from './materials.js';
-import { registerSelectable } from '../selection.js';
+import { registerSelectable } from '../ui/selection.js';
 import { camera } from '../core.js';
 import { registerTicker } from '../tickers.js';
 

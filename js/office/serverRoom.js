@@ -5,7 +5,7 @@ import * as geo from './geoCache.js';
 import { officeGroup, serverLedMaterials, stepLadder, STEP_LADDER_ORIGIN } from './group.js';
 import { rackMat, screenMat, metalDeskMat, woodDeskMat } from './materials.js';
 import { createChair, createCopier, createEmptyTable } from './furniture.js';
-import { registerSelectable } from '../selection.js';
+import { registerSelectable } from '../ui/selection.js';
 import { registerCatalogEntry } from '../catalog.js';
 
 export function buildServerRoom() {
