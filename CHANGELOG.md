@@ -2,6 +2,25 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-08-28] — Fix menú contextual: animación sin error, asiento funcional + sillas iluminadas
+
+- **Error al clickear una animación del menú**: los botones usaban la clase
+  `action-btn` (sin `data-action`), así que el handler global del panel los
+  capturaba y llamaba `setAction(null)` → TypeError. Ahora usan clase propia
+  `.ctx-btn` (fuera de los handlers globales) con stopPropagation.
+- **"Elegir asiento" no funcionaba**: el click competía con el gizmo y el
+  raycast dependía de `editObjects` (en modo Personajes las sillas no son
+  clickeables). Ahora el modo usa raycast PROPIO contra los grupos con ancla
+  `seat_<id>` e intercepta el click en fase captura (antes del gizmo).
+- **Sillas se iluminan al pasar el mouse** durante la elección: glow verde
+  (emissive) en la silla bajo el cursor. Los materiales de sillas son
+  COMPARTIDOS, así que el glow clona el material del mesh (brilla solo esa
+  silla) y restaura el original al salir.
+- **"Sentado" ya no sienta en el aire**: el botón 🪑 del panel izquierdo (acción
+  `sit`) entra en el modo de elegir asiento (iluminado + click directo), igual
+  que la opción del menú. En cinemáticas `sit` sigue siendo válido para
+  sentarse en el lugar del waypoint; el asiento concreto es `sit_at`.
+
 ## [2026-08-28] — Sentarse real (#4): en cinemática con animación + menú contextual
 
 - **`sit_at` en eventos de waypoint** (cinemáticas): nueva acción "🪑

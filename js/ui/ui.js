@@ -8,6 +8,7 @@ import {
 } from '../cinema/cinematics.js';
 import { setEnvironment } from '../environment.js';
 import { flyToTarget } from './viewport.js';
+import { startPickSeatMode } from './contextMenu.js';
 import { setStatus } from '../media/recorder.js';
 import { pushHistory } from '../undo.js';
 import { applyViewToSelectedShot, clearSubSelection as clearSubtitleSelection, clearSelection as clearShotSelection } from '../cinema/timeline.js';
@@ -226,6 +227,16 @@ document.addEventListener('click', (e) => {
   const actionBtn = e.target.closest('.action-btn');
   if (actionBtn) {
     const act = actionBtn.getAttribute('data-action');
+    // "Sentado" ya no sienta en el aire: entra en el modo de elegir asiento
+    // (las sillas se iluminan al pasar el mouse; click lo sienta directo).
+    // En cinemáticas sigue existiendo `sit` para sentarse en el lugar.
+    if (act === 'sit') {
+      const entry = getActiveEntry();
+      if (entry && entry.type === 'human') {
+        startPickSeatMode();
+        return;
+      }
+    }
     const entry = getActiveEntry();
     if (entry && entry.rig) {
       entry.rig.setAction(act);

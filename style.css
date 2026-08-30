@@ -537,6 +537,18 @@ body, html {
   margin: 4px 0;
 }
 
+/* Botones del menú contextual (clase propia para NO entrar en el handler
+   global de .action-btn del panel izquierdo) */
+.ctx-btn {
+  width: 100%;
+  text-align: left;
+  font-size: 0.78rem;
+  padding: 4px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .cinema-chars-label {
   font-size: 10px;
   font-weight: 700;

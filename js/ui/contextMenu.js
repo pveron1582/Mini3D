@@ -1,31 +1,35 @@
 // js/ui/contextMenu.js — Menú contextual del click derecho sobre un
-// personaje seleccionado (P-sentarse / acciones rápidas).
+// personaje seleccionado (acciones rápidas + sentarse en un asiento).
 //
 //   click derecho en el viewport con un humano activo
-//     → menú con: Animar (sostenidas) · Acción única (gestos) · Elegir asiento.
-//   "Elegir asiento" entra en modo selección: el próximo click IZQUIERDO en
-//   una silla sienta al personaje ahí DIRECTO (sin animación — sirve para
-//   posar la escena: que arranque sentado o se quede durante una toma).
+//     → menú: Animar (sostenidas) · Acción única (gestos) · Sentarse.
+//   "Sentarse en una silla" entra en modo SELECCIÓN DE ASIENTO: el próximo
+//   click IZQUIERDO en una silla/sillón lo sienta ahí (directo, para posar
+//   la escena). Mientras dura el modo, TODOS los asientos válidos se
+//   ILUMINAN al pasar el mouse (feedback de "acá podés"), y ESC cancela.
+//
+// Los botones usan clase propia (.ctx-btn) para NO entrar en los handlers
+// globales de .action-btn del panel (que aplicarían sobre data-action).
 
 import { byId } from '../dom.js';
-import { canvas } from '../core.js';
+import { canvas, camera } from '../core.js';
 import { store, interactiveRegistry } from '../state.js';
-import { getActiveEntry, setActiveTarget } from './selection.js';
+import { getActiveEntry } from './selection.js';
 import { sitAtAnchor, GESTURE_DEFS } from '../characters/characters.js';
-import { raycaster, getIntersectedObjectId } from './gizmo.js';
+import { getAnchor } from '../characters/anchors.js';
+import { raycaster } from './gizmo.js';
 import { setStatus } from '../media/recorder.js';
 import { pushHistory } from '../undo.js';
 import * as THREE from 'three';
 
 const menu = byId('contextMenu');
 let pickSeatMode = false;   // esperando el click en la silla
-let menuTargetId = null;    // personaje sobre el que se abrió
+let menuTargetId = null;    // personaje sobre el que se abrió el menú
 
-// Acciones sostenidas relevantes del panel (mismo orden/vocabulario).
+// ---------- acciones del menú ----------
 const ANIM_ACTIONS = [
   ['idle', '🧍 De pie'],
   ['talk', '🗣️ Hablando'],
-  ['sit', '🪑 Sentado (en el lugar)'],
   ['sit_typing', '💻 Tecleando'],
   ['lay', '🛌 Tirado en piso'],
   ['walk', '🚶 Caminar'],
@@ -35,6 +39,8 @@ const ANIM_ACTIONS = [
   ['point', '👉 Señalar (bucle)'],
   ['hold', '📦 Llevar objeto']
 ];
+// (sin 'sit': "Sentarse" del menú va directo a elegir asiento — no existe
+// "sentarse en el aire": siempre elige dónde sentarse.)
 
 function buildMenu() {
   if (!menu) return;
@@ -44,9 +50,9 @@ function buildMenu() {
     animBox.innerHTML = '';
     ANIM_ACTIONS.forEach(([act, label]) => {
       const b = document.createElement('button');
-      b.className = 'action-btn';
+      b.className = 'ctx-btn blender-btn';
       b.textContent = label;
-      b.addEventListener('click', () => { applyAction(act); hideMenu(); });
+      b.addEventListener('click', (ev) => { ev.stopPropagation(); applyAction(act); hideMenu(); });
       animBox.appendChild(b);
     });
   }
@@ -54,9 +60,9 @@ function buildMenu() {
     gestBox.innerHTML = '';
     Object.keys(GESTURE_DEFS).forEach(name => {
       const b = document.createElement('button');
-      b.className = 'action-btn';
+      b.className = 'ctx-btn blender-btn';
       b.textContent = GESTURE_DEFS[name].label || name;
-      b.addEventListener('click', () => { applyAction('gesture:' + name); hideMenu(); });
+      b.addEventListener('click', (ev) => { ev.stopPropagation(); applyAction('gesture:' + name); hideMenu(); });
       gestBox.appendChild(b);
     });
   }
@@ -71,18 +77,17 @@ function applyAction(act) {
 }
 
 function showMenu(e) {
+  if (!menu) return;
+  menuTargetId = null;
   const entry = getActiveEntry();
-  if (!entry || entry.type !== 'human') return false;
+  if (!entry || entry.type !== 'human') return;
   menuTargetId = entry.id;
-  if (!menu) return false;
   const title = byId('contextMenuTitle');
   if (title) title.textContent = '🧍 ' + entry.name;
   menu.style.display = 'flex';
-  // Clampear para que no se salga de la ventana
-  const w = menu.offsetWidth || 220, h = menu.offsetHeight || 300;
+  const w = menu.offsetWidth || 220, h = menu.offsetHeight || 320;
   menu.style.left = Math.min(e.clientX, window.innerWidth - w - 8) + 'px';
   menu.style.top = Math.min(e.clientY, window.innerHeight - h - 8) + 'px';
-  return true;
 }
 
 function hideMenu() {
@@ -90,54 +95,138 @@ function hideMenu() {
   menuTargetId = null;
 }
 
-byId('contextMenuSit')?.addEventListener('click', () => {
+// ---------- modo "elegir asiento" ----------
+// Asientos válidos: entradas del registry (furniture) con ancla 'seat_<id>'.
+function seatEntries() {
+  const out = [];
+  interactiveRegistry.forEach(entry => {
+    if (entry.deleted || !entry.group || entry.type !== 'furniture') return;
+    if (!getAnchor('seat_' + entry.id)) return;
+    out.push(entry);
+  });
+  return out;
+}
+
+// Raycast PROPIO contra los grupos de asiento (no depende de editObjects:
+// en modo Personajes las sillas no son "clickeables" para el gizmo, pero acá
+// sí hay que poder elegirlas).
+const seatRaycaster = new THREE.Raycaster();
+const seatNDC = new THREE.Vector2();
+
+function pickSeatAt(e) {
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0) return null;
+  seatNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  seatNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  seatRaycaster.setFromCamera(seatNDC, camera);
+  const groups = seatEntries().map(en => en.group);
+  const hits = seatRaycaster.intersectObjects(groups, true);
+  if (hits.length === 0) return null;
+  let curr = hits[0].object;
+  while (curr) {
+    if (curr.userData && curr.userData.selectableRoot) {
+      const root = curr.userData.selectableRoot;
+      const entry = seatEntries().find(en => en.group === root);
+      if (entry) return entry;
+    }
+    curr = curr.parent;
+  }
+  return null;
+}
+
+// Resaltado de asientos en el modo elegir: se ilumina el que está bajo el
+// mouse. Los materiales de las sillas son COMPARTIDOS (chairMat común), así
+// que al iluminar se CLONA el material del mesh (solo esa silla brilla) y
+// al apagar se restaura el original.
+let hoveredSeat = null;
+const glowRestore = []; // { mesh, origMat }
+
+function setSeatGlow(entry, on) {
+  if (!entry || !entry.group) return;
+  if (on) {
+    glowRestore.length = 0;
+    entry.group.traverse(o => {
+      if (!o.isMesh || !o.material) return;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      const clones = mats.map(m => {
+        if (!m || !m.isMeshStandardMaterial) return m;
+        const c = m.clone();
+        c.emissive = new THREE.Color(0x35c46a);
+        c.emissiveIntensity = 0.45;
+        return c;
+      });
+      if (clones.length === 1) o.material = clones[0];
+      else o.material = clones;
+      glowRestore.push({ mesh: o, origMat: mats.length === 1 ? mats[0] : mats });
+    });
+  } else {
+    glowRestore.forEach(r => { r.mesh.material = r.origMat; });
+    glowRestore.length = 0;
+  }
+}
+
+function enterPickSeat() {
   pickSeatMode = true;
   hideMenu();
   setStatus('🪑 Hacé click en la silla donde querés sentarlo (ESC cancela).');
   canvas.style.cursor = 'pointer';
+}
+
+// API pública: lo usa el botón "Sentado" del panel izquierdo (la acción `sit`
+// ya no deja al personaje en el aire — siempre elige la silla).
+export function startPickSeatMode() { enterPickSeat(); }
+
+byId('contextMenuSit')?.addEventListener('click', enterPickSeat);
+
+function exitPickSeat() {
+  pickSeatMode = false;
+  if (hoveredSeat) setSeatGlow(hoveredSeat, false);
+  hoveredSeat = null;
+  canvas.style.cursor = 'default';
+}
+
+// Hover: iluminar la silla bajo el mouse mientras se elige
+canvas.addEventListener('pointermove', (e) => {
+  if (!pickSeatMode) return;
+  const hit = pickSeatAt(e);
+  if (hit === hoveredSeat) return;
+  if (hoveredSeat) setSeatGlow(hoveredSeat, false);
+  if (hit) setSeatGlow(hit, true);
+  hoveredSeat = hit;
 });
 
-// Click derecho: abrir menú SOLO con un humano activo (el resto, el menú
-// nativo del navegador para pan/vuelo sigue igual que siempre).
-canvas.addEventListener('contextmenu', (e) => {
-  const entry = getActiveEntry();
-  if (!entry || entry.type !== 'human') return; // sin humano activo: no abrir
-  e.preventDefault();
-  e.stopPropagation();
-  showMenu(e);
-});
-
-// Modo "elegir asiento": el próximo click izquierdo en una silla lo sienta
-// ahí DIRECTO (sin animación — posiciona para posar la escena).
+// Click en el asiento: capture ANTES del gizmo para que no lo pise la
+// selección normal (en modo Personajes el click en la silla no selecciona).
 canvas.addEventListener('pointerdown', (e) => {
   if (!pickSeatMode || e.button !== 0) return;
-  const hitId = getIntersectedObjectId(e);
-  if (!hitId) return;
-  // Aceptar solo anclas de asiento (sillas registradas con seat_<id>)
-  const anchorName = 'seat_' + hitId;
+  e.preventDefault();
+  e.stopPropagation();
+  const hit = pickSeatAt(e);
+  if (!hit) return;
   const entry = getActiveEntry();
-  if (entry && entry.rig) {
-    const pose = sitAtAnchorDirect(entry.rig, anchorName);
-    if (pose) {
-      pickSeatMode = false;
-      canvas.style.cursor = 'default';
-      setStatus(`${entry.name} sentado en ${interactiveRegistry.get(hitId)?.name || 'el asiento'}.`);
-      pushHistory();
-      e.preventDefault();
-      e.stopPropagation();
-    }
+  if (entry && entry.rig && sitAtAnchor(entry.rig, 'seat_' + hit.id, { instant: true })) {
+    setStatus(`${entry.name} sentado en ${hit.name}.`);
+    pushHistory();
+    exitPickSeat();
   }
 }, true);
 
-// ESC cancela el modo elegir asiento (y cierra el menú si estaba abierto)
+// ESC cancela el modo elegir asiento
 window.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
-  if (pickSeatMode) {
-    pickSeatMode = false;
-    canvas.style.cursor = 'default';
-    setStatus('Selección de asiento cancelada.');
-  }
+  if (pickSeatMode) { exitPickSeat(); setStatus('Selección de asiento cancelada.'); }
   hideMenu();
+});
+
+// ---------- apertura del menú ----------
+// Click derecho SOLO con un humano activo (sin humano: el click derecho
+// sigue siendo pan/vuelo de cámara, como siempre).
+canvas.addEventListener('contextmenu', (e) => {
+  const entry = getActiveEntry();
+  if (!entry || entry.type !== 'human') return;
+  e.preventDefault();
+  e.stopPropagation();
+  showMenu(e);
 });
 
 // Click fuera del menú lo cierra
@@ -145,12 +234,5 @@ window.addEventListener('pointerdown', (e) => {
   if (!menu || menu.style.display === 'none') return;
   if (e.target !== menu && !menu.contains(e.target)) hideMenu();
 }, true);
-
-// Colocación directa (sin animación): pose exacta del ancla + acción sit.
-function sitAtAnchorDirect(rig, anchorName) {
-  // Reutiliza sitAtAnchor con duración ~0: ubicación inmediata.
-  const ok = sitAtAnchor(rig, anchorName, { instant: true });
-  return ok;
-}
 
 buildMenu();
