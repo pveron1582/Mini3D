@@ -2,6 +2,20 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-08-28] — Fase 3 de reorganización: grafo 100% acíclico + npm verify
+
+- **Último ciclo de imports roto** (`js/undo.js` + `js/main.js`): undo.js ya
+  no importa projectFiles.js; `initUndo({ serialize, apply })` recibe las
+  funciones por inyección desde main.js. El grafo queda **sin ningún ciclo**
+  (`check-scc`: "SCCs con ciclo: ninguno" — antes quedaba
+  projectFiles ↔ catalog ↔ undo).
+- **`package.json`**: comandos npm — `verify` (todo: imports + ciclos + suite
+  + loadtest + geo-cache), `check` (imports + ciclos), `test` (p7-test),
+  `test:load` y granulares `check:imports` / `check:scc`. Se retiró la
+  referencia al validate-office.cjs borrado en la Fase 2.
+- **`README.md`**: nueva sección "Comandos de verificación" con los tres
+  comandos principales.
+
 ## [2026-08-28] — Fase 2 de reorganización: js/ en subcarpetas por capa
 
 - **`js/` pasa de 34 archivos sueltos a 4 subcarpetas + núcleo** (18 módulos

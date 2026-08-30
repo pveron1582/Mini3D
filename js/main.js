@@ -35,6 +35,7 @@ import { populateOutliner, syncSlidersFromTarget } from './ui/ui.js';
 import { updateGizmoPosition } from './ui/gizmo.js';
 import { updateCinemaCharList, refreshCinemaUI } from './cinema/cinematics.js';
 import { initUndo } from './undo.js';
+import { serializeProject, applyProject } from './projectFiles.js';
 
 // ==========================================
 // INITIALIZATION
@@ -48,4 +49,7 @@ syncSlidersFromTarget();
 updateGizmoPosition();
 updateCinemaCharList();
 refreshCinemaUI();
-initUndo();
+// Fase 3: el undo recibe la serialización por INYECCIÓN en vez de importar
+// projectFiles (rompía el ciclo projectFiles → catalog → undo). main conoce
+// ambos lados sin circular.
+initUndo({ serialize: serializeProject, apply: applyProject });

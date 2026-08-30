@@ -157,6 +157,14 @@ Mini 3D/
 └── AGENTS.md                # Reglas para agentes (fuente única)
 ```
 
+### Comandos de verificación
+
+```bash
+npm run verify      # TODO: imports + ciclos + suite funcional + carga + geo-cache
+npm run check       # Salud del grafo (imports + ciclos)
+npm test            # Solo la suite funcional
+```
+
 > Importante: `app.js` en la raíz es código heredado y no debe tomarse como referencia de arquitectura del proyecto actual.
 
 ## Cómo ejecutar

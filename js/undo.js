@@ -1,4 +1,3 @@
-import { serializeProject, applyProject } from './projectFiles.js';
 import { byId, qs, qsa } from './dom.js';
 import { setStatus } from './media/recorder.js';
 import { sessionDirty } from './state.js';
@@ -9,11 +8,21 @@ import { sessionDirty } from './state.js';
 // Cada cambio confirmado guarda una foto completa de la escena (JSON).
 // Deshacer/Rehacer restaura esa foto. Botones en la barra superior y
 // atajos Ctrl+Z / Ctrl+Y (o Ctrl+Shift+Z).
+//
+// Fase 3: este módulo ya NO importa projectFiles.js (rompía el último ciclo
+// projectFiles → catalog → undo → projectFiles). Las funciones de
+// serialización/aplicación se INYECTAN desde main.js (initUndo), que conoce
+// ambos lados sin crear dependencia circular.
 
 const MAX_HISTORY = 60;
 let history = [];
 let index = -1;
 let restoring = false;
+
+// Funciones inyectadas (llegan en initUndo). Antes de inicializar, el undo
+// es un no-op seguro: solo registrarían snapshots vacíos.
+let serializeScene = () => ({});
+let applyScene = () => {};
 
 const undoBtn = byId('undoBtn');
 const redoBtn = byId('redoBtn');
@@ -27,7 +36,7 @@ function updateButtons() {
 export function pushHistory() {
   if (restoring) return;
   sessionDirty.value = true; // hay cambios sin guardar
-  const snap = JSON.stringify(serializeProject());
+  const snap = JSON.stringify(serializeScene());
   if (index >= 0 && history[index] === snap) return; // sin cambios
   history = history.slice(0, index + 1);
   history.push(snap);
@@ -53,15 +62,19 @@ export function redo() {
 function restore() {
   restoring = true;
   try {
-    applyProject(JSON.parse(history[index]));
+    applyScene(JSON.parse(history[index]));
   } finally {
     restoring = false;
   }
   updateButtons();
 }
 
-// Historial inicial (estado de arranque de la escena)
-export function initUndo() {
+// Historial inicial (estado de arranque de la escena).
+// `hooks`: { serialize, apply } — inyectados por main.js para romper el ciclo
+// de imports con projectFiles.js (ver comentario arriba).
+export function initUndo(hooks = {}) {
+  if (typeof hooks.serialize === 'function') serializeScene = hooks.serialize;
+  if (typeof hooks.apply === 'function') applyScene = hooks.apply;
   history = [];
   index = -1;
   pushHistory();

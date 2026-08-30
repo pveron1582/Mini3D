@@ -61,6 +61,12 @@
 > `p7-test`, `p7-loadtest` y `test-geo-cache` en verde. Detalle en
 > `CHANGELOG.md`.
 >
+> **Actualización 2026-08-28 (Fase 3 — grafo acíclico)**: el último ciclo de
+> dependencias (projectFiles ↔ catalog ↔ undo) se rompió inyectando las
+> funciones de serialización en `initUndo` desde main.js; `check-scc` reporta
+> cero SCCs. Nuevos comandos npm: `verify` (todo), `check` (grafo) y `test`
+> (suite). Detalle en `CHANGELOG.md`.
+>
 > **Actualización 2026-08-28 (Lote 3b — Mini Rack, cierra el Lote 3)**: el mini
 > rack de pared ahora es una pieza del catálogo (`createMiniRack` en
 > `js/office/network.js`, categoría `📡 Red`, 33 piezas en total). Su puerta es
