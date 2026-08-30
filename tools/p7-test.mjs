@@ -85,7 +85,7 @@ const { toggleInMulti, hasMulti, multi, beginGroupDrag, updateGroupDrag, endGrou
 await import(pathToFileURL('./js/office/index.js'));
 // Ejecutar main.js completo para validar que todo el grafo de arranque carga.
 await import(pathToFileURL('./js/main.js'));
-const { interactiveRegistry, store } = await import(pathToFileURL('./js/state.js'));
+const { interactiveRegistry, store, cinemaPaths } = await import(pathToFileURL('./js/state.js'));
 const { serializeProject, applyProject } = await import(pathToFileURL('./js/projectFiles.js'));
 console.log(`grafo evaluado OK en ${Date.now() - t0} ms`);
 
@@ -265,6 +265,26 @@ addHumanCharacter('customChar2', 'Chef Test', 1, 1, 0, { outfit: 'chef', sunglas
 const withOutfit = serializeProject();
 const serChef = withOutfit.characters.find(c => c.id === 'customChar2');
 assert(!!serChef && serChef.colors.outfit === 'chef' && serChef.colors.sunglasses === true, 'outfit y accesorios del personaje serializados');
+
+// --- sentarse en asiento (sit_at): evento con silla + ancla ---
+const { sitAtAnchor } = await import(pathToFileURL('./js/characters/characters.js'));
+const { anchorPose } = await import(pathToFileURL('./js/characters/anchors.js'));
+const sitRig = addHumanCharacter('sitTestChar', 'Sit Test', 2, 2, 0, {});
+// El evento del waypoint guarda la silla elegida junto a la acción
+const sitPose = anchorPose('seat_chair1');
+assert(!!sitPose, 'ancla de asiento registrada (seat_chair1)');
+assert(sitAtAnchor(sitRig, 'seat_chair1', { instant: true }) === true, 'sitAtAnchor instant coloca directo');
+assert(Math.abs(sitRig.root.position.x - sitPose.x) < 1e-6 && Math.abs(sitRig.root.position.z - sitPose.z) < 1e-6, 'personaje en la pose del asiento');
+assert(sitRig.currentAction === 'sit', 'sentado tras sitAtAnchor instant');
+assert(sitAtAnchor(sitRig, 'seat_inexistente_xyz') === false, 'sitAtAnchor devuelve false con ancla inexistente');
+// Serialización: el evento sit_at guarda la silla (sitAt) en el recorrido
+cinemaPaths.set('sitTestChar', {
+  waypoints: [new (await import('three')).Vector3(2, 0, 2), new (await import('three')).Vector3(4, 0, 2)],
+  planeY: 0, events: { '1': { action: 'sit_at', sitAt: 'chair1', wait: 0 } }
+});
+const withSit = serializeProject();
+const sitEv = withSit.paths['sitTestChar'].events['1'];
+assert(!!sitEv && sitEv.action === 'sit_at' && sitEv.sitAt === 'chair1', 'evento sit_at serializa la silla elegida');
 
 console.log('\n✅ P7: todas las pruebas pasaron');
 process.exit(0);

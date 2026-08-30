@@ -8,6 +8,7 @@ import { createChair, createCopier, createEmptyTable } from './furniture.js';
 import { createWallAP } from './network.js';
 import { createWindow } from './walls.js';
 import { registerSelectable } from '../ui/selection.js';
+import { registerAnchor } from '../characters/anchors.js';
 import { registerCatalogEntry } from '../catalog.js';
 
 const counterMat = new THREE.MeshStandardMaterial({ color: 0xcfd4dc, roughness: 0.35, metalness: 0.2 });
@@ -326,6 +327,7 @@ export function createExecChair(id, name, x, z, rotY = 0) {
   }
   officeGroup.add(g);
   registerSelectable(id, name, g, 'furniture');
+  registerAnchor('seat_' + id, g);
   return g;
 }
 
@@ -348,6 +350,7 @@ export function createGuestChair(id, name, x, z, rotY = 0) {
   g.add(gcBase);
   officeGroup.add(g);
   registerSelectable(id, name, g, 'furniture');
+  registerAnchor('seat_' + id, g);
   return g;
 }
 
@@ -385,6 +388,7 @@ export function createChesterfield(id, name, x, z, rotY = 0) {
   });
   officeGroup.add(g);
   registerSelectable(id, name, g, 'furniture');
+  registerAnchor('seat_' + id, g);
   return g;
 }
 

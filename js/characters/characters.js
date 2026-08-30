@@ -5,7 +5,7 @@ import { stepLadder } from '../office/group.js';
 import { updateActionButtonsState, updateMoodButtonsState } from '../ui/ui.js';
 import { setStatus } from '../media/recorder.js';
 import { store, interactiveRegistry } from '../state.js';
-import { registerTicker } from '../tickers.js';
+import { registerTicker, unregisterTicker } from '../tickers.js';
 import { anchorPose } from './anchors.js';
 
 // ==========================================
@@ -1493,6 +1493,65 @@ export function syncCustomCharacters(list = []) {
 export function clearCustomCharacters() {
   syncCustomCharacters([]);
 }
+
+// ==========================================
+// SENTARSE EN UN ASIENTO (ancla) CON ANIMACIÓN SUAVE
+// ==========================================
+// Coloca al personaje en el asiento registrado con nombre `seat_<ancla>`
+// (ver js/characters/anchors.js): camina/gira hasta la pose del ancla en
+// ~0.8 s (easing) y queda sentado (acción `sit`) mirando como mira la silla.
+// Lo usan los eventos de waypoint `sit_at` (cinemáticas) y el menú contextual.
+// opts.instant = true lo posiciona DIRECTO (sin animación): para posar la
+// escena (que el personaje arranque sentado o se quede durante una toma).
+// La animación corre por ticker propio y se auto-limpia al terminar.
+export function sitAtAnchor(rig, anchorName, opts = {}) {
+  const pose = anchorPose(anchorName);
+  if (!rig || !pose) return false;
+  const root = rig.root;
+
+  if (opts.instant) {
+    // Posicionamiento inmediato: pose exacta + sentado.
+    root.position.set(pose.x, 0, pose.z);
+    root.rotation.y = pose.rotY;
+    rig.setAction('sit');
+    return true;
+  }
+
+  const startX = root.position.x, startZ = root.position.z;
+  const startY = root.position.y;
+  const startRot = root.rotation.y;
+  // Rotación más corta hacia la de la silla
+  let dRot = pose.rotY - startRot;
+  while (dRot > Math.PI) dRot -= Math.PI * 2;
+  while (dRot < -Math.PI) dRot += Math.PI * 2;
+  const targetY = 0; // sentado: el origen del rig apoya en el asiento vía la pose sit
+  const DUR = 0.8;
+  let t = 0;
+  const ease = (x) => x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+  const tick = (simDt) => {
+    t = Math.min(1, t + simDt / DUR);
+    const k = ease(t);
+    root.position.x = startX + (pose.x - startX) * k;
+    root.position.z = startZ + (pose.z - startZ) * k;
+    root.position.y = startY + (targetY - startY) * k;
+    root.rotation.y = startRot + dRot * k;
+    // A mitad de camino empieza a "doblarse" (acción sit): la pose sit baja
+    // el torso a la altura del asiento, así el descenso se lee como sentarse.
+    if (t >= 0.5) rig.setAction('sit');
+    if (t >= 1) {
+      // Fijo la pose final exacta y suelto el ticker
+      root.position.set(pose.x, targetY, pose.z);
+      root.rotation.y = pose.rotY;
+      rig.setAction('sit');
+      const i = sitTickers.indexOf(tick);
+      if (i >= 0) { sitTickers.splice(i, 1); unregisterTicker(tick); }
+    }
+  };
+  sitTickers.push(tick);
+  registerTicker(tick);
+  return true;
+}
+const sitTickers = [];
 
 // TICKERS: los personajes por defecto registran los suyos en ensureDefaultCharacters();
 // los agregados por el editor, en addHumanCharacter().

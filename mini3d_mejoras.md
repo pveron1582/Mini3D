@@ -97,11 +97,15 @@ Campo opcional `audio` en el proyecto JSON: música de fondo + efectos
   stream del canvas (recomendada: sale sincronizado en un solo paso).
 - Dónde: nuevo módulo `js/audio.js`; `recorder.js` combina pistas.
 
-### 4. Sentarse real en sillas (MEDIO impacto / esfuerzo bajo)
-Evento/action `sit_at`: al cruzar un waypoint, buscar la silla registrada
-más cercana, colocar al personaje en ella orientado como la silla.
-- Dónde: `js/render.js` (rama de eventos) + registrar sillas en
-  `interactiveRegistry` con su rotación (ya están).
+### 4. ~~Sentarse real en sillas~~ ✅ (2026-08-28)
+HECHO (mejorado sobre la propuesta original): acción `sit_at` en eventos de
+waypoint con **dropdown de sillas** por nombre (no "la más cercana": la que
+se elige), **animación suave** de 0.8 s hasta el asiento (easing, giro corto,
+se dobla a mitad de camino) y termina sentado mirando como la silla. Además,
+**menú contextual de click derecho** sobre un humano: Animar (sostenidas),
+Acción única (gestos) y "🪑 Elegir asiento…" → click en la silla lo posiciona
+DIRECTO (sin animación) para posar la escena. Anclas `seat_<id>` en todas las
+sillas (oficina, comedor, gerencia, invitado, sillones).
 
 ### 5. Transiciones suaves entre acciones (MEDIO impacto / esfuerzo medio)
 Hoy las poses cambian en seco. Interpolar ángulos de articulaciones durante

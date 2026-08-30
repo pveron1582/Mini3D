@@ -777,7 +777,8 @@
                   <option value="">— sin cambio —</option>
                   <option value="idle">Idle</option>
                   <option value="talk">Hablar</option>
-                  <option value="sit">Sentarse</option>
+                  <option value="sit">Sentarse (en el lugar)</option>
+                  <option value="sit_at">🪑 Sentarse en una silla…</option>
                   <option value="lay">Acostarse</option>
                   <option value="walk">Caminar</option>
                   <option value="run">Correr</option>
@@ -792,6 +793,9 @@
                   <option value="gesture:clap">👏 Gesto: Aplaudir (1 vez)</option>
                   <option value="gesture:watch">⌚ Gesto: Mirar reloj (1 vez)</option>
                 </select>
+              </label>
+              <label class="inline-label" id="waypointEventSeatRow" style="display:none;">Asiento
+                <select id="waypointEventSeat" class="tl-input" style="flex:1;"></select>
               </label>
               <label class="inline-label">Espera <input type="number" id="waypointEventWait" class="tl-input" min="0" step="0.5" value="0" style="width:52px;" /> s</label>
               <div class="btn-grid" style="margin-top:4px;">
@@ -824,6 +828,19 @@
 
         <!-- Banner de instrucción de cinemática -->
         <div id="cinemaBanner" class="cinema-banner" style="display:none;"></div>
+
+    <!-- Menú contextual del click derecho (sobre un personaje seleccionado):
+         acciones rápidas, gestos de un disparo y sentarse en un asiento. -->
+    <div id="contextMenu" class="context-menu" style="display:none;">
+      <div class="context-menu-title" id="contextMenuTitle">Personaje</div>
+      <div class="context-menu-section">Animar</div>
+      <div class="context-menu-items" id="contextMenuAnim"></div>
+      <div class="context-menu-section">Acción única</div>
+      <div class="context-menu-items" id="contextMenuGestures"></div>
+      <div class="context-menu-sep"></div>
+      <button class="blender-btn" id="contextMenuSit" style="width:100%;">🪑 Elegir asiento…</button>
+      <p class="cinema-hint" style="margin:4px 0 0;">Luego hacé click en la silla donde se sienta (sin animación, lo posiciona directo).</p>
+    </div>
 
         <!-- Viewport HUD Info -->
         <div class="hud-top-left">

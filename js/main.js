@@ -13,6 +13,7 @@ import './terrain.js';
 import './construction.js';
 import './ui/selection.js';
 import './ui/gizmo.js';
+import './ui/contextMenu.js';
 import './cinema/cinematics.js';
 import './ui/ui.js';
 import './environment.js';

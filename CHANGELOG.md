@@ -2,6 +2,30 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-08-28] — Sentarse real (#4): en cinemática con animación + menú contextual
+
+- **`sit_at` en eventos de waypoint** (cinemáticas): nueva acción "🪑
+  Sentarse en una silla…" con **dropdown de asientos** por nombre (todas las
+  sillas de la escena con ancla: oficina, este/norte, comedor, gerencia,
+  invitado, sillones — también las spawneadas del catálogo). Al cruzar el
+  waypoint, el recorrido termina ahí y el personaje se acomoda en ESA silla
+  con **animación suave** (~0.8 s, easing): camina hasta la pose del asiento,
+  gira por el camino más corto, a mitad de camino empieza a doblarse (acción
+  `sit`) y queda sentado mirando como mira la silla. Se guarda en el JSON del
+  recorrido (`{ action: 'sit_at', sitAt: '<silla>' }`).
+- **Menú contextual (click derecho)** (`js/ui/contextMenu.js`): con un humano
+  activo, click derecho abre menú con **Animar** (sostenidas), **Acción única**
+  (gestos) y **🪑 Elegir asiento…** — entra en modo selección y el próximo
+  click en una silla lo **posiciona directo** (sin animación) para posar la
+  escena (arrancar sentado o quedarse durante una toma). ESC cancela. Sin
+  humano activo no interfiere (el click derecho sigue siendo pan/vuelo).
+- **Anclas de asiento ampliadas** (`js/office/lounge.js`): `execChair`,
+  `guestChair` y `chesterfield` ahora registran `seat_<id>` (antes solo las
+  sillas comunes). `tickers.js` gana `unregisterTicker` para animaciones de
+  un solo uso.
+- **`tools/p7-test.mjs`**: 6 tests nuevos (ancla, colocación instantánea,
+  pose final, acción `sit`, ancla inexistente, serialización del evento).
+
 ## [2026-08-28] — pnpm documentado como runner de los validadores
 
 - **`README.md`**: comandos de verificación actualizados a `pnpm run verify /

@@ -13,3 +13,9 @@ export const tickers = [];
 export function registerTicker(fn) {
   if (typeof fn === 'function') tickers.push(fn);
 }
+
+// Quita un ticker registrado (p.ej. una animación de un solo uso que termina).
+export function unregisterTicker(fn) {
+  const i = tickers.indexOf(fn);
+  if (i >= 0) tickers.splice(i, 1);
+}

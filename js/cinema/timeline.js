@@ -10,6 +10,7 @@ import { startPlayback, stopAllPlaybacks, cutCameraToShot, setCamView, cinemaSto
 import { startRecording, mediaRecorder, setStatus } from '../media/recorder.js';
 import { pushHistory } from '../undo.js';
 import { setActiveTarget } from '../ui/selection.js';
+import { getAnchor } from '../characters/anchors.js';
 
 // ==========================================
 // SECUENCIADOR DE ESCENAS (LÍNEA DE TIEMPO DE TOMAS)
@@ -686,17 +687,61 @@ window.addEventListener('resize', () => renderShots());
 const evPanel = byId('waypointEventPanel');
 const evTitle = byId('waypointEventTitle');
 const evAction = byId('waypointEventAction');
+const evSeatRow = byId('waypointEventSeatRow');
+const evSeat = byId('waypointEventSeat');
 const evWait = byId('waypointEventWait');
 const evApply = byId('waypointEventApply');
 const evRemove = byId('waypointEventRemove');
 const evClose = byId('waypointEventClose');
 let evWaypointIndex = -1;
 
+// Poblar el dropdown de asientos con las sillas registradas (anclas seat_<id>).
+function fillSeatOptions() {
+  if (!evSeat) return;
+  const current = evSeat.value;
+  evSeat.innerHTML = '';
+  const seats = [];
+  interactiveRegistry.forEach(entry => {
+    if (entry.deleted) return;
+    // Las sillas registran su ancla como 'seat_' + id (ver furniture.js)
+    const g = entry.group;
+    if (!g || entry.type !== 'furniture') return;
+    // Solo las que tienen ancla de asiento: se buscan por nombre en anchors
+    seats.push({ id: entry.id, name: entry.name });
+  });
+  // Filtrar las que de verdad tienen ancla registrada
+  const withAnchor = seats.filter(s => !!getAnchor('seat_' + s.id));
+  if (withAnchor.length === 0) {
+    const o = document.createElement('option');
+    o.value = '';
+    o.textContent = '— no hay sillas con asiento —';
+    evSeat.appendChild(o);
+    return;
+  }
+  withAnchor.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.id;
+    o.textContent = '🪑 ' + s.name;
+    evSeat.appendChild(o);
+  });
+  if (current) evSeat.value = current;
+}
+
+// Mostrar el selector de asiento solo para la acción sit_at
+function syncSeatRowVisibility() {
+  const isSitAt = evAction && evAction.value === 'sit_at';
+  if (evSeatRow) evSeatRow.style.display = isSitAt ? '' : 'none';
+  if (isSitAt) fillSeatOptions();
+}
+evAction?.addEventListener('change', syncSeatRowVisibility);
+
 window.addEventListener('cinema-waypoint-edit', (e) => {
   evWaypointIndex = e.detail.index;
   if (evTitle) evTitle.textContent = `Punto #${evWaypointIndex}`;
   const existing = cinema.events[evWaypointIndex] || {};
   if (evAction) evAction.value = existing.action || '';
+  if (evSeat) evSeat.value = existing.sitAt || '';
+  syncSeatRowVisibility();
   if (evWait) evWait.value = existing.wait || 0;
   if (evPanel) evPanel.style.display = 'block';
 });
@@ -705,7 +750,12 @@ function applyWaypointEvent() {
   if (evWaypointIndex < 0) return;
   const action = evAction ? evAction.value : '';
   const wait = parseFloat(evWait ? evWait.value : 0) || 0;
+  const sitAt = (action === 'sit_at' && evSeat) ? evSeat.value : '';
   if (!action && !(wait > 0)) delete cinema.events[evWaypointIndex];
+  else if (action === 'sit_at') {
+    if (!sitAt) { setStatus('Elegí un asiento para "Sentarse en una silla".'); return; }
+    cinema.events[evWaypointIndex] = { action, sitAt, wait: wait };
+  }
   else cinema.events[evWaypointIndex] = { action: action || null, wait: wait };
   cinemaStorePath(cinema.targetId);
   pushHistory();

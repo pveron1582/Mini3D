@@ -482,6 +482,61 @@ body, html {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
+/* ---------- Menú contextual (click derecho sobre un personaje) ---------- */
+.context-menu {
+  position: fixed;
+  min-width: 210px;
+  max-width: 260px;
+  background: rgba(20, 23, 30, 0.97);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px;
+  z-index: 200;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.context-menu-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-primary);
+  padding: 2px 4px 6px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 2px;
+}
+
+.context-menu-section {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  padding: 3px 4px 1px;
+}
+
+.context-menu-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.context-menu-items .action-btn {
+  width: 100%;
+  text-align: left;
+  font-size: 0.78rem;
+  padding: 4px 8px;
+}
+
+.context-menu-sep {
+  height: 1px;
+  background: var(--border-color);
+  margin: 4px 0;
+}
+
 .cinema-chars-label {
   font-size: 10px;
   font-weight: 700;

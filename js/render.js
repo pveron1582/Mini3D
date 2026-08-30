@@ -12,6 +12,7 @@ import { updateTimeline } from './cinema/timeline.js';
 import { renderSubtitleOverlay } from './media/subtitles.js';
 import { updateFlyTo } from './ui/viewport.js';
 import { renderQuizOverlay } from './media/quiz.js';
+import { sitAtAnchor } from './characters/characters.js';
 import { tickers } from './tickers.js';
 
 // ==========================================
@@ -95,6 +96,16 @@ function animate(timestamp) {
             // caminar normal (la escalera real queda en el piso).
             if (ev.action === 'shoulder_lift') inst.moveAction = 'shoulder_carry';
             else if (ev.action === 'shoulder_drop') inst.moveAction = 'walk';
+            // Sentarse en un asiento concreto (ancla de silla): termina el
+            // recorrido acá — el personaje se acomoda con animación suave en
+            // la silla elegida y queda sentado (no lo pisa el playback).
+            if (ev.action === 'sit_at' && ev.sitAt && entry.rig) {
+              if (sitAtAnchor(entry.rig, ev.sitAt)) {
+                inst.sitAtDone = true;
+                finished.push(id);
+                return;
+              }
+            }
             if (ev.action && entry.rig) entry.rig.setAction(ev.action);
             if (ev.wait > 0) inst.waiting = ev.wait;
           });
