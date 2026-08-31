@@ -202,11 +202,13 @@ assert(miniRackSpawn.userData.doorAngle === 0 && miniRackSpawn.userData.doorHing
 
 // --- canaleta dibujada punto a punto (trayDraw): geometría, puntos y rebuild ---
 const { createCableTrayRun } = await import(pathToFileURL('./js/office/network.js'));
-const runPts = [{ x: 2, z: 2 }, { x: 5, z: 2 }, { x: 5, z: 6 }];
+const runPts = [{ x: 2, z: 7 }, { x: 5, z: 7 }, { x: 5, z: 9.5 }];
 const run = createCableTrayRun('cableTray_run1', 'Canaleta Test', runPts, 3.42);
 run.userData.catalogId = 'cableTray';
 run.userData.spawned = true;
-assert(run.children.length === 2, 'tramo dibujado: 3 puntos -> 2 segmentos');
+// Tramo elegido sin cruces de pared: 2 tramos de canaleta (y pasamuros ninguno)
+const runTrays = run.children.filter(c => c.children.length > 0);
+assert(runTrays.length === 2, 'tramo dibujado: 3 puntos -> 2 segmentos');
 assert(Array.isArray(run.userData.spawnData.points) && run.userData.spawnData.points.length === 3, 'tramo dibujado guarda sus puntos relativos');
 const ctEntry = CATALOG.find(c => c.id === 'cableTray');
 assert(typeof ctEntry.rebuild === 'function', 'catálogo canaleta expone rebuild');
@@ -215,6 +217,17 @@ assert(!!rebuilt && rebuilt.children.length === 2, 'rebuild recrea el tramo desd
 const runSnap = serializeProject();
 const runSer = runSnap.spawned.find(s => s.id === 'cableTray_run1');
 assert(!!runSer && runSer.data && runSer.data.points.length === 3, 'tramo dibujado serializa sus puntos');
+
+// --- canaleta dibujada con pasamuros automáticos (atraviesa tabiques) ---
+// Tramo que cruza el tabique vertical oeste de juntas (x=-4.5): de x=-8 a x=0
+// con z=-7.75 (dentro del rango del tabique). Debe incluir el pasamuro.
+const runWall = createCableTrayRun('cableTray_runWall', 'Cruza Tabique', [{ x: -8, z: -7.75 }, { x: 0, z: -7.75 }], 3.42);
+const sleeves = runWall.children.filter(c => c.children.length === 0 && c.geometry && c.geometry.type === 'CylinderGeometry' && c.material && c.material.color && c.material.color.getHex() === 0x8a929e);
+assert(sleeves.length >= 1, 'tramo que atraviesa tabique genera pasamuro automático');
+// Tramo que NO cruza paredes: sin pasamuros
+const runFree = createCableTrayRun('cableTray_runFree', 'Libre', [{ x: 5, z: 5 }, { x: 9, z: 5 }], 3.42);
+const sleevesFree = runFree.children.filter(c => c.children.length === 0 && c.geometry && c.geometry.type === 'CylinderGeometry' && c.material && c.material.color && c.material.color.getHex() === 0x8a929e);
+assert(sleevesFree.length === 0, 'tramo sin cruces no genera pasamuros');
 
 // --- canaleta: routing ortogonal (sin diagonales), codo 90° e imán/T ---
 const { orthoSnap, routeOrtho, nearestOnSegment } = await import(pathToFileURL('./js/trayDraw.js'));

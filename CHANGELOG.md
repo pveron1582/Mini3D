@@ -2,6 +2,22 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-08-28] — Canaletas: pasamuros completos (fijos que faltaban + automáticos en dibujadas)
+
+- **Instalación fija** (`js/office/network.js`): la canaleta de la pared
+  OESTE atraviesa los tabiques horizontales z=±4.5 sin tubo visible — ahora
+  tiene sus 2 pasamuros (cilindro + anillos en ambas caras, mismo estilo que
+  el resto de la instalación).
+- **Pasamuros AUTOMÁTICOS en canaletas dibujadas** (`createCableTrayRun`): al
+  dibujar un tramo que atraviesa una pared/tabique, el punto de cruce recibe
+  su pasamuro (cilindro + 2 anillos) sin hacer nada — igual que el cableado
+  estructurado real. Detecta el cruce contra los colliders de pared (AABB,
+  funciona con paredes de construcción también) en tramos ortogonales; sin
+  duplicados en esquinas contiguas. Como los pasamuros son hijos del grupo de
+  la canaleta, al moverla con el gizmo acompañan, y se recrean solos al
+  recargar el proyecto (viven en spawnData).
+- Tests: cruce de tabique genera pasamuro; tramo sin cruces no genera ninguno.
+
 ## [2026-08-28] — Hint tipo subtítulo abajo del viewport (modos interactivos)
 
 - **`#viewportHint`** (nuevo, `index.html` + `style.css`): banda oscura

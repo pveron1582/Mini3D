@@ -6,6 +6,7 @@ import { officeGroup, registerMiniRack, serverLedMaterials } from './group.js';
 import { createAlarmBeacon } from './alarm.js';
 import { rackMat, metalDeskMat, glassMat, steelMat, goldMat } from './materials.js';
 import { createCopier } from './furniture.js';
+import { getWallColliders } from './walls.js';
 import { registerSelectable } from '../ui/selection.js';
 import { registerCatalogEntry } from '../catalog.js';
 
@@ -170,6 +171,26 @@ cableDrop(14.78, 0, 0.12, TRAY_Y_OUT);                // bajada hasta el piso (m
 // oeste hacia el sur y por la pared sur, rodeando la oficina del jefe.
 cableTray(-14.82, -10.82, -13.0, -10.82, TRAY_Y_OUT); // cierra el rincón NO con la canaleta existente
 cableTray(-14.82, -10.82, -14.82, 10.82, TRAY_Y_OUT); // pared oeste completa hasta el rincón SO
+// Pasamuros donde la canaleta OESTE atraviesa los tabiques horizontales
+// (z=±4.5): mismos cilindros + anillos que el resto de la instalación.
+[-4.5, 4.5].forEach(sz => {
+  const sleeveW = new THREE.Mesh(
+    geo.cylinder(0.09, 0.09, 0.34, 10),
+    new THREE.MeshStandardMaterial({ color: 0x8a929e, roughness: 0.4, metalness: 0.7 })
+  );
+  sleeveW.rotation.x = Math.PI / 2;
+  sleeveW.position.set(-14.82, TRAY_Y_OUT, sz);
+  officeGroup.add(sleeveW);
+  [-0.17, 0.17].forEach(sx => {
+    const ringW = new THREE.Mesh(
+      geo.torus(0.1, 0.02, 8, 16),
+      new THREE.MeshStandardMaterial({ color: 0x5a6068, roughness: 0.35, metalness: 0.8 })
+    );
+    ringW.rotation.y = Math.PI / 2;
+    ringW.position.set(-14.82 + sx, TRAY_Y_OUT, sz);
+    officeGroup.add(ringW);
+  });
+});
 cableTray(-14.82, 10.82, -4.82, 10.82, TRAY_Y_OUT);   // pared sur hasta el tabique este del jefe
 // Ramal dentro de la oficina del jefe: por el borde superior del tabique
 // norte (z=4.5, altura TRAY_Y) hasta el eje de la impresora (x=-10.4),
@@ -479,10 +500,59 @@ const r2 = (v) => Math.round(v * 100) / 100;
 // grupo se ancla en el primer punto y cada tramo se ubica relativo a él, así al
 // mover el objeto con el gizmo se desplaza entero. Guarda los puntos relativos
 // en userData.spawnData para poder recrearse al cargar el proyecto.
+// Donde un tramo ATRAVIESA una pared (collider), se agrega un PASAMUROS
+// (cilindro + 2 anillos) en el punto de cruce — igual que la instalación fija:
+// el tubo se ve atravesando el tabique.
+const sleeveMat = new THREE.MeshStandardMaterial({ color: 0x8a929e, roughness: 0.4, metalness: 0.7 });
+const ringMat = new THREE.MeshStandardMaterial({ color: 0x5a6068, roughness: 0.35, metalness: 0.8 });
+
+// Agrega un pasamuro en (x, y, z) orientado sobre el eje X o Z del mundo.
+// El cilindro atraviesa el espesor de la pared y los anillos marcan ambas caras.
+function addSleeveAt(g, x, y, z, alongZ) {
+  const sleeve = new THREE.Mesh(geo.cylinder(0.09, 0.09, 0.34, 10), sleeveMat);
+  if (alongZ) sleeve.rotation.x = Math.PI / 2;
+  else sleeve.rotation.z = Math.PI / 2;
+  sleeve.position.set(x - g.position.x, y - g.position.y, z - g.position.z);
+  g.add(sleeve);
+  const offs = [0.17, -0.17];
+  offs.forEach(o => {
+    const ring = new THREE.Mesh(geo.torus(0.1, 0.02, 8, 16), ringMat);
+    if (!alongZ) ring.rotation.y = Math.PI / 2;
+    ring.position.set(
+      sleeve.position.x + (alongZ ? 0 : o),
+      sleeve.position.y,
+      sleeve.position.z + (alongZ ? o : 0)
+    );
+    g.add(ring);
+  });
+}
+
+// ¿El segmento a→b atraviesa el AABB de una pared? Devuelve el punto de cruce
+// (mundo) o null. Solo segmentos rectos (X o Z): el routing es ortogonal.
+function segmentWallCross(a, b, box) {
+  // Tramo horizontal (varía x, z constante): cruza si z cae en el rango del
+  // box y el x del box está entre a.x y b.x.
+  if (Math.abs(b.z - a.z) < 1e-6) {
+    if (a.z < box.minZ || a.z > box.maxZ) return null;
+    const x0 = Math.min(a.x, b.x), x1 = Math.max(a.x, b.x);
+    if (box.maxX <= x0 || box.minX >= x1) return null;
+    return { x: (box.minX + box.maxX) / 2, z: a.z, alongZ: false };
+  }
+  // Tramo vertical (varía z, x constante)
+  if (Math.abs(b.x - a.x) < 1e-6) {
+    if (a.x < box.minX || a.x > box.maxX) return null;
+    const z0 = Math.min(a.z, b.z), z1 = Math.max(a.z, b.z);
+    if (box.maxZ <= z0 || box.minZ >= z1) return null;
+    return { x: a.x, z: (box.minZ + box.maxZ) / 2, alongZ: true };
+  }
+  return null; // diagonales no ocurren (routing ortogonal)
+}
+
 export function createCableTrayRun(id, name, absPoints, y = 3.42) {
   const g = new THREE.Group();
   const ox = absPoints[0].x, oz = absPoints[0].z;
   g.position.set(ox, y, oz);
+  const walls = getWallColliders();
   for (let i = 0; i < absPoints.length - 1; i++) {
     const a = absPoints[i], b = absPoints[i + 1];
     const len = Math.hypot(b.x - a.x, b.z - a.z);
@@ -491,6 +561,18 @@ export function createCableTrayRun(id, name, absPoints, y = 3.42) {
     seg.position.set((a.x + b.x) / 2 - ox, 0, (a.z + b.z) / 2 - oz);
     seg.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x);
     g.add(seg);
+    // Pasamuros automático donde ESTE tramo atraviesa una pared (sin repetir
+    // el mismo cruce en tramos contiguos).
+    for (const box of walls) {
+      const cross = segmentWallCross(a, b, box);
+      if (!cross) continue;
+      // Evitar duplicado con el tramo anterior (esquinas comparten la pared)
+      const dup = g.userData._crosses && g.userData._crosses.some(c =>
+        Math.abs(c.x - cross.x) < 0.01 && Math.abs(c.z - cross.z) < 0.01);
+      if (dup) continue;
+      addSleeveAt(g, cross.x, 0, cross.z, cross.alongZ);
+      (g.userData._crosses = g.userData._crosses || []).push(cross);
+    }
   }
   officeGroup.add(g);
   registerSelectable(id, name, g, 'prop');
