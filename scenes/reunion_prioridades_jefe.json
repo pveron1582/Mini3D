@@ -1,0 +1,92 @@
+{
+  "app": "MiniStudio 3D",
+  "version": 1,
+  "env": "office",
+  "description": "Reunión de urgencias en el despacho del jefe (45s). Carlos (jefe) sentado en su silla de gerencia pregunta a Alex y Elena qué ven urgente. Alex detalla el AP WiFi de la sala de juntas saturado (42 equipos en un solo canal, videollamadas cortándose) y Elena agrega el disco del servidor de archivos al 91% con el backup nocturno fallando por espacio. El jefe fija el plan del día y ambos confirman con tiempos concretos. Cierre con humor: el jefe dice que al menos el perro está tranquilo… y se lo ve sentado frente a la heladera de la cocina, vigilándola. Tomas cercanas con lip-sync visible en cada parlamento.",
+  "objects": {
+    "human1": { "pos": [-8.0, 0, 7.1], "rotY": 3.5, "action": "idle" },
+    "human2": { "pos": [-9.0, 0, 9.6], "rotY": 3.14, "action": "sit" },
+    "human3": { "pos": [-10.0, 0, 7.1], "rotY": -3.5, "action": "idle" },
+    "dog": { "pos": [4.85, 0, 5.6], "rotY": 3.14, "action": "sit" }
+  },
+  "paths": {
+    "human1": {
+      "waypoints": [
+        [-8.0, 0, 7.1], [-8.04, 0, 7.1], [-8.0, 0, 7.12],
+        [-7.96, 0, 7.1], [-8.0, 0, 7.08], [-8.0, 0, 7.1]
+      ],
+      "planeY": 0, "speed": 1,
+      "events": {
+        "1": { "action": "idle", "wait": 9.5 },
+        "2": { "action": "talk", "wait": 6.3 },
+        "3": { "action": "idle", "wait": 12.8 },
+        "4": { "action": "talk", "wait": 3.8 },
+        "5": { "action": "idle", "wait": 12.4 }
+      }
+    },
+    "human2": {
+      "waypoints": [
+        [-9.0, 0, 9.6], [-9.04, 0, 9.6], [-9.0, 0, 9.62],
+        [-8.96, 0, 9.6], [-9.0, 0, 9.58], [-9.04, 0, 9.6], [-9.0, 0, 9.6]
+      ],
+      "planeY": 0, "speed": 1,
+      "events": {
+        "1": { "action": "sit", "wait": 4.6 },
+        "2": { "action": "talk", "wait": 4.4 },
+        "3": { "action": "sit", "wait": 13.8 },
+        "4": { "action": "talk", "wait": 5.4 },
+        "5": { "action": "sit", "wait": 8.4 },
+        "6": { "action": "talk", "wait": 3.0 },
+        "7": { "action": "sit", "wait": 5.2 }
+      }
+    },
+    "human3": {
+      "waypoints": [
+        [-10.0, 0, 7.1], [-10.04, 0, 7.1], [-10.0, 0, 7.12],
+        [-9.96, 0, 7.1], [-10.0, 0, 7.1]
+      ],
+      "planeY": 0, "speed": 1,
+      "events": {
+        "1": { "action": "idle", "wait": 16.2 },
+        "2": { "action": "talk", "wait": 6.2 },
+        "3": { "action": "idle", "wait": 10.3 },
+        "4": { "action": "talk", "wait": 3.5 },
+        "5": { "action": "idle", "wait": 8.6 }
+      }
+    }
+  },
+  "subtitles": [
+    { "start": 0.4, "end": 4.2, "text": "Oficina del jefe — reunión de prioridades de la semana" },
+    { "start": 4.6, "end": 9.0, "text": "Carlos (jefe): Necesito el ranking de urgencias. ¿Qué nos está quemando HOY?" },
+    { "start": 9.5, "end": 15.8, "text": "Alex: El AP de la sala de juntas: 42 equipos compitiendo por UN canal. Las videollamadas se cortan cada dos minutos." },
+    { "start": 16.2, "end": 22.4, "text": "Elena: Y el disco del servidor de archivos está al 91%. El backup de anoche falló por espacio: si no lo ampliamos hoy, mañana tampoco copia." },
+    { "start": 22.8, "end": 28.2, "text": "Carlos: Plan de hoy, entonces: canal nuevo para el AP, y el disco ampliado antes de la noche. ¿Lo tenemos?" },
+    { "start": 28.6, "end": 32.4, "text": "Alex: Sí — el AP ya lo tengo acá: en una hora está andando en el canal limpio." },
+    { "start": 32.7, "end": 36.2, "text": "Elena: Yo reservo el almacenamiento a las 11, así el backup nocturno entra completo." },
+    { "start": 36.6, "end": 39.6, "text": "Carlos: Perfecto. Al menos el perro está tranquilo… no como ustedes dos." },
+    { "start": 40.0, "end": 44.8, "text": "…«tranquilo» es una forma de decirlo: lleva media hora sentado vigilando la heladera." }
+  ],
+  "timeline": {
+    "time": 0,
+    "shots": [
+      { "start": 0.0, "duration": 4.4, "camMode": "fixed",
+        "camPos": [-6.6, 1.75, 6.2], "target": [-9.0, 1.3, 8.2] },
+      { "start": 4.4, "duration": 5.0, "camMode": "fixed",
+        "camPos": [-8.6, 1.55, 8.9], "target": [-8.1, 1.35, 7.2] },
+      { "start": 9.4, "duration": 6.6, "camMode": "fixed",
+        "camPos": [-8.5, 1.5, 8.5], "target": [-8.0, 1.4, 7.1] },
+      { "start": 16.0, "duration": 6.6, "camMode": "fixed",
+        "camPos": [-9.6, 1.5, 8.5], "target": [-10.0, 1.4, 7.1] },
+      { "start": 22.6, "duration": 5.4, "camMode": "fixed",
+        "camPos": [-8.3, 1.6, 9.7], "target": [-9.0, 1.45, 9.4] },
+      { "start": 28.0, "duration": 4.4, "camMode": "fixed",
+        "camPos": [-8.55, 1.5, 8.45], "target": [-8.05, 1.4, 7.1] },
+      { "start": 32.4, "duration": 3.9, "camMode": "fixed",
+        "camPos": [-9.65, 1.5, 8.45], "target": [-10.0, 1.4, 7.1] },
+      { "start": 36.3, "duration": 3.3, "camMode": "fixed",
+        "camPos": [-8.5, 1.55, 9.2], "target": [-9.0, 1.45, 9.5] },
+      { "start": 39.6, "duration": 5.6, "camMode": "fixed",
+        "camPos": [3.3, 0.9, 6.0], "target": [4.85, 0.55, 7.1] }
+    ]
+  }
+}
