@@ -640,8 +640,11 @@ export function setCamView(mode) {
 // Corte de cámara de la timeline: aplica una toma (modo + sujeto) al instante
 export function cutCameraToShot(mode, subjectId, shot = null) {
   if (mode === 'free') {
-    // Vista Libre: si la toma guarda un encuadre (el usuario lo dejó con ✕),
-    // se restaura; si no, la cámara queda donde está.
+    // Vista Libre: si la toma guarda un encuadre (el usuario lo dejó con 💾),
+    // se restaura; si no, la cámara queda donde está — PERO si venimos de un
+    // modo que posicionó la cámara de forma especial (FPV pegado a una cara,
+    // aérea cenital), la posición heredada es inutilizable: la reencuadramos
+    // retrocediendo desde donde mira y poniendo el objetivo delante.
     view.mode = 'orbit';
     view.subjectId = null;
     controls.enabled = true;
@@ -649,6 +652,18 @@ export function cutCameraToShot(mode, subjectId, shot = null) {
       camera.position.set(shot.camPos[0], shot.camPos[1], shot.camPos[2]);
       controls.target.set(shot.target[0], shot.target[1], shot.target[2]);
       camera.lookAt(controls.target);
+    }
+    // Si la cámara quedó "pegada" (venía de FPV/third/aerial): reencuadre
+    // de emergencia para que la Vista Libre sea usable — mirar adelante y
+    // alejarse un poco (la posición relativa se mantiene razonable).
+    const dist = camera.position.distanceTo(controls.target);
+    if (dist < 0.4 || !isFinite(dist)) {
+      // Objetivo inválido o pegadísimo: recalcularlo delante de la cámara
+      const dir = new THREE.Vector3();
+      camera.getWorldDirection(dir);
+      controls.target.copy(camera.position).addScaledVector(dir, 3.5);
+      // Y retroceder la cámara para no estar dentro del objetivo
+      camera.position.subScaledVector(dir, 1.2);
     }
     return;
   }

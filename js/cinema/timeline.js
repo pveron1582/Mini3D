@@ -26,6 +26,7 @@ const CAM_NAMES = {
   fixed: 'Fija / Zoom', aerial: 'Aérea'
 };
 const LANE_LABEL_W = 116;
+const round2 = (n) => Math.round(n * 100) / 100;
 
 let shotCounter = 0;
 
@@ -639,6 +640,25 @@ function saveFreeCameraToShot(shot) {
   shot.target = [controls.target.x, controls.target.y, controls.target.z];
 }
 
+// ANTI-SUPERPOSICIÓN de tomas: ninguna puede invadir a su vecina. Devuelve
+// los límites [minStart, maxStart+duration] que la toma puede ocupar según
+// sus vecinas (excluyendo a sí misma). Si no hay vecinos: [0, Infinity).
+function shotBounds(shot) {
+  let minStart = 0;
+  let maxEnd = Infinity;
+  timeline.shots.forEach(s => {
+    if (s === shot || s.id === shot.id) return;
+    if (s.start >= shot.start + shot.duration) {
+      // Vecino posterior: mi fin no puede pasarlo
+      maxEnd = Math.min(maxEnd, s.start);
+    } else if (s.start + s.duration <= shot.start) {
+      // Vecino anterior: mi inicio no puede ser menor a su fin
+      minStart = Math.max(minStart, s.start + s.duration);
+    }
+  });
+  return { minStart, maxEnd };
+}
+
 // Si hay un bloque de cinemática seleccionado (Vista Libre) y el usuario mueve
 // la cámara, ese nuevo encuadre pasa a ser el de la toma: queda configurado
 // temporalmente (se conserva al Guardar; si no, al recargar vuelve el original).
@@ -747,12 +767,23 @@ function beginShotDrag(e, shot, el) {
     const ds = Math.round(dSec * 10) / 10;
     if (dragState.mode === 'move') {
       shot.start = Math.max(0, dragState.origStart + ds);
+      // Anti-superposición: no puedo arrastrarme encima de un vecino
+      const b = shotBounds(shot);
+      shot.start = Math.max(b.minStart, Math.min(shot.start, Math.max(0, b.maxEnd - shot.duration)));
     } else if (dragState.mode === 'l') {
       const ns = Math.min(dragState.origStart + ds, dragState.origStart + dragState.origDur - 0.5);
       shot.start = Math.max(0, ns);
+      // Anti-superposición: el borde izquierdo no invade al vecino anterior
+      const b = shotBounds(shot);
+      shot.start = Math.max(b.minStart, shot.start);
       shot.duration = Math.round((dragState.origStart + dragState.origDur - shot.start) * 10) / 10;
     } else {
       shot.duration = Math.max(0.5, Math.round((dragState.origDur + ds) * 10) / 10);
+      // Anti-superposición: el borde derecho no invade al vecino posterior
+      const b = shotBounds(shot);
+      if (shot.start + shot.duration > b.maxEnd) {
+        shot.duration = Math.max(0.5, Math.round((b.maxEnd - shot.start) * 10) / 10);
+      }
     }
     el.style.left = (LANE_LABEL_W + shot.start * pps) + 'px';
     el.style.width = Math.max(18, shot.duration * pps) + 'px';
@@ -1067,15 +1098,19 @@ byId('subEditNew')?.addEventListener('click', () => {
 });
 
 // ---------- Botones ＋ de cada pista: crear bloques nuevos ----------
-// Toma nueva (Vista Libre de 2s) en el cabezal de reproducción, seleccionada
-// para editarla en vivo (cámara, personaje, duración…). 💾 guarda, ✕ descarta.
+// Toma nueva: VA AL FINAL de la última toma existente (continuación de la
+// cinemática), no al cabezal — así nunca se superpone con lo que ya hay y
+// sigue el hilo temporal. Seleccionada para editarla en vivo (cámara,
+// personaje, duración…). 💾 guarda, ✕ descarta.
 byId('btnAddShot')?.addEventListener('pointerdown', (e) => e.stopPropagation());
 byId('btnAddShot')?.addEventListener('click', (e) => {
   e.stopPropagation();
-  const t = Math.max(0, Math.round(timeline.time * 10) / 10);
+  // Fin de la última toma (o el cabezal si no hay ninguna — lo que sea mayor)
+  const endOfLast = timeline.shots.reduce((m, s) => Math.max(m, s.start + s.duration), 0);
+  const t = Math.max(endOfLast, 0);
   const shot = {
     id: 'shot' + (++shotCounter),
-    start: t,
+    start: round2(t),
     duration: 2,
     camMode: 'free',
     subjectId: null,
@@ -1087,17 +1122,22 @@ byId('btnAddShot')?.addEventListener('click', (e) => {
   refreshDuration();
   renderShots();
   renderRuler();
+  // Llevar el cabezal al inicio de la toma nueva para verla en contexto
+  timeline.time = shot.start;
+  updatePlayheadUI();
   selectShot(shot.id);
   updateTransportUI();
-  setStatus('Toma nueva: elegí la vista/cámara y su duración. 💾 guarda, ✕ descarta.');
+  setStatus('Toma nueva al final: elegí la vista/cámara y su duración. 💾 guarda, ✕ descarta.');
 });
 
-// Subtítulo nuevo (2s) en el cabezal, seleccionado para escribir directo.
+// Subtítulo nuevo: al final del último subtítulo (sin superponerse),
+// seleccionado para escribir directo.
 byId('btnAddSub')?.addEventListener('pointerdown', (e) => e.stopPropagation());
 byId('btnAddSub')?.addEventListener('click', (e) => {
   e.stopPropagation();
-  const t = Math.max(0, Math.round(timeline.time * 10) / 10);
-  const cue = { start: t, end: t + 2, text: 'Nuevo subtítulo' };
+  const endOfLast = subtitleTrack.reduce((m, c) => Math.max(m, c.end), 0);
+  const t = Math.max(endOfLast, 0);
+  const cue = { start: round2(t), end: round2(t + 2), text: 'Nuevo subtítulo' };
   subtitleTrack.push(cue);
   commitSubtitles();
   openSubEditor(cue);

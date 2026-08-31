@@ -294,15 +294,17 @@ export { resetQuiz };
 byId('btnAddQuiz')?.addEventListener('pointerdown', (e) => e.stopPropagation());
 byId('btnAddQuiz')?.addEventListener('click', (e) => {
   e.stopPropagation();
-  const start = Math.max(0, Math.round(timeline.time * 10) / 10);
+  // Al final del último cartel (sin superponerse) o en el cabezal si está vacío
+  const endOfLast = quizTrack.reduce((m, q) => Math.max(m, q.end), 0);
+  const start = Math.max(endOfLast, 0);
   const q = {
     id: 'quiz' + (++quizCounter),
     question: '¿Pregunta?',
     options: ['Opción A', 'Opción B', 'Opción C'],
     correct: 0,
     duration: 10,
-    start,
-    end: start + 10
+    start: Math.round(start * 10) / 10,
+    end: Math.round((start + 10) * 10) / 10
   };
   quizTrack.push(q);
   quizTrack.sort((a, b) => a.start - b.start);
