@@ -28,6 +28,7 @@ function pxPerSec() {
 }
 
 let selectedQuiz = null;
+let quizSnapshot = null;  // snapshot del cartel al seleccionarlo (✕ descarta)
 
 export function quizSelection() { return selectedQuiz; }
 export function clearQuizSelection() {
@@ -55,6 +56,8 @@ function openQuizEditor(q) {
   // de imports quizTrack ↔ timeline.
   window.dispatchEvent(new CustomEvent('quiz-block-selected'));
   selectedQuiz = q;
+  // Snapshot para poder DESCARTAR con ✕ (vuelve a esta pregunta/opciones)
+  quizSnapshot = JSON.parse(JSON.stringify({ question: q.question, options: [...(q.options || [])], correct: q.correct, duration: q.duration, start: q.start, end: q.end }));
   const set = (id, v) => { const el = byId(id); if (el) el.value = v; };
   set('quizEditQuestion', q.question || '');
   const opts = q.options || [];
@@ -93,17 +96,35 @@ export function renderQuizLane() {
     el.appendChild(left);
     el.appendChild(right);
 
-    // ✕ solo en el bloque seleccionado: termina su edición (y guarda).
+    // 💾 / ✕ solo en el bloque seleccionado: guardar o descartar su edición.
     if (q === selectedQuiz) {
-      const closeQuiz = document.createElement('div');
-      closeQuiz.className = 'tl-shot-close';
-      closeQuiz.textContent = '✕';
-      closeQuiz.title = 'Terminar edición del cartel (guarda)';
-      closeQuiz.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-      closeQuiz.addEventListener('click', (ev) => {
+      const saveQuiz = document.createElement('div');
+      saveQuiz.className = 'tl-shot-save';
+      saveQuiz.textContent = '💾';
+      saveQuiz.title = 'Guardar la edición del cartel';
+      saveQuiz.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
+      saveQuiz.addEventListener('click', (ev) => {
         ev.stopPropagation();
         clearQuizSelection();
         pushHistory();
+        setStatus('Cartel guardado.');
+      });
+      el.appendChild(saveQuiz);
+
+      const closeQuiz = document.createElement('div');
+      closeQuiz.className = 'tl-shot-close';
+      closeQuiz.textContent = '✕';
+      closeQuiz.title = 'Descartar cambios del cartel (vuelve a la pregunta previa)';
+      closeQuiz.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
+      closeQuiz.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        // Restaurar el cartel al snapshot tomado al seleccionarlo
+        if (quizSnapshot && selectedQuiz) {
+          Object.assign(selectedQuiz, JSON.parse(JSON.stringify(quizSnapshot)));
+        }
+        clearQuizSelection();
+        renderQuizLane();
+        setStatus('Cambios del cartel descartados.');
       });
       el.appendChild(closeQuiz);
     }
@@ -267,3 +288,23 @@ let quizShown = null;
 
 // Pausa de simulación: el reloj del cartel sigue con el de la escena (quiz.js).
 export { resetQuiz };
+
+// Botón ＋ de la pista QUIZ: cartel nuevo (10s) en el cabezal, seleccionado
+// para editarlo en vivo (pregunta, opciones, correcta, tiempos). 💾 guarda, ✕ descarta.
+byId('btnAddQuiz')?.addEventListener('click', () => {
+  const start = Math.max(0, Math.round(timeline.time * 10) / 10);
+  const q = {
+    id: 'quiz' + (++quizCounter),
+    question: '¿Pregunta?',
+    options: ['Opción A', 'Opción B', 'Opción C'],
+    correct: 0,
+    duration: 10,
+    start,
+    end: start + 10
+  };
+  quizTrack.push(q);
+  quizTrack.sort((a, b) => a.start - b.start);
+  openQuizEditor(q);
+  pushHistory();
+  setStatus('Cartel nuevo: escribí la pregunta y sus opciones. 💾 guarda, ✕ descarta.');
+});

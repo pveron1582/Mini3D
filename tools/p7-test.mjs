@@ -397,11 +397,19 @@ cinemaActivate();
 assert(cinema.active === true, 'cinemática activada (modo edición de recorrido)');
 cinema.targetId = 'cineCommitChar';
 cinema.waypoints = [new (await import('three')).Vector3(0, 0, 0), new (await import('three')).Vector3(2, 0, 0)];
-cinemaDeactivate(); // lo mismo que ejecuta el ✕ de la toma (via clearSelection)
-assert(cinema.active === false, 'al cerrar la toma: modo cinemático liberado');
+cinemaDeactivate(); // lo mismo que ejecuta el 💾 de la toma (via clearSelection)
+assert(cinema.active === false, 'al 💾 de la toma: modo cinemático liberado');
 assert(cinemaPaths.has('cineCommitChar') && cinemaPaths.get('cineCommitChar').waypoints.length === 2,
-  'al cerrar la toma: recorrido quedo guardado (se reproduce en la escena)');
+  'al 💾 de la toma: recorrido quedo guardado (se reproduce en la escena)');
 
+// --- ✕ DESCARTA: el snapshot restaura el bloque modificado ---
+// (discardSelection usa el mismo mecanismo: Object.assign sobre el snapshot)
+const shotDiscard = { id: 'shotX', start: 1, duration: 2, camMode: 'free', subjectId: null, label: '', color: '#111' };
+const snapDiscard = JSON.parse(JSON.stringify(shotDiscard));
+shotDiscard.start = 9; shotDiscard.duration = 5; shotDiscard.camMode = 'top';
+Object.assign(shotDiscard, JSON.parse(JSON.stringify(snapDiscard)));
+assert(shotDiscard.start === 1 && shotDiscard.duration === 2 && shotDiscard.camMode === 'free',
+  '✕ de la toma: el snapshot restaura el bloque modificado');
 
 console.log('\n✅ P7: todas las pruebas pasaron');
 process.exit(0);

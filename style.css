@@ -993,6 +993,51 @@ body, html {
   z-index: 4;
   user-select: none;
 }
+/* Botón ＋ del rótulo de cada pista: crea un bloque nuevo del estilo de la
+   pista, ubicado en el cabezal de reproducción. */
+.tl-lane-add {
+  margin-left: 6px;
+  width: 18px;
+  height: 16px;
+  line-height: 14px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(86, 133, 207, 0.35);
+  color: #fff;
+  cursor: pointer;
+  vertical-align: middle;
+  padding: 0;
+}
+
+.tl-lane-add:hover {
+  background: var(--accent-primary);
+}
+
+/* Botones del bloque seleccionado: 💾 guarda (commit), ✕ descarta. */
+.tl-shot-save {
+  position: absolute;
+  top: 2px;
+  right: 24px;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 10px;
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+  display: none;
+  z-index: 4;
+  user-select: none;
+}
+.tl-shot.selected .tl-shot-save,
+.tl-sub.selected .tl-shot-save,
+.tl-quiz.selected .tl-shot-save { display: block; }
+.tl-shot-save:hover { background: #2e7d43; }
+
 .tl-shot.selected .tl-shot-close { display: block; }
 .tl-shot-close:hover { background: #b3455c; }
 

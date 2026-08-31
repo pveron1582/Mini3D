@@ -6,7 +6,7 @@ import { setAlarm } from '../office/alarm.js';
 import { resetQuiz, quizTick } from '../media/quiz.js';
 import { quizPlayTick, renderQuizLane, clearQuizSelection } from './quizTrack.js';
 import { subtitleTrack, refreshSubtitles } from '../media/subtitles.js';
-import { startPlayback, stopAllPlaybacks, cutCameraToShot, setCamView, cinemaStorePath, updateCameraViewVisibility, evaluateAllPathsAt, cinemaDeactivate } from './cinematics.js';
+import { startPlayback, stopAllPlaybacks, cutCameraToShot, setCamView, cinemaStorePath, updateCameraViewVisibility, evaluateAllPathsAt, cinemaDeactivate, cinemaClearVisuals, cinemaClearAllVisuals, cinemaSetMode } from './cinematics.js';
 import { startRecording, mediaRecorder, setStatus } from '../media/recorder.js';
 import { pushHistory } from '../undo.js';
 import { setActiveTarget } from '../ui/selection.js';
@@ -270,9 +270,17 @@ function renderShots() {
     const close = document.createElement('div');
     close.className = 'tl-shot-close';
     close.textContent = '✕';
-    close.title = 'Terminar edición de la toma (guarda el recorrido y la cámara)';
+    close.title = 'Descartar cambios de la toma (vuelve al estado previo)';
     close.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-    close.addEventListener('click', (ev) => { ev.stopPropagation(); clearSelection(); });
+    close.addEventListener('click', (ev) => { ev.stopPropagation(); discardSelection(); });
+
+    const save = document.createElement('div');
+    save.className = 'tl-shot-save';
+    save.textContent = '💾';
+    save.title = 'Guardar la edición de la toma (cinemática, cámara, tiempos)';
+    save.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
+    save.addEventListener('click', (ev) => { ev.stopPropagation(); clearSelection(); });
+    el.appendChild(save);
     el.appendChild(close);
 
     el.addEventListener('pointerdown', (e) => beginShotDrag(e, shot, el));
@@ -314,17 +322,36 @@ function renderSubtitles() {
     el.appendChild(left);
     el.appendChild(right);
 
-    // ✕ solo en el bloque seleccionado: termina su edición (y guarda).
+    // 💾 / ✕ solo en el bloque seleccionado: guardar o descartar su edición.
     if (c === selectedCue) {
-      const closeSub = document.createElement('div');
-      closeSub.className = 'tl-shot-close';
-      closeSub.textContent = '✕';
-      closeSub.title = 'Terminar edición del subtítulo (guarda)';
-      closeSub.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-      closeSub.addEventListener('click', (ev) => {
+      const saveSub = document.createElement('div');
+      saveSub.className = 'tl-shot-save';
+      saveSub.textContent = '💾';
+      saveSub.title = 'Guardar la edición del subtítulo';
+      saveSub.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
+      saveSub.addEventListener('click', (ev) => {
         ev.stopPropagation();
         clearSubSelection();
         pushHistory();
+        setStatus('Subtítulo guardado.');
+      });
+      el.appendChild(saveSub);
+
+      const closeSub = document.createElement('div');
+      closeSub.className = 'tl-shot-close';
+      closeSub.textContent = '✕';
+      closeSub.title = 'Descartar cambios del subtítulo (vuelve al texto previo)';
+      closeSub.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
+      closeSub.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        // Restaurar el cue al snapshot tomado al seleccionarlo
+        if (subSnapshot && selectedCue) {
+          Object.assign(selectedCue, JSON.parse(JSON.stringify(subSnapshot)));
+        }
+        clearSubSelection();
+        refreshSubtitles();
+        renderSubtitles();
+        setStatus('Cambios del subtítulo descartados.');
       });
       el.appendChild(closeSub);
     }
@@ -548,7 +575,7 @@ let selectedShotId = null;
 // "recuadro blanco" cuando la UI era una sola); ahora cada sección de edición
 // muestra solo lo suyo, y la des-selección la maneja el click afuera (ui.js).
 
-// Quitar la selección = "commit" de la mini-edición de la toma (✕). Guarda:
+// Quitar la selección guardando (💾 = commit de la mini-edición). Guarda:
 // - el recorrido cinemático que se esté grabando (cinemaDeactivate hace
 //   cinemaStorePath: la cinemática grabada de principio a fin queda guardada
 //   y se reproducirá durante la escena), y
@@ -562,9 +589,47 @@ export function clearSelection() {
   const shot = selectedShot();
   if (shot && shot.camMode === 'free') saveFreeCameraToShot(shot);
   selectedShotId = null;
+  shotSnapshot = null;
   renderShots();
   syncCameraControlsVisibility(null);
-  pushHistory();   // el ✕ confirma los cambios de esta toma
+  pushHistory();   // el 💾 confirma los cambios de esta toma
+}
+
+// Descartar (✕): restaura el bloque al estado que tenía al seleccionarse
+// (snapshot) y suelta la cinemática en edición SIN guardarla. No toca el
+// resto de la escena (personajes movidos, etc. quedan como estén).
+export function discardSelection() {
+  if (!selectedShotId) return;
+  const shot = selectedShot();
+  if (shot && shotSnapshot) {
+    // Restaurar la toma al snapshot de cuando se seleccionó
+    Object.assign(shot, JSON.parse(JSON.stringify(shotSnapshot)));
+  }
+  // Cerrar la cinemática en edición SIN guardar (descarta el recorrido nuevo)
+  if (cinema.active) {
+    cinema.active = false;
+    cinema.playing = false;
+    cinema.dragging = -1;
+    cinema.waypoints = [];
+    cinema.curve = null;
+    cinema.length = 0;
+    cinemaClearVisuals();
+    cinemaClearAllVisuals();
+    controls.enabled = true;
+    cinemaSetMode('off');
+  }
+  selectedShotId = null;
+  shotSnapshot = null;
+  renderShots();
+  syncCameraControlsVisibility(null);
+  refreshDuration();
+  renderRuler();
+}
+
+// Snapshot de la toma al seleccionarla (para poder descartar con ✕)
+let shotSnapshot = null;
+function takeShotSnapshot(shot) {
+  shotSnapshot = shot ? JSON.parse(JSON.stringify(shot)) : null;
 }
 
 // Guarda el encuadre actual de la cámara en una toma en Vista Libre, para que
@@ -599,6 +664,7 @@ function selectShot(id) {
   clearSubSelection();
   clearQuizSelection();
   selectedShotId = id;
+  takeShotSnapshot(selectedShot());
   renderShots();
   // Si la toma sigue a un personaje, dejarlo marcado en la lista de
   // recorridos para editar su cinemática.
@@ -849,6 +915,7 @@ rateSlider?.addEventListener('input', () => {
 // hacer click en un bloque de la pista y TODO se guarda solo mientras se
 // escribe o ajusta (no hay botones Aplicar ni Cerrar).
 let selectedCue = null;
+let subSnapshot = null;   // snapshot del subtítulo al seleccionarlo (✕ descarta)
 
 const subPanel = byId('subtitleEditPanel');
 const subText = byId('subEditText');
@@ -878,6 +945,8 @@ function openSubEditor(cue) {
   if (selectedShotId) clearSelection();
   clearQuizSelection();
   selectedCue = cue;
+  // Snapshot para poder DESCARTAR con ✕ (vuelve a este texto/tiempos)
+  subSnapshot = JSON.parse(JSON.stringify({ start: cue.start, end: cue.end, text: cue.text, font: cue.font, size: cue.size, color: cue.color }));
   if (subText) subText.value = cue.text;
   if (subFont) subFont.value = cue.font || '"Segoe UI", Arial, sans-serif';
   if (subSize) { subSize.value = cue.size || 30; }
@@ -995,6 +1064,42 @@ byId('subEditNew')?.addEventListener('click', () => {
   openSubEditor(cue);
   pushHistory();
   if (subText) subText.select();
+});
+
+// ---------- Botones ＋ de cada pista: crear bloques nuevos ----------
+// Toma nueva (Vista Libre de 2s) en el cabezal de reproducción, seleccionada
+// para editarla en vivo (cámara, personaje, duración…). 💾 guarda, ✕ descarta.
+byId('btnAddShot')?.addEventListener('click', () => {
+  const t = Math.max(0, Math.round(timeline.time * 10) / 10);
+  const shot = {
+    id: 'shot' + (++shotCounter),
+    start: t,
+    duration: 2,
+    camMode: 'free',
+    subjectId: null,
+    label: '',
+    color: '#5685cf'
+  };
+  timeline.shots.push(shot);
+  timeline.shots.sort((a, b) => a.start - b.start);
+  refreshDuration();
+  renderShots();
+  renderRuler();
+  selectShot(shot.id);
+  updateTransportUI();
+  setStatus('Toma nueva: elegí la vista/cámara y su duración. 💾 guarda, ✕ descarta.');
+});
+
+// Subtítulo nuevo (2s) en el cabezal, seleccionado para escribir directo.
+byId('btnAddSub')?.addEventListener('click', () => {
+  const t = Math.max(0, Math.round(timeline.time * 10) / 10);
+  const cue = { start: t, end: t + 2, text: 'Nuevo subtítulo' };
+  subtitleTrack.push(cue);
+  commitSubtitles();
+  openSubEditor(cue);
+  pushHistory();
+  if (subText) subText.select();
+  setStatus('Subtítulo nuevo: escribí el texto. 💾 guarda, ✕ descarta.');
 });
 
 // ---------- Init ----------

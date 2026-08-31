@@ -2,6 +2,23 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-08-28] — Pistas: botón ＋ para crear bloques + 💾 guarda / ✕ descarta
+
+- **Botón ＋ junto al rótulo de cada pista** (🎬 CINEMÁTICA, 💬 SUBTÍTULOS,
+  📋 QUIZ): crea un bloque nuevo vacío del estilo de la pista, ubicado en el
+  cabezal de reproducción y SELECCIONADO para editarlo en vivo:
+  - Toma: Vista Libre de 2s (elegir vista/cámara, personaje y duración).
+  - Subtítulo: "Nuevo subtítulo" de 2s con el texto listo para escribir.
+  - Quiz: "¿Pregunta?" con 3 opciones de 10s, editor abierto.
+- **💾 (disquete) en el bloque seleccionado**: GUARDA la mini-edición — en la
+  toma, también la cinemática grabada (cinemaStorePath) y el encuadre Libre;
+  registra el historial.
+- **✕ ahora DESCARTA**: restaura el bloque al snapshot tomado al
+  seleccionarlo (tiempos, texto/pregunta, cámara…, según la pista) y, en la
+  toma, cierra la cinemática en edición SIN guardar el recorrido nuevo.
+  El resto de la escena (personajes movidos, etc.) no se toca.
+- Exports: `discardSelection` (timeline), `cinemaClearVisuals/All` (cinematics).
+
 ## [2026-08-28] — Bloques de la timeline: edición pegajosa con ✕ que guarda (toma / subtítulo / quiz)
 
 - **Selección pegajosa**: al hacer click en un bloque (toma de cinemática,

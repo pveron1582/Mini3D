@@ -911,7 +911,8 @@ export function evaluateAllPathsAt(t) {
 export {
   cinemaStorePath, cinemaLoadTarget, cinemaActivate, cinemaDeactivate,
   cinemaClearPath, cinemaTogglePlay, startAllPlaybacks, stopAllPlaybacks,
-  cinemaSetMode, refreshCinemaUI, updateCinemaCharList, fixCameraVisibility
+  cinemaSetMode, refreshCinemaUI, updateCinemaCharList, fixCameraVisibility,
+  cinemaClearVisuals, cinemaClearAllVisuals
 };
 
 // ==========================================
