@@ -19,7 +19,7 @@ import {
   clearDefaultCharacters, restoreDefaultCharacters, areDefaultCharactersHidden,
   syncCustomCharacters, clearCustomCharacters
 } from './characters/characters.js';
-import { populateOutliner } from './ui/ui.js';
+import { populateOutliner, closeAllBarMenus } from './ui/ui.js';
 import { clearActiveTarget } from './ui/selection.js';
 
 // ==========================================
@@ -533,11 +533,12 @@ const menuArchivo = byId('menuArchivo');
 const dropdown = byId('menuArchivoDropdown');
 
 menuArchivo?.addEventListener('click', (e) => {
-  menuArchivo.classList.toggle('open');
   e.stopPropagation();
+  const wasOpen = menuArchivo.classList.contains('open');
+  closeAllBarMenus();              // cierra Editar/Ayuda si estaban abiertos
+  menuArchivo.classList.toggle('open', !wasOpen);
 });
-// (El cierre por click afuera está unificado en js/ui/ui.js: cierra todos los
-// dropdowns de la barra, incluido éste.)
+// (El cierre por click afuera es global en js/ui/ui.js — closeAllBarMenus.)
 
 byId('mnuOpen')?.addEventListener('click', () => {
   openProjectPicker();

@@ -968,12 +968,24 @@ function cycleEditMode(dir) {
   setEditMode(next);
 }
 
+// Dropdowns de la barra: menú EXCLUSIVO. Abrir uno cierra los otros, y
+// cualquier click fuera (o en una opción) cierra el abierto. Los toggles
+// cierran los demás explícitamente (el stopPropagation que evita el cierre
+// global también impediría que el global cierre al otro menú).
+export function closeAllBarMenus(exceptId = null) {
+  ['menuArchivo', 'menuEditar', 'menuAyuda'].forEach(id => {
+    if (id !== exceptId) byId(id)?.classList.remove('open');
+  });
+}
+
 // Dropdown Editar
 const menuEditar = byId('menuEditar');
 const dropdownEditar = byId('menuEditarDropdown');
 menuEditar?.addEventListener('click', (e) => {
-  menuEditar.classList.toggle('open');
   e.stopPropagation();
+  const wasOpen = menuEditar.classList.contains('open');
+  closeAllBarMenus();              // cierra Archivo/Ayuda si estaban abiertos
+  menuEditar.classList.toggle('open', !wasOpen);
 });
 byId('mnuEditEdificio')?.addEventListener('click', () => { setEditMode('edificio'); menuEditar?.classList.remove('open'); });
 byId('mnuEditObjetos')?.addEventListener('click', () => { setEditMode('objetos'); menuEditar?.classList.remove('open'); });
@@ -988,13 +1000,7 @@ byId('btnEditModeNext')?.addEventListener('click', () => cycleEditMode(1));
 // Cierre global de TODOS los dropdowns de la barra (Archivo, Editar, etc.)
 // al hacer click en CUALQUIER lado — incluso dentro de una opción: los
 // handlers de opción no deben cortar la propagación (el menú se cierra solo).
-document.addEventListener('click', () => {
-  menuEditar?.classList.remove('open');
-  const menuArchivo = byId('menuArchivo');
-  menuArchivo?.classList.remove('open');
-  const menuAyuda = byId('menuAyuda');
-  menuAyuda?.classList.remove('open');
-});
+document.addEventListener('click', () => closeAllBarMenus());
 
 // Inicializar estado visual
 applyEditMode();
