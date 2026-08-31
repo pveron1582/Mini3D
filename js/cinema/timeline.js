@@ -1069,7 +1069,9 @@ byId('subEditNew')?.addEventListener('click', () => {
 // ---------- Botones ＋ de cada pista: crear bloques nuevos ----------
 // Toma nueva (Vista Libre de 2s) en el cabezal de reproducción, seleccionada
 // para editarla en vivo (cámara, personaje, duración…). 💾 guarda, ✕ descarta.
-byId('btnAddShot')?.addEventListener('click', () => {
+byId('btnAddShot')?.addEventListener('pointerdown', (e) => e.stopPropagation());
+byId('btnAddShot')?.addEventListener('click', (e) => {
+  e.stopPropagation();
   const t = Math.max(0, Math.round(timeline.time * 10) / 10);
   const shot = {
     id: 'shot' + (++shotCounter),
@@ -1091,7 +1093,9 @@ byId('btnAddShot')?.addEventListener('click', () => {
 });
 
 // Subtítulo nuevo (2s) en el cabezal, seleccionado para escribir directo.
-byId('btnAddSub')?.addEventListener('click', () => {
+byId('btnAddSub')?.addEventListener('pointerdown', (e) => e.stopPropagation());
+byId('btnAddSub')?.addEventListener('click', (e) => {
+  e.stopPropagation();
   const t = Math.max(0, Math.round(timeline.time * 10) / 10);
   const cue = { start: t, end: t + 2, text: 'Nuevo subtítulo' };
   subtitleTrack.push(cue);

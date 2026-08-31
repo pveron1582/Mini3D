@@ -1270,6 +1270,9 @@ body, html {
   white-space: nowrap;
 }
 
+/* El botón ＋ del rótulo SÍ recibe clicks (el resto del rótulo, no). */
+.tl-lane-name .tl-lane-add { pointer-events: auto; }
+
 .tl-shot-editor {
   display: flex;
   align-items: center;

@@ -291,7 +291,9 @@ export { resetQuiz };
 
 // Botón ＋ de la pista QUIZ: cartel nuevo (10s) en el cabezal, seleccionado
 // para editarlo en vivo (pregunta, opciones, correcta, tiempos). 💾 guarda, ✕ descarta.
-byId('btnAddQuiz')?.addEventListener('click', () => {
+byId('btnAddQuiz')?.addEventListener('pointerdown', (e) => e.stopPropagation());
+byId('btnAddQuiz')?.addEventListener('click', (e) => {
+  e.stopPropagation();
   const start = Math.max(0, Math.round(timeline.time * 10) / 10);
   const q = {
     id: 'quiz' + (++quizCounter),
