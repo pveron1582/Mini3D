@@ -2,6 +2,19 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-08-28] — Hint tipo subtítulo abajo del viewport (modos interactivos)
+
+- **`#viewportHint`** (nuevo, `index.html` + `style.css`): banda oscura
+  centrada abajo del viewport con texto grande — como un subtítulo. Reemplaza
+  el status bar (arriba, poco visible) para las instrucciones de modos.
+- **`showViewportHint(text, {sticky})`** (`js/dom.js`): sticky mantiene el
+  mensaje mientras dura el modo; sin sticky se auto-oculta a los ~2.6 s.
+- **Elegir asiento** (`js/ui/contextMenu.js`): "Hacé click en la silla o
+  sillón… — ESC cancela" se muestra como subtítulo mientras se elige; al
+  sentarse confirma con "✅ X se sentó en Y"; se limpia al salir del modo.
+- **Dibujo de canaleta** (`js/trayDraw.js`): misma mejora — instrucción como
+  subtítulo mientras se dibuja y "✅ Canaleta creada (N tramos)" al terminar.
+
 ## [2026-08-28] — Menús unificados: S. Tecleando + nueva Tecleando de pie (ambos menús iguales)
 
 - **Nueva acción `type_standing` (⌨️ Tecleando de pie)**: como sit_typing pero

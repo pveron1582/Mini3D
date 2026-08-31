@@ -482,6 +482,29 @@ body, html {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
+/* Hint tipo SUBTÍTULO (abajo del viewport): instrucciones de modos
+   interactivos (elegir asiento, dibujar canaleta…). Banda oscura centrada,
+   texto grande y legible; no tapa la acción en el centro de la vista. */
+.viewport-hint {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(12, 14, 19, 0.88);
+  color: #fff;
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  max-width: 70%;
+  text-align: center;
+  pointer-events: none;
+  z-index: 25;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
 /* ---------- Menú contextual (click derecho sobre un personaje) ---------- */
 .context-menu {
   position: fixed;

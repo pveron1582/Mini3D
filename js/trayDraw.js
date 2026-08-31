@@ -22,6 +22,7 @@
 //   ESC                            -> termina (crea si hay 2+ puntos, si no cancela)
 import * as THREE from 'three';
 import { scene, camera, renderer } from './core.js';
+import { showViewportHint } from './dom.js';
 import { createCableTrayRun, getFixedTraySegments } from './office/network.js';
 import { interactiveRegistry, store } from './state.js';
 import { setActiveTarget } from './ui/selection.js';
@@ -256,7 +257,8 @@ export function startTrayDraw() {
   store.trayDrawing = true;
   points = [];
   ensureGhost();
-  setStatus('🔗 Canaleta: click marca el inicio y cada click agrega un tramo recto. Se pega a la red existente. ESC o click derecho termina.');
+  // Hint tipo subtítulo (abajo del viewport): bien visible mientras se dibuja.
+  showViewportHint('🔗 Marcá el inicio con un click; cada click agrega un tramo recto — ESC o click derecho termina', { sticky: true });
 }
 
 function finishTrayDraw(commit) {
@@ -264,6 +266,7 @@ function finishTrayDraw(commit) {
   active = false;
   store.trayDrawing = false;
   removeGhost();
+  showViewportHint(null); // quita el hint del modo dibujo
   const pts = points;
   points = [];
   downPos = null;
@@ -279,7 +282,7 @@ function finishTrayDraw(commit) {
     setActiveTarget(id);
     pushHistory();
     createdListeners.forEach(cb => cb(id));
-    setStatus(`🔗 Canaleta creada (${pts.length - 1} tramo/s). Podés moverla con el gizmo.`);
+    showViewportHint(`✅ Canaleta creada (${pts.length - 1} tramo/s)`);
   } else {
     setStatus('Dibujo de canaleta cancelado.');
   }

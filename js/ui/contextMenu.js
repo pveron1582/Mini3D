@@ -11,7 +11,7 @@
 // Los botones usan clase propia (.ctx-btn) para NO entrar en los handlers
 // globales de .action-btn del panel (que aplicarían sobre data-action).
 
-import { byId } from '../dom.js';
+import { byId, showViewportHint } from '../dom.js';
 import { canvas, camera } from '../core.js';
 import { interactiveRegistry } from '../state.js';
 import { getActiveEntry } from './selection.js';
@@ -178,7 +178,8 @@ function setSeatGlow(entry, on) {
 function enterPickSeat() {
   pickSeatMode = true;
   hideMenu();
-  setStatus('🪑 Hacé click en la silla donde querés sentarlo (ESC cancela).');
+  // Hint tipo subtítulo (abajo del viewport): bien visible mientras se elige.
+  showViewportHint('🪑 Hacé click en la silla o sillón donde querés sentarlo — ESC cancela', { sticky: true });
   canvas.style.cursor = 'pointer';
 }
 
@@ -191,6 +192,7 @@ function exitPickSeat() {
   if (hoveredSeat) setSeatGlow(hoveredSeat, false);
   hoveredSeat = null;
   canvas.style.cursor = 'default';
+  showViewportHint(null); // quita el hint de elegir asiento
 }
 
 // Hover: iluminar la silla bajo el mouse mientras se elige
@@ -224,9 +226,10 @@ canvas.addEventListener('pointerdown', (e) => {
   });
   const entry = getActiveEntry();
   if (entry && entry.rig && sitAtAnchor(entry.rig, 'seat_' + seatEntry.id, { instant: true, spot: bestSpot })) {
-    setStatus(`${entry.name} sentado en ${seatEntry.name}${seats.length > 1 ? ' (lugar ' + (bestSpot + 1) + ')' : ''}.`);
-    pushHistory();
     exitPickSeat();
+    setStatus(`${entry.name} sentado en ${seatEntry.name}${seats.length > 1 ? ' (lugar ' + (bestSpot + 1) + ')' : ''}.`);
+    showViewportHint(`✅ ${entry.name} se sentó en ${seatEntry.name}${seats.length > 1 ? ' (lugar ' + (bestSpot + 1) + ')' : ''}`);
+    pushHistory();
   }
 }, true);
 
@@ -236,7 +239,6 @@ window.addEventListener('keydown', (e) => {
   if (pickSeatMode) { exitPickSeat(); setStatus('Selección de asiento cancelada.'); }
   hideMenu();
 });
-
 // ---------- apertura del menú ----------
 // Click derecho SOLO con un humano activo (sin humano: el click derecho
 // sigue siendo pan/vuelo de cámara, como siempre).
