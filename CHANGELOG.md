@@ -2,6 +2,24 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-08-28] — Menús unificados: S. Tecleando + nueva Tecleando de pie (ambos menús iguales)
+
+- **Nueva acción `type_standing` (⌨️ Tecleando de pie)**: como sit_typing pero
+  parado frente a una máquina/mesa alta — brazos al frente tecleando y mirada
+  levemente abajo. Va al lado de "🧍 De pie" en la grilla.
+- **"💻 Tecleando" renombrada a "💻 S. Tecleando"** (sentado tecleando) para
+  que queda en el botón y quede el par con la de pie.
+- **Grilla en pares** (sentadas arriba, de pie abajo): Hablando · S. Tecleando ·
+  Sentado · Llevar objeto · De pie · Tecleando de pie · Caminar · Correr ·
+  Saludar · Aplaudir · Señalar · Tirado en piso.
+- **Menú contextual SINCRONIZADO con el panel** (falta previa): las mismas 12
+  acciones, en el mismo orden y con los mismos nombres — incluida la nueva
+  tecleando de pie y "Sentado" (que en ambos menús abre el modo de elegir
+  asiento, nunca sienta en el aire). La única diferencia restante: ⚙️ Acciones
+  avanzadas queda únicamente en el panel izquierdo.
+- Dropdown de eventos de waypoint: opciones S. Tecleando y Tecleando de pie
+  agregadas.
+
 ## [2026-08-28] — Panel de acciones reordenado + modal ⚙️ Acciones avanzadas
 
 - **Grilla de Animaciones reordenada** (`index.html`): "🪑 Sentado" queda al

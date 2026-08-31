@@ -27,19 +27,21 @@ let menuTargetId = null;    // personaje sobre el que se abrió el menú
 
 // ---------- acciones del menú ----------
 const ANIM_ACTIONS = [
-  ['idle', '🧍 De pie'],
   ['talk', '🗣️ Hablando'],
-  ['sit_typing', '💻 Tecleando'],
-  ['lay', '🛌 Tirado en piso'],
+  ['sit_typing', '💻 S. Tecleando'],
+  ['sit', '🪑 Sentado'],
+  ['hold', '📦 Llevar objeto'],
+  ['idle', '🧍 De pie'],
+  ['type_standing', '⌨️ Tecleando de pie'],
   ['walk', '🚶 Caminar'],
   ['run', '🏃 Correr'],
-  ['wave', '👋 Saludar (bucle)'],
-  ['clap', '👏 Aplaudir (bucle)'],
-  ['point', '👉 Señalar (bucle)'],
-  ['hold', '📦 Llevar objeto']
+  ['wave', '👋 Saludar'],
+  ['clap', '👏 Aplaudir'],
+  ['point', '👉 Señalar'],
+  ['lay', '🛌 Tirado en piso']
 ];
-// (sin 'sit': "Sentarse" del menú va directo a elegir asiento — no existe
-// "sentarse en el aire": siempre elige dónde sentarse.)
+// Nota: 'sit' (Sentado) en este menú va directo al modo de elegir asiento
+// (igual que el botón 🪑 del panel): no existe sentarse en el aire.
 
 function buildMenu() {
   if (!menu) return;
@@ -70,6 +72,13 @@ function buildMenu() {
 function applyAction(act) {
   const entry = interactiveRegistry.get(menuTargetId);
   if (entry && entry.rig) {
+    // 'Sentado' nunca sienta en el aire: igual que el panel, abre el modo
+    // de elegir asiento (sillas iluminadas + click directo).
+    if (act === 'sit' && entry.type === 'human') {
+      hideMenu();
+      enterPickSeat();
+      return;
+    }
     entry.rig.setAction(act);
     pushHistory();
   }

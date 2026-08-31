@@ -638,6 +638,21 @@ function createHumanoidModel(id, name, posX, posZ, colors, opts = {}) {
 
       parts.h_armR.rotation.set(-0.55, 0, -0.15);
       parts.h_elbowR.rotation.set(-1.25 + Math.cos(t * 25) * 0.06, 0, 0);
+    } else if (rig.currentAction === 'type_standing') {
+      // Tecleando DE PIE: parado frente a una máquina/mesa alta, brazos al
+      // frente tecleando y mirada levemente hacia abajo (hermana de
+      // sit_typing, sin flexionar piernas).
+      parts.h_head.rotation.x = 0.18;
+      parts.h_head.rotation.y = Math.sin(t * 1.2) * 0.05;
+      parts.h_torso.rotation.x = 0.08;
+
+      parts.h_armL.position.set(-0.38, 1.06, 0);
+      parts.h_armR.position.set(0.38, 1.06, 0);
+      parts.h_armL.rotation.set(-0.55, 0, 0.15);
+      parts.h_elbowL.rotation.set(-1.25 + Math.sin(t * 22) * 0.06, 0, 0);
+
+      parts.h_armR.rotation.set(-0.55, 0, -0.15);
+      parts.h_elbowR.rotation.set(-1.25 + Math.cos(t * 25) * 0.06, 0, 0);
     } else if (rig.currentAction === 'lay') {
       parts.h_torso.position.set(0, 0.16, 0);
       parts.h_torso.rotation.x = -Math.PI / 2;

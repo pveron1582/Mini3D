@@ -246,6 +246,8 @@ assert(gestoRig.gesture === null && gestoRig.currentAction === 'walk', 'acción 
 gestoRig.playGesture('wave');
 assert(gestoRig.gesture === 'wave', 'playGesture("wave") inicia el gesto');
 gestoRig.setAction('idle');
+gestoRig.setAction('type_standing');
+assert(gestoRig.currentAction === 'type_standing', 'acción type_standing (tecleando de pie) existe y aplica');
 
 const { newProject } = await import(pathToFileURL('./js/projectFiles.js'));
 const { areDefaultCharactersHidden } = await import(pathToFileURL('./js/characters/characters.js'));
