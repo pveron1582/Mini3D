@@ -909,6 +909,23 @@
           </div>
         </div>
 
+        <!-- Brújula del viewport: siempre visible al mover la cámara con la izquierda.
+             N/N-S/S-E/W — véiajp siempre la vista hacia que mira. -->
+        <div id="hudCompass" class="hud-compass" style="display:none;">
+          <div class="compass-body">
+            <div class="compass-face">
+              <span class="dir n">N</span><span class="dir e">E</span>
+              <span class="dir s">S</span><span class="dir o">O</span>
+              <div class="compass-needle" style="transform:rotate(0deg);">
+                <div class="needle-side needle-n"></div>
+                <div class="needle-side needle-s"></div>
+                <div class="needle-center"></div>
+              </div>
+            </div>
+            <div class="compass-deg" id="hudCompassDeg">0°</div>
+          </div>
+        </div>
+
         <div class="hud-bottom-left" id="hudCamPos">
           Cam: X: 5.50, Y: 3.50, Z: 7.00
         </div>

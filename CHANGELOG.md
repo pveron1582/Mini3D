@@ -1,7 +1,24 @@
 # Changelog — MiniStudio 3D
 
+# Changelog — MiniStudio 3D
+
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+
+## [2026-08-28] — Personajes en oficina: "standInFrontOf", "standFacing", "sitAtAnchor"
+
+- `standInFrontOf` y `standFacing`: posicionan a un personaje junto a un
+  mueble/mesa mirándolo — corrigen el problema sistemático de "mal quedando
+  encima" por órbitas vilabóricas.
+- `sitAtAnchor` usa la altura del asiento que toma (seatY del objeto).
+- `fixCameraVisibility` (cinematics.js): tomas fijas no quedan atrás de pared.
+- Tests: pruebas de `standInFrontOf` para muebles + la silla sentada bien.
+
+## [2026-08-28] — Fix avisar al personaje que se ubica en "modo saber cuál es mi español"
+
+---
+
+## [2026-08-28] — Convención de orientación unificada (fix definitivo de "dados vuelta")
 
 ## [2026-08-28] — Personajes: frente a muebles + sentado con altura real + cámaras limpias
 

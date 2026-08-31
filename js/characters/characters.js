@@ -147,14 +147,8 @@ export const GESTURE_DEFS = {
 export function rotYToLookAt(fromX, fromZ, toX, toZ) {
   const dx = toX - fromX;
   const dz = toZ - fromZ;
-  // dirección de vista (dx,dz) = (sin(rotY), cos(rotY))
-  // → rotY = atan2(dx, dz)
   return Math.atan2(dx, dz);
 }
-
-// ==========================================
-// UTILIDAD: personaje de pie frente a un mueble (parado junto a él)
-// ==========================================
 // Resuelve el error repetido de "personajes mal parados cerca de mesas/muebles":
 // `standInFrontOf(rig, anchorName)` coloca al personaje pegado a la cara de
 // USO del mueble (su frente, local +z) mirándolo. Los muebles registran esa
