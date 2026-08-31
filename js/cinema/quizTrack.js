@@ -50,6 +50,10 @@ function setQuizFieldsEnabled(on) {
 
 function openQuizEditor(q) {
   if (!q || !quizTrack.includes(q)) return;
+  // Exclusividad: elegir un cartel libera la toma y el subtítulo en edición.
+  // Se avisa por evento (la timeline escucha y limpia) para no crear un ciclo
+  // de imports quizTrack ↔ timeline.
+  window.dispatchEvent(new CustomEvent('quiz-block-selected'));
   selectedQuiz = q;
   const set = (id, v) => { const el = byId(id); if (el) el.value = v; };
   set('quizEditQuestion', q.question || '');
@@ -88,6 +92,21 @@ export function renderQuizLane() {
     right.className = 'tl-handle tl-handle-r';
     el.appendChild(left);
     el.appendChild(right);
+
+    // ✕ solo en el bloque seleccionado: termina su edición (y guarda).
+    if (q === selectedQuiz) {
+      const closeQuiz = document.createElement('div');
+      closeQuiz.className = 'tl-shot-close';
+      closeQuiz.textContent = '✕';
+      closeQuiz.title = 'Terminar edición del cartel (guarda)';
+      closeQuiz.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
+      closeQuiz.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        clearQuizSelection();
+        pushHistory();
+      });
+      el.appendChild(closeQuiz);
+    }
 
     el.title = `${q.start.toFixed(1)}s → ${q.end.toFixed(1)}s: ${q.question || 'Pregunta'} (click para editar; arrastrá bordes para ajustar)`;
     el.addEventListener('pointerdown', (e) => beginQuizDrag(e, q, el));

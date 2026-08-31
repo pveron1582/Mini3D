@@ -1,9 +1,23 @@
 # Changelog — MiniStudio 3D
 
-# Changelog — MiniStudio 3D
-
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-08-28] — Bloques de la timeline: edición pegajosa con ✕ que guarda (toma / subtítulo / quiz)
+
+- **Selección pegajosa**: al hacer click en un bloque (toma de cinemática,
+  subtítulo o cartel de quiz), queda seleccionado con un **✕** en el bloque
+  mientras se sigue editando la escena libremente (mover personajes, agregar
+  objetos, activar cinemática…). Se quitó la des-selección por click afuera.
+- **El ✕ es el commit**: al cerrar, guarda lo hecho en esa mini-edición:
+  - **Toma**: si había un recorrido cinemático en grabación, se guarda
+    (`cinemaDeactivate` → `cinemaStorePath`) y se reproduce con la escena; si
+    era Vista Libre, también guarda el encuadre. Todo al historial.
+  - **Subtítulo / quiz**: liberan su editor y registran el historial.
+- **Exclusividad entre pistas**: elegir un bloque libera el anterior (toma ↔
+  subtítulo ↔ quiz) — el quiz avisa por evento `quiz-block-selected` para no
+  crear ciclo de imports con la timeline.
+- **✕ nuevos en bloques de subtítulo y quiz** (la toma ya lo tenía): misma
+  pastilla `.tl-shot-close`, visible solo en el bloque seleccionado.
 
 ## [2026-08-28] — Personajes en oficina: "standInFrontOf", "standFacing", "sitAtAnchor"
 

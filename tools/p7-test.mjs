@@ -385,5 +385,23 @@ const expectRot = Math.atan2(counterEntry.group.position.x - standTest.root.posi
 assert(Math.abs(facing - expectRot) < 0.05, 'mirando hacia el mueble (no le da la espalda)');
 assert(standFacing(standTest, -5.0, 8.5, 0.55, 0), 'standFacing se ajusta igualmente');
 
+// --- ✕ de la toma = commit: cinemática activa se guarda al cerrar ---
+// (El ✕ de una toma seleccionada llama clearSelection, que hace cinemaDeactivate
+// cuando hay un recorrido en edición — así la cinemática grabada de principio
+// a fin queda guardada y se reproduce con la escena.)
+const { cinema } = await import(pathToFileURL('./js/state.js'));
+const { cinemaActivate, cinemaDeactivate } = await import(pathToFileURL('./js/cinema/cinematics.js'));
+const cineChar = addHumanCharacter('cineCommitChar', 'Commit Test', 0, 0, 0, {});
+store.activeTarget = 'cineCommitChar';
+cinemaActivate();
+assert(cinema.active === true, 'cinemática activada (modo edición de recorrido)');
+cinema.targetId = 'cineCommitChar';
+cinema.waypoints = [new (await import('three')).Vector3(0, 0, 0), new (await import('three')).Vector3(2, 0, 0)];
+cinemaDeactivate(); // lo mismo que ejecuta el ✕ de la toma (via clearSelection)
+assert(cinema.active === false, 'al cerrar la toma: modo cinemático liberado');
+assert(cinemaPaths.has('cineCommitChar') && cinemaPaths.get('cineCommitChar').waypoints.length === 2,
+  'al cerrar la toma: recorrido quedo guardado (se reproduce en la escena)');
+
+
 console.log('\n✅ P7: todas las pruebas pasaron');
 process.exit(0);

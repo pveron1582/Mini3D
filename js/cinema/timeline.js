@@ -6,7 +6,7 @@ import { setAlarm } from '../office/alarm.js';
 import { resetQuiz, quizTick } from '../media/quiz.js';
 import { quizPlayTick, renderQuizLane, clearQuizSelection } from './quizTrack.js';
 import { subtitleTrack, refreshSubtitles } from '../media/subtitles.js';
-import { startPlayback, stopAllPlaybacks, cutCameraToShot, setCamView, cinemaStorePath, updateCameraViewVisibility, evaluateAllPathsAt } from './cinematics.js';
+import { startPlayback, stopAllPlaybacks, cutCameraToShot, setCamView, cinemaStorePath, updateCameraViewVisibility, evaluateAllPathsAt, cinemaDeactivate } from './cinematics.js';
 import { startRecording, mediaRecorder, setStatus } from '../media/recorder.js';
 import { pushHistory } from '../undo.js';
 import { setActiveTarget } from '../ui/selection.js';
@@ -270,7 +270,7 @@ function renderShots() {
     const close = document.createElement('div');
     close.className = 'tl-shot-close';
     close.textContent = '✕';
-    close.title = 'Terminar edición de la toma';
+    close.title = 'Terminar edición de la toma (guarda el recorrido y la cámara)';
     close.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
     close.addEventListener('click', (ev) => { ev.stopPropagation(); clearSelection(); });
     el.appendChild(close);
@@ -313,6 +313,21 @@ function renderSubtitles() {
     right.className = 'tl-handle tl-handle-r';
     el.appendChild(left);
     el.appendChild(right);
+
+    // ✕ solo en el bloque seleccionado: termina su edición (y guarda).
+    if (c === selectedCue) {
+      const closeSub = document.createElement('div');
+      closeSub.className = 'tl-shot-close';
+      closeSub.textContent = '✕';
+      closeSub.title = 'Terminar edición del subtítulo (guarda)';
+      closeSub.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
+      closeSub.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        clearSubSelection();
+        pushHistory();
+      });
+      el.appendChild(closeSub);
+    }
 
     el.title = `${c.start.toFixed(1)}s → ${c.end.toFixed(1)}s: ${c.text} (click para editar; arrastrá bordes para ajustar)`;
     el.addEventListener('pointerdown', (e) => beginSubDrag(e, c, el));
@@ -533,15 +548,23 @@ let selectedShotId = null;
 // "recuadro blanco" cuando la UI era una sola); ahora cada sección de edición
 // muestra solo lo suyo, y la des-selección la maneja el click afuera (ui.js).
 
-// Quitar la selección. Si la toma estaba en Vista Libre, guarda la posición
-// actual de la cámara en la toma para restaurarla al volver (scrub/reproducción).
+// Quitar la selección = "commit" de la mini-edición de la toma (✕). Guarda:
+// - el recorrido cinemático que se esté grabando (cinemaDeactivate hace
+//   cinemaStorePath: la cinemática grabada de principio a fin queda guardada
+//   y se reproducirá durante la escena), y
+// - el encuadre de la toma en Vista Libre (para restaurarlo al volver).
+// Después libera la selección; el resto de la escena se pudo editar libre.
 export function clearSelection() {
   if (!selectedShotId) return;
+  // Guardar la cinemática en edición (si hay una activa): su recorrido queda
+  // asociado al personaje de la toma y se reproduce con la escena.
+  if (cinema.active) cinemaDeactivate();
   const shot = selectedShot();
   if (shot && shot.camMode === 'free') saveFreeCameraToShot(shot);
   selectedShotId = null;
   renderShots();
   syncCameraControlsVisibility(null);
+  pushHistory();   // el ✕ confirma los cambios de esta toma
 }
 
 // Guarda el encuadre actual de la cámara en una toma en Vista Libre, para que
@@ -571,10 +594,12 @@ function selectedShot() {
 }
 
 function selectShot(id) {
+  // Exclusividad: elegir una toma libera el subtítulo y el cartel (quiz)
+  // en edición (cada bloque selecciona uno a la vez).
+  clearSubSelection();
+  clearQuizSelection();
   selectedShotId = id;
   renderShots();
-  // Exclusividad de selección: elegir una toma libera el subtítulo en edición
-  clearSubSelection();
   // Si la toma sigue a un personaje, dejarlo marcado en la lista de
   // recorridos para editar su cinemática.
   const shot = selectedShot();
@@ -771,6 +796,14 @@ window.addEventListener('cinema-waypoint-edit', (e) => {
   if (evPanel) evPanel.style.display = 'block';
 });
 
+// Elegir un bloque de QUIZ libera la toma/subtítulo en edición (exclusividad
+// de selección entre pistas; quizTrack avisa por este evento para evitar el
+// ciclo de imports quizTrack ↔ timeline).
+window.addEventListener('quiz-block-selected', () => {
+  if (selectedShotId) clearSelection();
+  if (selectedCue) clearSubSelection();
+});
+
 function applyWaypointEvent() {
   if (evWaypointIndex < 0) return;
   const action = evAction ? evAction.value : '';
@@ -840,9 +873,10 @@ function setSubFieldsEnabled(on) {
 
 function openSubEditor(cue) {
   if (!cue || !subPanel || !subtitleTrack.includes(cue)) return;
-  // Exclusividad con la toma seleccionada: elegir un subtítulo libera la toma
-  // (y viceversa)
+  // Exclusividad con la toma seleccionada y el cartel (quiz): elegir un
+  // subtítulo libera los otros bloques en edición.
   if (selectedShotId) clearSelection();
+  clearQuizSelection();
   selectedCue = cue;
   if (subText) subText.value = cue.text;
   if (subFont) subFont.value = cue.font || '"Segoe UI", Arial, sans-serif';

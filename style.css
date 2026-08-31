@@ -996,6 +996,12 @@ body, html {
 .tl-shot.selected .tl-shot-close { display: block; }
 .tl-shot-close:hover { background: #b3455c; }
 
+/* ✕ de bloques de subtítulo/quiz seleccionados (misma pastilla de la toma):
+   el elemento se agrega solo cuando el bloque ya está seleccionado, así que
+   forzar display:block en esas pistas. */
+.tl-sub.selected .tl-shot-close,
+.tl-quiz.selected .tl-shot-close { display: block; }
+
 .tl-playhead {
   position: absolute;
   top: 0;

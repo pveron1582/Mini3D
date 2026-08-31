@@ -168,29 +168,14 @@ queueMicrotask(() => onTargetSelected(refreshTargetPanels));
 // ==========================================
 // DESELECCIÓN GLOBAL DE BLOQUES DE LA LÍNEA DE TIEMPO
 // ==========================================
-// DES-SELECCIÓN DE BLOQUES (toma / subtítulo)
+// SELECCIÓN DE BLOQUES (toma / subtítulo / quiz): "pegajosa" hasta su ✕
 // ==========================================
-// Sin bloqueos ni recuadros: la selección es "pegajosa" solo dentro de su
-// sección. Elegir un bloque de toma (cinemática) o de subtítulo habilita su
-// edición en vivo; al hacer click en CUALQUIER lado fuera de esa sección de
-// edición (paneles, viewport, timeline, otro editor), el bloque se deselecciona
-// solo y todo queda libre. Los clicks dentro de la propia sección no la sueltan.
-document.addEventListener('pointerdown', (e) => {
-  const t = e.target;
-  if (!t || !t.closest) return;
-  // Pista / regla / subtítulos / quiz de la línea de tiempo: mantener (elegir
-  // otro bloque ahí es responsabilidad de la timeline, no de este handler).
-  if (t.closest('#timelineTrack') || t.closest('#timelineRuler') || t.closest('#subtitleLane') || t.closest('#quizLane')) return;
-  // Dentro de la sección de edición de TEXTOS (subtítulos + quiz): no soltar.
-  if (t.closest('#subtitlesPanel')) return;
-  // Dentro de la sección de CINEMÁTICA (vistas, edición del recorrido): no
-  // soltar la toma seleccionada.
-  if (t.closest('#section-cinematic')) return;
-  // Click en cualquier otro lado: liberar todas las selecciones de bloque.
-  clearSubtitleSelection();
-  clearQuizSelection();
-  clearShotSelection();
-}, true);
+// Elegir un bloque lo deja seleccionado MIENTRAS se sigue editando la escena
+// (mover personajes, agregar objetos, activar cinemática…). Solo se libera:
+//   1) con el ✕ del propio bloque (guarda lo hecho: recorrido cinemático,
+//      tomas, subtítulo…), 2) eligiendo otro bloque, o 3) cambiando de editor
+//      (setEditMode ya libera). No hay des-selección por click afuera: el ✕
+//      es el "commit" natural de esa mini-edición.
 
 // ==========================================
 // CONTROLS, ACTIONS & SLIDERS
