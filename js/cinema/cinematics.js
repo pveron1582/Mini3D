@@ -7,6 +7,7 @@ import { raycaster, getPointerNDC, projectPointerToPlane } from '../ui/gizmo.js'
 import { setStatus } from '../media/recorder.js';
 import { solvePath } from './navigation.js';
 import { pushHistory } from '../undo.js';
+import { anchorSeats } from '../characters/anchors.js';
 import { stepLadder, STEP_LADDER_ORIGIN } from '../office/group.js';
 
 // ==========================================
@@ -778,7 +779,7 @@ function getPreviewPath(stored) {
     const ev = stored.events[k];
     if (!ev || i < 0 || i >= stored.waypoints.length) return;
     if (!ev.action && !(ev.wait > 0)) return;
-    events.push({ u: cinemaWaypointU(curve, stored.waypoints[i]), action: ev.action || null, wait: ev.wait || 0 });
+    events.push({ u: cinemaWaypointU(curve, stored.waypoints[i]), action: ev.action || null, wait: ev.wait || 0, sitAt: ev.sitAt || null });
   });
   events.sort((a, b) => a.u - b.u);
 
@@ -798,8 +799,14 @@ function getPreviewPath(stored) {
       try { ladderDrop = { time: cursor, pos: curve.getPointAt(THREE.MathUtils.clamp(ev.u, 0, 1)) }; } catch (err) { /* sin posición */ }
     }
     if (ev.wait > 0) {
-      segments.push({ type: 'wait', t0: cursor, t1: cursor + ev.wait, u: ev.u, action: ev.action || moveAction });
+      segments.push({ type: 'wait', t0: cursor, t1: cursor + ev.wait, u: ev.u, action: ev.action || moveAction, sitAt: ev.sitAt || null });
       cursor += ev.wait;
+    } else if (ev.action) {
+      // Evento SIN espera pero con acción (ej. "talk" al pasar, sin parar):
+      // la acción se MANTIENE mientras el recorrido sigue — igual que el
+      // playback en vivo (render.js la aplica y ningún segmento la pisa).
+      // Así el lip-sync de una respuesta en marcha sí se ve en la escena.
+      moveAction = ev.action;
     }
     prevU = ev.u;
   });
@@ -834,7 +841,16 @@ function samplePreviewPath(pv, t, entry) {
   }
   for (const seg of pv.segments) {
     if (tAbs >= seg.t0 && tAbs < seg.t1) {
-      if (seg.type === 'wait') return { u: seg.u, action: seg.action };
+      if (seg.type === 'wait') {
+        // Espera en un asiento (sit_at): el personaje queda SENTADO en la
+        // silla elegida (pose del ancla + 180° como el playback en vivo).
+        if (seg.sitAt) {
+          const seats = anchorSeats('seat_' + seg.sitAt);
+          const spot = seats[0] || null;
+          if (spot) return { u: seg.u, action: 'sit', seatPose: spot };
+        }
+        return { u: seg.u, action: seg.action };
+      }
       const f = (tAbs - seg.t0) / Math.max(0.0001, seg.t1 - seg.t0);
       return { u: seg.u0 + (seg.u1 - seg.u0) * f, action: seg.action };
     }
@@ -858,16 +874,27 @@ export function evaluateAllPathsAt(t) {
       return;
     }
     let pos, tan;
-    try {
-      const cu = THREE.MathUtils.clamp(s.u, 0, 1);
-      pos = pv.curve.getPointAt(cu);
-      tan = pv.curve.getTangentAt(cu);
-    } catch (err) {
-      pos = stored.waypoints[0];
-      tan = { x: 0, z: 1 };
+    if (s.seatPose) {
+      // Sentado en su asiento (evento sit_at en escena): pose del ancla,
+      // mirando al frente de la silla (rotY + 180°, como sitAtAnchor).
+      pos = { x: s.seatPose.x, z: s.seatPose.z };
+      tan = null;
+    } else {
+      try {
+        const cu = THREE.MathUtils.clamp(s.u, 0, 1);
+        pos = pv.curve.getPointAt(cu);
+        tan = pv.curve.getTangentAt(cu);
+      } catch (err) {
+        pos = stored.waypoints[0];
+        tan = { x: 0, z: 1 };
+      }
     }
-    entry.group.position.set(pos.x, pv.planeY, pos.z);
-    if (tan && (tan.x || tan.z)) entry.group.rotation.y = Math.atan2(tan.x, tan.z);
+    entry.group.position.set(pos.x, s.seatPose ? 0 : pv.planeY, pos.z);
+    if (s.seatPose) {
+      entry.group.rotation.y = s.seatPose.rotY + Math.PI;
+    } else if (tan && (tan.x || tan.z)) {
+      entry.group.rotation.y = Math.atan2(tan.x, tan.z);
+    }
     if (entry.rig) {
       entry.rig.setAction(s.action || 'idle');
       const natural = s.action === 'run' ? (entry.rig.naturalRun || 4.5) : (entry.rig.naturalWalk || 1.8);

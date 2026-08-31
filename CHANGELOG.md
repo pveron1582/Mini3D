@@ -2,6 +2,20 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-08-28] — Fix escena: acciones de eventos sin espera (lip-sync en marcha) + sit_at en escena
+
+- **Acción perdida al reproducir la escena** (`js/cinema/cinematics.js`
+  `getPreviewPath`): los eventos con `wait: 0` pero con acción (ej. "talk" al
+  pasar, como la respuesta de Alex en la sala de juntas del patchcord) se
+  aplicaban y el segmento siguiente los pisaba con walk — la boca no batía.
+  Ahora la acción sin espera se MANTIENE mientras el recorrido sigue (igual
+  que el playback en vivo): el personaje habla en marcha y el lip-sync se ve.
+- **`sit_at` en la escena** (mismo preview): los eventos de sentarse en una
+  silla ahora se resuelven en la reproducción de la escena también — el
+  personaje queda en la pose del asiento (posición + rotY de la silla +180°)
+  durante la espera, en vez de caer en una acción inválida.
+- Tests: evento sin espera mantiene talk; antes del evento camina/corre.
+
 ## [2026-08-28] — Lip-sync mínimo (#2): la boca abre/cierra mientras habla
 
 - **`js/characters/characters.js`**: durante la acción `talk`, la boca del

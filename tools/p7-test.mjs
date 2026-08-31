@@ -275,6 +275,23 @@ gestoRig.setAction('idle');
 gestoRig.run(0.1);
 assert(Math.abs(gestoRig.parts.h_mouth.scale.y - 1) < 0.02, 'lip-sync: fuera de talk la boca vuelve a la forma normal');
 
+// --- escena: evento SIN espera mantiene su acción (lip-sync en marcha) ---
+// El preview de la timeline (getPreviewPath) antes perdía acciones de eventos
+// con wait:0 (ej. "talk" al pasar): el segmento move siguiente las pisaba.
+const { evaluateAllPathsAt } = await import(pathToFileURL('./js/cinema/cinematics.js'));
+const V = (await import('three')).Vector3;
+cinemaPaths.set('gestoTestChar', {
+  waypoints: [new V(0, 0, 0), new V(10, 0, 0)],
+  planeY: 0,
+  speed: 5,
+  events: { '1': { action: 'talk', wait: 0 } }
+});
+evaluateAllPathsAt(2.5); // ~después del evento (llega a x=10 al segundo 2)
+assert(gestoRig.currentAction === 'talk', 'escena: evento sin espera mantiene su acción en el recorrido (talk en marcha)');
+evaluateAllPathsAt(0.5); // antes del evento: caminando
+assert(gestoRig.currentAction === 'walk' || gestoRig.currentAction === 'run', 'escena: antes del evento el personaje camina/corre');
+cinemaPaths.delete('gestoTestChar');
+
 const { newProject } = await import(pathToFileURL('./js/projectFiles.js'));
 const { areDefaultCharactersHidden } = await import(pathToFileURL('./js/characters/characters.js'));
 newProject('proyecto_test');
