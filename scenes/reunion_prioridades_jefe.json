@@ -5,7 +5,7 @@
   "description": "Reunión de urgencias en el despacho del jefe (45s). Carlos (jefe) sentado de frente a su escritorio en la silla de gerencia (respaldo atrás), y Alex y Elena de pie junto al frente del escritorio, mirando hacia él. Alex cuenta el AP WiFi saturado de la sala de juntas y Elena agrega el backup del disco al 91% fallido; El jefe fija el plan del día y ambos confirman los tiempos. Cierre con humor: el jefe dice que al menos el perro está tranquilo… y se lo ve sentado frente a la heladera de la cocina, vigilándola. Tomas cercas con lip-sync visible en cada parlamento.",
   "objects": {
     "human1": { "pos": [-8.3, 0, 7.2], "rotY": -0.28, "action": "idle" },
-    "human2": { "pos": [-9.0, 0, 9.6], "rotY": 3.1416, "action": "sit" },
+    "human2": { "pos": [-9.0, 0.06, 9.6], "rotY": 3.14159, "action": "sit" },
     "human3": { "pos": [-9.7, 0, 7.2], "rotY": 0.28, "action": "idle" },
     "dog": { "pos": [5.85, 0, 7.1], "rotY": -1.57, "action": "sit" }
   },
@@ -15,11 +15,11 @@
       "planeY": 0,
       "speed": 1,
       "events": {
-        "1": { "action": "idle", "wait": 9.5 },
-        "2": { "action": "talk", "wait": 6.3 },
-        "3": { "action": "idle", "wait": 12.8 },
-        "4": { "action": "talk", "wait": 3.8 },
-        "5": { "action": "idle", "wait": 12.4 }
+        "0": { "action": "idle", "wait": 9.5 },
+        "1": { "action": "talk", "wait": 6.3 },
+        "2": { "action": "idle", "wait": 12.8 },
+        "3": { "action": "talk", "wait": 3.8 },
+        "4": { "action": "idle", "wait": 12.4 }
       }
     },
     "human2": {
