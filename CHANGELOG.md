@@ -2,6 +2,23 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-08-28] — Convención de orientación unificada (fix definitivo de "dados vuelta")
+
+- **Raíz del bug recurrente**: al calcular rotaciones a mano, se invertía el
+  orden de los ejes del atan2 (personajes, sillas y mesas quedaban de
+  espaldas; volvió a pasar con la cinemática de la reunión).
+- **`rotYToLookAt(fromX, fromZ, toX, toZ)`** (`js/characters/characters.js`):
+  la ÚNICA forma correcta de calcular "mirá hacia allá". Convención del rig,
+  verificada contra todos los casos del código (human1–9, perro, gato):
+  `rotY=0` mira al SUR (+z), `rotY=π` al NORTE (-z), `±π/2` al ESTE/OESTE.
+- **Escena `reunion_prioridades_jefe.json` corregida**: jefe de frente al
+  escritorio (rotY=π), Alex/Elena en diagonal correcta hacia el jefe (±0.83),
+  perro mirando la heladera de frente (rotY=-π/2); las 9 tomas recalculadas
+  para ver las caras de los hablantes.
+- **Blindaje**: 5 tests en p7-test fijan la convención cardinal + caso real
+  human1→escritorio; nueva regla 7 en SKILL.md (usar siempre
+  `rotYToLookAt`, nunca atan2 a mano).
+
 ## [2026-08-28] — Alarma visible: destello potente + pulso rojo de escena + toma de la baliza
 
 - **`js/office/alarm.js`**: la alarma ahora SE VE. Balizas con destello el

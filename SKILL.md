@@ -99,3 +99,11 @@ modular). No usarlo como referencia de arquitectura.
    (imports + ciclos + suite funcional + carga + geo-cache). El proyecto no
    tiene dependencias, así que no hace falta instalar nada — solo Node y pnpm.
    Verificación rápida del grafo: `pnpm run check`.
+7. **Orientación de personajes y muebles (error recurrente)**: un rig con
+   `rotY = 0` mira al **SUR (+z)**; `rotY = π` mira al **NORTE (-z)**; `±π/2`
+   mira al **ESTE/OESTE**. Para "que mire hacia X", usar SIEMPRE
+   `rotYToLookAt(fromX, fromZ, toX, toZ)` de `js/characters/characters.js`
+   (= `atan2(dx, dz)`) — NUNCA calcular un `atan2` a mano: invertir el orden
+   de los ejes deja a personajes/sillas de espaldas (bug que se repitió
+   varias veces). Los asientos con ancla (`sitAtAnchor`) ya aplican
+   `rotY_silla + 180°` internamente.

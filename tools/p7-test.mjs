@@ -292,6 +292,17 @@ evaluateAllPathsAt(0.5); // antes del evento: caminando
 assert(gestoRig.currentAction === 'walk' || gestoRig.currentAction === 'run', 'escena: antes del evento el personaje camina/corre');
 cinemaPaths.delete('gestoTestChar');
 
+// --- convención de orientación (blindaje anti "dados vuelta") ---
+const { rotYToLookAt } = await import(pathToFileURL('./js/characters/characters.js'));
+const approx = (a, b, tol = 0.02) => Math.abs(a - b) <= tol;
+const deg = (r) => r * 180 / Math.PI;
+assert(approx(rotYToLookAt(0, 0, 0, 1), 0), 'orientación: rotY=0 mira al SUR (+z)');
+assert(approx(rotYToLookAt(0, 0, 0, -1), Math.PI), 'orientación: rotY=π mira al NORTE (-z)');
+assert(approx(rotYToLookAt(0, 0, 1, 0), Math.PI / 2), 'orientación: rotY=+π/2 mira al ESTE (+x)');
+assert(approx(rotYToLookAt(0, 0, -1, 0), -Math.PI / 2), 'orientación: rotY=-π/2 mira al OESTE (-x)');
+// Casos reales del código: human1 (-π/2 mira oeste), human5 (0 mira sur), perro (π mira... sur)
+assert(deg(rotYToLookAt(2.7, 0.3, -1.1, -1.0)) < -80 && deg(rotYToLookAt(2.7, 0.3, -1.1, -1.0)) > -120, 'orientación: human1→escritorio da oeste (como el código)');
+
 const { newProject } = await import(pathToFileURL('./js/projectFiles.js'));
 const { areDefaultCharactersHidden } = await import(pathToFileURL('./js/characters/characters.js'));
 newProject('proyecto_test');

@@ -132,6 +132,26 @@ export const GESTURE_DEFS = {
   } }
 };
 
+// ==========================================
+// UTILIDAD DE ORIENTACIÓN (convención única del proyecto)
+// ==========================================
+// El rig "mira" hacia la dirección (sin(rotY), cos(rotY)) en el plano XZ:
+//   rotY = 0    → mira al SUR (+z)      [human5: rotY=0 "mira al sur"]
+//   rotY = π    → mira al NORTE (-z)    [human2: rotY=π "mira al norte"]
+//   rotY = -π/2 → mira al OESTE (-x)    [human1: rotY=-π/2 "mira al oeste"]
+//   rotY = +π/2 → mira al ESTE (+x)
+// VERIFICADO contra todos los casos del código (human1–9, perro, gato).
+// Esta función ES la única forma correcta de calcular "mirá hacia allá".
+// Evita el error sistemático de invertir la fórmula a mano (personajes y
+// sillas quedaban de espaldas). USAR SIEMPRE ESTA; no inventar atan2 propio.
+export function rotYToLookAt(fromX, fromZ, toX, toZ) {
+  const dx = toX - fromX;
+  const dz = toZ - fromZ;
+  // dirección de vista (dx,dz) = (sin(rotY), cos(rotY))
+  // → rotY = atan2(dx, dz)
+  return Math.atan2(dx, dz);
+}
+
 // Universal Humanoid Rig Builder
 function createHumanoidModel(id, name, posX, posZ, colors, opts = {}) {
   const g = new THREE.Group();

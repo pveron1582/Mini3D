@@ -4,10 +4,10 @@
   "env": "office",
   "description": "Reunión de urgencias en el despacho del jefe (45s). Carlos (jefe) sentado de frente a su escritorio en la silla de gerencia; Alex y Elena de pie flanqueando el frente del escritorio, mirándolo. Alex detalla el AP WiFi de la sala de juntas saturado (42 equipos en un solo canal, videollamadas cortándose) y Elena agrega el disco del servidor de archivos al 91% con el backup nocturno fallando por espacio. El jefe fija el plan del día y ambos confirman con tiempos concretos. Cierre con humor: el jefe dice que al menos el perro está tranquilo… y se lo ve sentado de frente a la heladera de la cocina, vigilándola. Tomas cercas con lip-sync visible en cada parlamento.",
   "objects": {
-    "human1": { "pos": [-7.85, 0, 8.55], "rotY": 2.31, "action": "idle" },
-    "human2": { "pos": [-9.0, 0, 9.6], "rotY": 0, "action": "sit" },
-    "human3": { "pos": [-10.15, 0, 8.55], "rotY": -2.31, "action": "idle" },
-    "dog": { "pos": [5.75, 0, 7.1], "rotY": 1.57, "action": "sit" }
+    "human1": { "pos": [-7.85, 0, 8.55], "rotY": -0.83, "action": "idle" },
+    "human2": { "pos": [-9.0, 0, 9.6], "rotY": 3.14, "action": "sit" },
+    "human3": { "pos": [-10.15, 0, 8.55], "rotY": 0.83, "action": "idle" },
+    "dog": { "pos": [5.75, 0, 7.1], "rotY": -1.57, "action": "sit" }
   },
   "paths": {
     "human1": {
@@ -70,21 +70,21 @@
     "time": 0,
     "shots": [
       { "start": 0.0, "duration": 4.4, "camMode": "fixed",
-        "camPos": [-9.0, 1.7, 7.0], "target": [-9.0, 1.3, 9.0] },
+        "camPos": [-9.0, 1.7, 5.8], "target": [-9.0, 1.3, 9.2] },
       { "start": 4.4, "duration": 5.0, "camMode": "fixed",
-        "camPos": [-7.4, 1.55, 9.9], "target": [-9.0, 1.4, 9.5] },
+        "camPos": [-8.7, 1.5, 7.6], "target": [-9.0, 1.4, 9.5] },
       { "start": 9.4, "duration": 6.6, "camMode": "fixed",
-        "camPos": [-8.3, 1.5, 9.6], "target": [-7.85, 1.45, 8.6] },
+        "camPos": [-8.65, 1.5, 9.35], "target": [-7.8, 1.42, 8.5] },
       { "start": 16.0, "duration": 6.6, "camMode": "fixed",
-        "camPos": [-9.7, 1.5, 9.6], "target": [-10.15, 1.45, 8.6] },
+        "camPos": [-9.35, 1.5, 9.35], "target": [-10.2, 1.42, 8.5] },
       { "start": 22.6, "duration": 5.4, "camMode": "fixed",
-        "camPos": [-8.1, 1.6, 8.4], "target": [-9.0, 1.45, 9.5] },
+        "camPos": [-8.7, 1.55, 7.9], "target": [-9.0, 1.45, 9.5] },
       { "start": 28.0, "duration": 4.4, "camMode": "fixed",
-        "camPos": [-8.35, 1.5, 9.55], "target": [-7.85, 1.45, 8.6] },
+        "camPos": [-8.65, 1.5, 9.3], "target": [-7.8, 1.42, 8.5] },
       { "start": 32.4, "duration": 3.9, "camMode": "fixed",
-        "camPos": [-9.65, 1.5, 9.55], "target": [-10.15, 1.45, 8.6] },
+        "camPos": [-9.35, 1.5, 9.3], "target": [-10.2, 1.42, 8.5] },
       { "start": 36.3, "duration": 3.3, "camMode": "fixed",
-        "camPos": [-8.15, 1.55, 8.6], "target": [-9.0, 1.45, 9.5] },
+        "camPos": [-8.75, 1.55, 8.1], "target": [-9.0, 1.45, 9.5] },
       { "start": 39.6, "duration": 5.6, "camMode": "fixed",
         "camPos": [7.2, 1.0, 7.15], "target": [5.8, 0.5, 7.1] }
     ]
