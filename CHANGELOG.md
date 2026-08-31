@@ -2,6 +2,19 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-08-28] — Fix: anillos de pasamuros oeste + puertas del mini rack se cierran al reproducir
+
+- **Anillos mal ubicados (oficina del jefe / sala de sistemas)**: en los
+  pasamuros nuevos de la canaleta OESTE (tabiques z=±4.5), los anillos estaban
+  desplazados en X con rotación de lado — quedaban "acostados" pegados al tubo
+  en vez de abrazarlo. Corregidos: el tubo atraviesa en Z, así que los anillos
+  van a cada lado del espesor (offset en Z) mirando al eje del tubo.
+- **Puertas del mini rack al reproducir**: `playScene` ahora CIERRA las
+  puertas al (re)iniciar la escena (antes quedaban abiertas de la pasada
+  anterior). El scrub también refleja el estado del instante con la nueva
+  `computeOpenDoorsAt(t)` (mismo criterio que la alarma): al volver el cabezal
+  atrás, las puertas se ven cerradas si la toma de ese momento no las pide.
+
 ## [2026-08-28] — Canaletas: pasamuros completos (fijos que faltaban + automáticos en dibujadas)
 
 - **Instalación fija** (`js/office/network.js`): la canaleta de la pared

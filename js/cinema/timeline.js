@@ -66,6 +66,23 @@ function computeAlarmAt(t) {
   return on;
 }
 
+// Estado de las puertas de mini racks en un instante: abiertas si la última
+// toma con flag `openDoor` que ya arrancó lo pide (mismo criterio que la
+// alarma). Lo usan el scrub y el arranque de la escena para reflejar el
+// estado correcto al volver atrás — no queda "abierto de la pasada anterior".
+function computeOpenDoorsAt(t) {
+  let open = false;
+  let latest = -Infinity;
+  timeline.shots.forEach(s => {
+    if (!s.openDoor) return;
+    if (s.start <= t && s.start >= latest) {
+      latest = s.start;
+      open = true;
+    }
+  });
+  return open;
+}
+
 export function updateTimeline(dt) {
   if (!timeline.playing) return;
   timeline.time += dt;
@@ -124,6 +141,11 @@ export function playScene() {
   // otro lado al soltarla).
   stepLadder.position.set(STEP_LADDER_ORIGIN[0], STEP_LADDER_ORIGIN[1], STEP_LADDER_ORIGIN[2]);
   stepLadder.visible = true;
+
+  // Las puertas de los mini racks CIERRAN al (re)producir: la escena arranca
+  // desde su estado inicial (si una toma las abre con `openDoor`, se verá el
+  // giro completo en cada pasada, no quedan abiertas de la anterior).
+  openAllRackDoors(false);
 
   // Reiniciar el cartel de cierre para que vuelva a aparecer si se repite
   resetQuiz();
@@ -470,7 +492,10 @@ function scrubTo(t) {
   view.mode = 'orbit';
   view.subjectId = null;
   controls.enabled = true;
-  if (shot && shot.openDoor) openAllRackDoors(true);
+  // Estado de las puertas de mini racks en el instante del cabezal: abiertas
+  // si alguna toma ya iniciada en t pide `openDoor` (igual que la alarma).
+  // Así, al volver atrás también se ven cerradas — no queda "abierta de antes".
+  openAllRackDoors(computeOpenDoorsAt(timeline.time));
   // La alarma sigue el instante de la cabeza también al moverla manualmente
   setAlarm(computeAlarmAt(timeline.time));
   // El cartel de pregunta sigue la pista 📋 QUIZ en el scrub (igual que al

@@ -173,6 +173,8 @@ cableTray(-14.82, -10.82, -13.0, -10.82, TRAY_Y_OUT); // cierra el rincón NO co
 cableTray(-14.82, -10.82, -14.82, 10.82, TRAY_Y_OUT); // pared oeste completa hasta el rincón SO
 // Pasamuros donde la canaleta OESTE atraviesa los tabiques horizontales
 // (z=±4.5): mismos cilindros + anillos que el resto de la instalación.
+// El tubo atraviesa en Z, así que los anillos abrazan el tubo a cada lado
+// del espesor (offset en Z, toro mirando al eje del tubo).
 [-4.5, 4.5].forEach(sz => {
   const sleeveW = new THREE.Mesh(
     geo.cylinder(0.09, 0.09, 0.34, 10),
@@ -181,13 +183,12 @@ cableTray(-14.82, -10.82, -14.82, 10.82, TRAY_Y_OUT); // pared oeste completa ha
   sleeveW.rotation.x = Math.PI / 2;
   sleeveW.position.set(-14.82, TRAY_Y_OUT, sz);
   officeGroup.add(sleeveW);
-  [-0.17, 0.17].forEach(sx => {
+  [-0.17, 0.17].forEach(off => {
     const ringW = new THREE.Mesh(
       geo.torus(0.1, 0.02, 8, 16),
       new THREE.MeshStandardMaterial({ color: 0x5a6068, roughness: 0.35, metalness: 0.8 })
     );
-    ringW.rotation.y = Math.PI / 2;
-    ringW.position.set(-14.82 + sx, TRAY_Y_OUT, sz);
+    ringW.position.set(-14.82, TRAY_Y_OUT, sz + off);
     officeGroup.add(ringW);
   });
 });
