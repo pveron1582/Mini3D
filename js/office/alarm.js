@@ -2,6 +2,7 @@
 
 import * as THREE from 'three';
 import * as geo from './geoCache.js';
+import { scene } from '../core.js';
 import { officeGroup } from './group.js';
 import { registerTicker } from '../tickers.js';
 
@@ -11,13 +12,29 @@ import { registerTicker } from '../tickers.js';
 // Balizas rojas de pared que parpadean cuando la escena lo indica (toma con
 // `alarm: true`). setAlarm() cambia el estado; updateAlarm() anima el
 // parpadeo cada frame (llamado desde render.js).
+// Además del destello de cada baliza, se enciende una LUZ ROJA GENERAL de
+// escena (pulso suave) para que la alarma se NOTE en todo el ambiente, no
+// solo en la esquina de la baliza.
 export const alarmBeacons = [];   // { light, domeMat }
 let alarmActive = false;
 let alarmClock = 0;
 
+// Luz general de la escena: teñido rojo pulsante de emergencia.
+let alarmSceneLight = null;
+function ensureSceneLight() {
+  if (alarmSceneLight) return alarmSceneLight;
+  alarmSceneLight = new THREE.PointLight(0xff1a1a, 0, 60, 1.2);
+  alarmSceneLight.position.set(0, 6, 0);
+  scene.add(alarmSceneLight);
+  return alarmSceneLight;
+}
+
 export function setAlarm(on) {
   alarmActive = !!on;
+  alarmClock = 0;
+  const sl = ensureSceneLight();
   if (!alarmActive) {
+    sl.intensity = 0;
     alarmBeacons.forEach(b => {
       b.light.intensity = 0;
       b.domeMat.emissive.setHex(0x2a0505);
@@ -29,13 +46,17 @@ export function setAlarm(on) {
 export function updateAlarm(dt) {
   if (!alarmActive) return;
   alarmClock += dt;
-  // Destello rojo rápido, tipo baliza de emergencia
+  // Destello rojo rápido, tipo baliza de emergencia (cono de luz duro)
   const flash = Math.sin(alarmClock * 10) > 0 ? 1 : 0.05;
   alarmBeacons.forEach(b => {
-    b.light.intensity = flash * 4.5;
+    b.light.intensity = flash * 9;               // antes 4.5: no se notaba
     b.domeMat.emissive.setHex(0xff1a1a);
-    b.domeMat.emissiveIntensity = 0.3 + flash * 2.6;
+    b.domeMat.emissiveIntensity = 0.3 + flash * 4.5;  // domo bien encendido
   });
+  // Pulso general de la escena (suave, desfasado del destello): la oficina
+  // entera respira en rojo mientras dura la alarma.
+  const sl = ensureSceneLight();
+  sl.intensity = 1.6 + Math.sin(alarmClock * 10) * 1.1;
 }
 
 export function createAlarmBeacon(x, y, z) {

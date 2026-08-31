@@ -2,6 +2,18 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-08-28] — Alarma visible: destello potente + pulso rojo de escena + toma de la baliza
+
+- **`js/office/alarm.js`**: la alarma ahora SE VE. Balizas con destello el
+  doble de intenso (luz 9, domo emissive ×4.5) y una **luz roja general de
+  escena** que pulsa mientras dura la alarma — la oficina entera respira en
+  rojo (antes solo brillaba la esquina de la baliza, muy sutil contra la luz
+  ambiente). Al apagar, todo vuelve a negro limpio.
+- **`scenes/alarma_en_la_red.json`**: la toma de alarma (3.2s) ahora
+  ENCUADRA la baliza de la sala de sistemas de cerca (cámara a la altura del
+  domo mirándolo directo) — se ve la baliza encenderse y destellar, en vez del
+  pasillo donde no se notaba.
+
 ## [2026-08-28] — Fix escena: acciones de eventos sin espera (lip-sync en marcha) + sit_at en escena
 
 - **Acción perdida al reproducir la escena** (`js/cinema/cinematics.js`
