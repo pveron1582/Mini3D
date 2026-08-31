@@ -818,6 +818,17 @@ function createHumanoidModel(id, name, posX, posZ, colors, opts = {}) {
       parts.h_armR.rotation.set(-2.4, 0, -0.1); parts.h_elbowR.rotation.x = -0.2;
     }
     applyMood();
+    // LIP-SYNC (backlog #2): mientras habla (`talk`), la boca se abre y
+    // cierra al ritmo del habla. Se aplica DESPUÉS de applyMood (que fija la
+    // forma base de la boca) para que el habla se imponga al estar neutral.
+    if (rig.currentAction === 'talk' && parts.h_mouth) {
+      // Dos senos desfasados: el batido no queda metronómico (varía el "acento"
+      // y a veces la boca queda un poco abierta entre sílabas).
+      const flap = Math.abs(Math.sin(t * 9) * 0.75 + Math.sin(t * 23) * 0.25);
+      const open = 1 + flap * 3.4;              // alto de la boca: 1x (cerrada) → ~4.4x
+      parts.h_mouth.scale.y = open;
+      parts.h_mouth.position.y = -0.1 - (open - 1) * 0.012; // baja un poco al abrirse
+    }
   };
 
   // Aplica el estado emocional a la cara (cejas y boca). Se llama cada frame

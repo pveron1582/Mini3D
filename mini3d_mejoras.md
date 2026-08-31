@@ -83,11 +83,12 @@ Botones en el panel (grilla "Gestos") y opciones `gesture:*` en los eventos de
 waypoint. Las acciones sostenidas existentes (wave/clap/point en bucle) se
 mantienen intactas.
 
-### 2. Lip-sync mínimo (ALTO impacto / esfuerzo muy bajo)
-Boca abre/cierra mientras dura `talk` (escala con seno del tiempo).
-- Dónde: `js/characters.js` (cabeza ya tiene partes; agregar mandíbula o
-  escala Y de la boca).
-- Ganancia: quien habla "parece" hablar aunque sea mudo.
+### 2. ~~Lip-sync mínimo~~ ✅ (2026-08-28)
+HECHO: durante `talk`, la boca abre/cierra al ritmo del habla (~4.5 acentos/s)
+con dos senos desfasados (9 Hz + 23 Hz) para que el batido no sea metronómico —
+a veces queda un poco abierta entre "sílabas". La boca escala su alto de 1× a
+~4.4× y baja apenas al abrirse; se aplica tras el ánimo (el habla se impone a
+la boca neutral). Fuera de `talk` vuelve a la forma normal.
 
 ### 3. Audio por escena (ALTO impacto / esfuerzo medio)
 Campo opcional `audio` en el proyecto JSON: música de fondo + efectos

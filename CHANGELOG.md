@@ -2,6 +2,18 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-08-28] — Lip-sync mínimo (#2): la boca abre/cierra mientras habla
+
+- **`js/characters/characters.js`**: durante la acción `talk`, la boca del
+  personaje se abre y cierra al ritmo del habla (~4.5 acentos/s) con variación:
+  dos senos desfasados (9 Hz + 23 Hz) evitan el batido metronómico — a veces
+  queda un poco abierta entre "sílabas", como una boca real. La boca (box fino
+  del rig) escala su alto de 1× (cerrada) hasta ~4.4× y baja apenas al abrirse.
+  Se aplica después de `applyMood` (el habla se impone a la boca neutral).
+  Con cualquier otra acción, la boca vuelve a su forma normal.
+- Tests p7: 4 aserciones (apertura, variación temporal, rango, reset fuera de
+  talk).
+
 ## [2026-08-28] — Fix: anillos de pasamuros oeste + puertas del mini rack se cierran al reproducir
 
 - **Anillos mal ubicados (oficina del jefe / sala de sistemas)**: en los

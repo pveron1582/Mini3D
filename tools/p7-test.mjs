@@ -262,6 +262,19 @@ gestoRig.setAction('idle');
 gestoRig.setAction('type_standing');
 assert(gestoRig.currentAction === 'type_standing', 'acción type_standing (tecleando de pie) existe y aplica');
 
+// --- lip-sync (backlog #2): la boca abre/cierra mientras dura `talk` ---
+gestoRig.setAction('talk');
+gestoRig.run(0.1); // frame con la boca bastante abierta
+const openScale = gestoRig.parts.h_mouth.scale.y;
+gestoRig.run(0.7); // ~medio ciclo después: mucho más cerrada
+const closedScale = gestoRig.parts.h_mouth.scale.y;
+assert(openScale > 1.6, 'lip-sync: boca se abre al hablar (scale.y alto)');
+assert(Math.abs(closedScale - openScale) > 1, 'lip-sync: la boca varía su apertura con el tiempo');
+assert(gestoRig.parts.h_mouth.scale.y >= 0.99 && gestoRig.parts.h_mouth.scale.y <= 4.5, 'lip-sync: apertura dentro del rango (cerrada→abierta)');
+gestoRig.setAction('idle');
+gestoRig.run(0.1);
+assert(Math.abs(gestoRig.parts.h_mouth.scale.y - 1) < 0.02, 'lip-sync: fuera de talk la boca vuelve a la forma normal');
+
 const { newProject } = await import(pathToFileURL('./js/projectFiles.js'));
 const { areDefaultCharactersHidden } = await import(pathToFileURL('./js/characters/characters.js'));
 newProject('proyecto_test');
