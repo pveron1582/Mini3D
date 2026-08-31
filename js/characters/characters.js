@@ -160,14 +160,26 @@ export function rotYToLookAt(fromX, fromZ, toX, toZ) {
 // USO del mueble (su frente, local +z) mirándolo. Los muebles registran esa
 // cara con su ancla (ej. mesada, escritorio, heladera, mini rack). Así, sin
 // adivinar coordenadas a mano, quien está de pie frente a una mesa la usa.
-export function standInFrontOf(rig, anchorName, dist = 0.55) {
-  const pose = anchorPose(anchorName);
+// Posiciona al personaje de pie junto a un mueble/objeto, mirándolo.
+// El "frente de uso" del mueble es su lado +z local (convención de este
+// proyecto — los que lo registran llevan esa cara al usuario).
+export function standInFrontOf(rig, anchorOrEntryName, dist = 0.55) {
+  // Soporta anclas registradas ('seat_xxx') o el nombre id del objeto en el
+  // registro (furniture/props): así se puede usar con cualquier cosa del
+  // editor, no solo con anclas.
+  let pose = anchorPose(anchorOrEntryName);
+  if (!pose) {
+    const e = interactiveRegistry.get(anchorOrEntryName);
+    if (e && e.group) {
+      pose = { x: e.group.position.x, z: e.group.position.z, rotY: e.group.rotation.y };
+      // Alerta: este mueble no tenía ancla, uso su posición/rotación directa)
+    }
+  }
   if (!rig || !rig.root || !pose) return false;
   const g = rig.root;
-  // Punto donde queda: a `dist` del centro del mueble, hacia la cara de uso
-  // (su frente local +z, rotada al plano XZ con la rotación del mueble).
   const c = Math.cos(pose.rotY), s = Math.sin(pose.rotY);
-  const px = pose.x + dist * s;   // +z local => movemos al lado del usuario
+  // Punto a `dist` del mueble hacia su cara de uso (mismo lado que quien lo usa).
+  const px = pose.x + dist * s;
   const pz = pose.z + dist * c;
   g.position.set(px, 0, pz);
   g.rotation.y = rotYToLookAt(px, pz, pose.x, pose.z);

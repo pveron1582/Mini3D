@@ -369,5 +369,21 @@ const sitTest2 = addHumanCharacter('sitTest2', 'Sit Test 2', 0, 0, 0, {});
 sitAtAnchor(sitTest2, 'seat_execChair', { instant: true });
 assert(Math.abs(sitTest2.root.position.y - (0.54 - 0.48)) < 0.02, 'sentado en gerencia usa la altura correcta');
 
+// --- personajes de pie junto a muebles: uso del frente del ancla ---
+const { standInFrontOf, standFacing } = await import(pathToFileURL('./js/characters/characters.js'));
+const standTest = addHumanCharacter('standTestChar', 'Test Frente', 0, 0, 0, {});
+assert(standInFrontOf(standTest, 'kitchenCounter'), 'se ubica frente al mueble');
+const counterEntry = interactiveRegistry.get('kitchenCounter');
+const dx = standTest.root.position.x - counterEntry.group.position.x;
+const dz = standTest.root.position.z - counterEntry.group.position.z;
+assert(Math.hypot(dx, dz) > 0.25 && Math.hypot(dx, dz) < 1.6, 'frente al mueble a distancia razonable (no adentro)');
+assert(standTest.root.position.y === 0, 'en piso, no flotando');
+// Y mira hacia el mueble (no le da la espalda)
+const facing = standTest.root.rotation.y;
+const expectRot = Math.atan2(counterEntry.group.position.x - standTest.root.position.x,
+                             counterEntry.group.position.z - standTest.root.position.z);
+assert(Math.abs(facing - expectRot) < 0.05, 'mirando hacia el mueble (no le da la espalda)');
+assert(standFacing(standTest, -5.0, 8.5, 0.55, 0), 'standFacing se ajusta igualmente');
+
 console.log('\n✅ P7: todas las pruebas pasaron');
 process.exit(0);
