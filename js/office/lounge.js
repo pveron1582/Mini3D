@@ -328,6 +328,7 @@ export function createExecChair(id, name, x, z, rotY = 0) {
   officeGroup.add(g);
   registerSelectable(id, name, g, 'furniture');
   registerAnchor('seat_' + id, g);
+  g.userData.seatY = 0.54;  // asiento de la silla de gerencia (ecSeat en 0.54)
   return g;
 }
 
@@ -351,6 +352,7 @@ export function createGuestChair(id, name, x, z, rotY = 0) {
   officeGroup.add(g);
   registerSelectable(id, name, g, 'furniture');
   registerAnchor('seat_' + id, g);
+  g.userData.seatY = 0.5;  // asiento de la silla de invitado (gcSeat en 0.5)
   return g;
 }
 
@@ -388,9 +390,10 @@ export function createChesterfield(id, name, x, z, rotY = 0) {
   });
   officeGroup.add(g);
   registerSelectable(id, name, g, 'furniture');
-  // Chesterfield de 2 m: 2 lugares (un cuerpo a cada lado).
+  // Chesterfield de 2 m: 2 lugares, asiento a la altura del cojín (0.47).
   registerAnchor('seat_' + id, g);
   setSeatSpots(g, [{ dx: -0.5, dz: 0 }, { dx: 0.5, dz: 0 }]);
+  g.userData.seatY = 0.47;
   return g;
 }
 

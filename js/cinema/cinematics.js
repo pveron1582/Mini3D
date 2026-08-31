@@ -8,6 +8,7 @@ import { setStatus } from '../media/recorder.js';
 import { solvePath } from './navigation.js';
 import { pushHistory } from '../undo.js';
 import { anchorSeats } from '../characters/anchors.js';
+import { getWallColliders, getDoorColliders } from '../office/walls.js';
 import { stepLadder, STEP_LADDER_ORIGIN } from '../office/group.js';
 
 // ==========================================
@@ -910,5 +911,76 @@ export function evaluateAllPathsAt(t) {
 export {
   cinemaStorePath, cinemaLoadTarget, cinemaActivate, cinemaDeactivate,
   cinemaClearPath, cinemaTogglePlay, startAllPlaybacks, stopAllPlaybacks,
-  cinemaSetMode, refreshCinemaUI, updateCinemaCharList
+  cinemaSetMode, refreshCinemaUI, updateCinemaCharList, fixCameraVisibility
 };
+
+// ==========================================
+// CÁMARAS FIJAS: línea de vista libre (nada tapa al personaje)
+// ==========================================
+// Una toma fija con camPos/target queda inútil si la cámara está detrás de
+// una pared o de un mueble que tape al personaje. Esta función revisa el
+// segmento cámara→objetivo contra los colliders de paredes y, si hay algo en
+// el medio, ACorta la cámara hacia el objetivo hasta verlo (después un
+// paso de "zoom de emergencia" se queda). Usar al crear/editar una toma.
+function fixCameraVisibility(camPosIn, targetIn) {
+  const cp = new THREE.Vector3(camPosIn[0], camPosIn[1], camPosIn[2]);
+  const tp = new THREE.Vector3(targetIn[0], targetIn[1], targetIn[2]);
+  const dir = new THREE.Vector3().subVectors(tp, cp);
+  const len = dir.length();
+  if (len < 0.01) return { camPos: camPosIn, target: targetIn, changed: false };
+  dir.normalize();
+  const walls = [...getWallColliders(), ...getDoorColliders()];
+  // Intersección del rayo cámara→objetivo contra las cajas de paredes
+  const hitWall = (rayOrigin, rayDir, maxT) => {
+    let minT = Infinity;
+    walls.forEach(b => {
+      // AABB 2D en el plano XZ con el piso de la pared (se sube hasta y ~1.9)
+      const ax = [b.minX, 1.0, b.minZ], aw = [b.maxX - b.minX, 0.9, b.maxZ - b.minZ];
+      const inv = new THREE.Vector3(1 / rayDir.x, 1 / rayDir.y, 1 / rayDir.z);
+      let tmin = 0, tmax = maxT;
+      ['x', 'z'].forEach(k => {
+        const d0 = (ax[k === 'x' ? 0 : 2] - rayOrigin[k]) * inv[k === 'x' ? 'x' : 'z'];
+        const d1 = (ax[k === 'x' ? 0 : 2] + aw[k === 'x' ? 0 : 2] - rayOrigin[k]) * inv[k === 'x' ? 'x' : 'z'];
+        const t0 = Math.min(d0, d1), t1 = Math.max(d0, d1);
+        tmin = Math.max(tmin, t0); tmax = Math.min(tmax, t1);
+      });
+      const hy = ax[1], hh = aw[1];
+      const y0 = (hy - hh / 2 - rayOrigin.y) * inv.y, y1 = (hy + hh / 2 - rayOrigin.y) * inv.y;
+      tmin = Math.max(tmin, Math.min(y0, y1)); tmax = Math.min(tmax, Math.max(y0, y1));
+    });
+    return minT;
+  };
+  let cam = cp.clone();
+  let changed = false;
+  // Acercar la cámara hacia el objetivo hasta que la línea de vista quede libre
+  for (let i = 0; i < 12; i++) {
+    const segLen = cam.distanceTo(tp);
+    if (segLen < 0.05) { changed = true; break; }
+    const ray = new THREE.Vector3().subVectors(tp, cam).normalize();
+    // Con todas las paredes, probar el cruce
+    let anyHit = false;
+    for (const b of walls) {
+      if (segmentIntersectsBox(cam, ray, b, segLen)) { anyHit = true; break; }
+    }
+    if (!anyHit) break;
+    changed = true;
+    cam.addScaledVector(ray, segLen * 0.18); // acercar un 18% del tramo faltante
+  }
+  return { camPos: cam.toArray(), target: targetIn, changed };
+}
+
+// ¿El segmento (origin, dir, len) cruza la caja AABB (pared) en XZ/Y?
+function segmentIntersectsBox(origin, dir, box, segLen) {
+  // AABB 3D aproximada (se limita a XZ con un poco de y para cubrir la pared)
+  const min = { x: box.minX, y: 0.0, z: box.minZ };
+  const max = { x: box.maxX, y: 2.1, z: box.maxZ };
+  let tmin = 0, tmax = segLen;
+  const inv = { x: 1 / dir.x, y: 1 / (dir.y || 1e-9), z: 1 / dir.z };
+  for (const ax of ['x', 'y', 'z']) {
+    const d0 = (min[ax] - origin[ax]) * inv[ax], d1 = (max[ax] - origin[ax]) * inv[ax];
+    const t0 = Math.min(d0, d1), t1 = Math.max(d0, d1);
+    tmin = Math.max(tmin, t0); tmax = Math.min(tmax, t1);
+    if (tmax < tmin) return false;
+  }
+  return tmin >= 0 && tmin <= segLen;
+}

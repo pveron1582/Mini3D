@@ -118,9 +118,10 @@ export function createChair(id, name, x, z, rotY = 0) {
 
   officeGroup.add(chair);
   registerSelectable(id, name, chair, 'furniture');
-  // Ancla de asiento (P4): los personajes que se sientan acá se colocan desde
-  // esta ancla (posición+rotación de la silla), no con coordenadas hardcodeadas.
+  // Ancla de asiento con la altura REAL de la silla (comedor 0.48 m): así
+  // quien se sienta apoya en la tapa correcta (no flota ni se hunde).
   registerAnchor('seat_' + id, chair);
+  chair.userData.seatY = 0.48;
   return chair;
 }
 
@@ -168,10 +169,11 @@ export function createSofa(id, name, x, z, rotY = 0) {
 
   officeGroup.add(g);
   registerSelectable(id, name, g, 'furniture');
-  // Ancla de asiento con 2 LUGARES (sillón de 2 cuerpos): un cuerpo a cada
-  // lado (±0.45 en el eje lateral del sillón).
+  // Ancla de asiento con 2 LUGARES (sillón de 2 cuerpos) y su altura real
+  // (cushion a y=0.44): quien se sienta apoya en la tapa del cojín.
   registerAnchor('seat_' + id, g);
   setSeatSpots(g, [{ dx: -0.45, dz: 0 }, { dx: 0.45, dz: 0 }]);
+  g.userData.seatY = 0.44;
   return g;
 }
 export function createPlant(id, name, x, z) {

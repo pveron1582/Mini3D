@@ -17,10 +17,11 @@ export function getAnchor(name) {
   return anchors.get(name);
 }
 
-// Devuelve { x, y, z, rotY } de la ancla, o null si no existe.
-// `offset` (opcional): desplazamiento local [dx, dz] en el marco del mueble —
-// lo usan los asientos múltiples (p.ej. un sillón de 2 cuerpos con un lugar a
-// cada extremo: seat_<id> con [0,-0.5] y seat_<id> con [0,+0.5]).
+// Devuelve { x, y, z, rotY, seatY } de la ancla, o null si no existe.
+// `offset` (opcional): desplazamiento local [dx, dz] en el marco del mueble
+// (sillones de 2 cuerpos: [±0.45, 0]). `seatY` es la ALTURA DEL ASIENTO de esa
+// silla (cómo queda la pose `sit` apoyada en la tapa). Cada tipo de silla la
+// registra distinta (en el factory): así el personaje no flota ni se hunde.
 export function anchorPose(name, offset) {
   const g = anchors.get(name);
   if (!g) return null;
@@ -30,19 +31,21 @@ export function anchorPose(name, offset) {
     x += offset[0] * c + offset[1] * s;
     z += -offset[0] * s + offset[1] * c;
   }
-  return { x, y: g.position.y, z, rotY: g.rotation.y };
+  return { x, y: g.position.y, z, rotY: g.rotation.y, seatY: g.userData.seatY || 0 };
 }
 
-// Asientos que ofrece una pieza: lista de poses { x, z, rotY } (mundo).
-// Las sillas comunes tienen 1; los sillones de 2 cuerpos, 2 (un cuerpo
-// cada uno). Se calcula desde las anclas registradas por la pieza.
+// Asientos que ofrece una pieza: lista de poses { x, z, rotY, seatY }.
+// Las sillas comunes registran 1; los sillones de 2 cuerpos, 2 (una a cada
+// lado). La seatY es la ALTURA del asiento de esa silla, para que la pose
+// `sit` apoye bien (sin hundir ni flotar).
 export function anchorSeats(name) {
   const g = anchors.get(name);
   if (!g) return [];
-  const seats = g.userData.seatSpots || [{ dx: 0, dz: 0 }];
-  return seats.map(s => {
+  const seatY = (g.userData.seatY !== undefined) ? g.userData.seatY : 0.48;
+  const spots = g.userData.seatSpots || [{ dx: 0, dz: 0 }];
+  return spots.map(s => {
     const pose = anchorPose(name, [s.dx, s.dz]);
-    return { x: pose.x, z: pose.z, rotY: pose.rotY };
+    return { x: pose.x, z: pose.z, rotY: pose.rotY, seatY };
   });
 }
 

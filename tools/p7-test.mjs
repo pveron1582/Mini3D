@@ -353,5 +353,21 @@ const withSit = serializeProject();
 const sitEv = withSit.paths['sitTestChar'].events['1'];
 assert(!!sitEv && sitEv.action === 'sit_at' && sitEv.sitAt === 'chair1', 'evento sit_at serializa la silla elegida');
 
+	// --- sentarse: altura del asiento por tipo de silla (no todo 0.48) ---
+	const chairSeat = anchorSeats('seat_chair1')[0];
+const execSeat = anchorSeats('seat_execChair')[0];
+const guestSeat = anchorSeats('seat_guestChair')[0];
+const sofaSeat = anchorSeats('seat_sofa1')[0];
+const chestSeat = anchorSeats('seat_bossSofa1')[0];
+assert(chairSeat && Math.abs(chairSeat.seatY - 0.48) < 0.02, 'seatY silla comedor ≈ 0.48');
+assert(execSeat && Math.abs(execSeat.seatY - 0.54) < 0.02, 'seatY silla gerencia ≈ 0.54');
+assert(guestSeat && Math.abs(guestSeat.seatY - 0.50) < 0.02, 'seatY invitado ≈ 0.50');
+assert(sofaSeat && Math.abs(sofaSeat.seatY - 0.44) < 0.02, 'seatY sillón verde ≈ 0.44');
+assert(chestSeat && Math.abs(chestSeat.seatY - 0.47) < 0.02, 'seatY chesterfield ≈ 0.47');
+// El descenso usa la altura real (0.54) y NO el 0.48 fijo
+const sitTest2 = addHumanCharacter('sitTest2', 'Sit Test 2', 0, 0, 0, {});
+sitAtAnchor(sitTest2, 'seat_execChair', { instant: true });
+assert(Math.abs(sitTest2.root.position.y - (0.54 - 0.48)) < 0.02, 'sentado en gerencia usa la altura correcta');
+
 console.log('\n✅ P7: todas las pruebas pasaron');
 process.exit(0);

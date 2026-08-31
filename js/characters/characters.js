@@ -152,6 +152,42 @@ export function rotYToLookAt(fromX, fromZ, toX, toZ) {
   return Math.atan2(dx, dz);
 }
 
+// ==========================================
+// UTILIDAD: personaje de pie frente a un mueble (parado junto a él)
+// ==========================================
+// Resuelve el error repetido de "personajes mal parados cerca de mesas/muebles":
+// `standInFrontOf(rig, anchorName)` coloca al personaje pegado a la cara de
+// USO del mueble (su frente, local +z) mirándolo. Los muebles registran esa
+// cara con su ancla (ej. mesada, escritorio, heladera, mini rack). Así, sin
+// adivinar coordenadas a mano, quien está de pie frente a una mesa la usa.
+export function standInFrontOf(rig, anchorName, dist = 0.55) {
+  const pose = anchorPose(anchorName);
+  if (!rig || !rig.root || !pose) return false;
+  const g = rig.root;
+  // Punto donde queda: a `dist` del centro del mueble, hacia la cara de uso
+  // (su frente local +z, rotada al plano XZ con la rotación del mueble).
+  const c = Math.cos(pose.rotY), s = Math.sin(pose.rotY);
+  const px = pose.x + dist * s;   // +z local => movemos al lado del usuario
+  const pz = pose.z + dist * c;
+  g.position.set(px, 0, pz);
+  g.rotation.y = rotYToLookAt(px, pz, pose.x, pose.z);
+  return true;
+}
+
+// Posicionar al personaje de pie mirando un punto arbitrario (sin ancla):
+// se para a 'dist' de ese punto, del lado indicado por 'side' (en radianes,
+// 0 = desde el sur). Usado cuando no hay mueble ancla y el objetivo es otro
+// punto libre (ej. junto a la pared, cerca de una ventana).
+export function standFacing(rig, targetX, targetZ, dist = 0.55, side = 0) {
+  const g = rig.root;
+  if (!g) return false;
+  const px = targetX - dist * Math.cos(side);
+  const pz = targetZ - dist * Math.sin(side);
+  g.position.set(px, 0, pz);
+  g.rotation.y = rotYToLookAt(px, pz, targetX, targetZ);
+  return true;
+}
+
 // Universal Humanoid Rig Builder
 function createHumanoidModel(id, name, posX, posZ, colors, opts = {}) {
   const g = new THREE.Group();
@@ -1561,11 +1597,16 @@ export function sitAtAnchor(rig, anchorName, opts = {}) {
   // de las sillas está en local +z, así que el personaje debe apuntar al
   // lado opuesto: rotY de la silla + 180°.
   const facingRot = spot.rotY + Math.PI;
+  // Altura de asiento REAL de esta silla (cada tipo tiene la suya):
+  // 0.48 (comedor), 0.54 (gerencia), 0.5 (invitado), 0.44 (sillón), 0.47
+  // (chesterfield). Así el personaje apoya en la tapa correcta — nunca se
+  // hunde ni flota.
+  const seatY = spot.seatY !== undefined ? spot.seatY : 0.48;
   const root = rig.root;
 
   if (opts.instant) {
-    // Posicionamiento inmediato: pose exacta + sentado.
-    root.position.set(spot.x, 0, spot.z);
+    // Posicionamiento inmediato: pose exacta (x, z y altura real) + sentado.
+    root.position.set(spot.x, seatY - 0.48, spot.z);
     root.rotation.y = facingRot;
     rig.setAction('sit');
     return true;
@@ -1578,7 +1619,9 @@ export function sitAtAnchor(rig, anchorName, opts = {}) {
   let dRot = facingRot - startRot;
   while (dRot > Math.PI) dRot -= Math.PI * 2;
   while (dRot < -Math.PI) dRot += Math.PI * 2;
-  const targetY = 0; // sentado: el origen del rig apoya en el asiento vía la pose sit
+  // La altura final es la del asiento de ESTA silla (menos el 0.48 base de
+  // la pose sit), así el descenso exacto se ve tan natural.
+  const targetY = seatY - 0.48;
   const DUR = 0.8;
   let t = 0;
   const ease = (x) => x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
