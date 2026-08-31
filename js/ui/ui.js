@@ -666,6 +666,35 @@ byId('btnAddObject')?.addEventListener('click', openObjectCatalog);
 byId('objCatClose')?.addEventListener('click', closeObjectCatalog);
 catalogSearch?.addEventListener('input', () => renderCatalogList(sinAcentos(catalogSearch.value.trim())));
 objCatalogModal?.addEventListener('click', (e) => { if (e.target === objCatalogModal) closeObjectCatalog(); });
+
+// ==========================================
+// ACCIONES AVANZADAS (modal)
+// ==========================================
+// El panel izquierdo y el menú contextual quedan SOLO con acciones
+// frecuentes. Las específicas (hoy: escalera; luego irán llegando más)
+// viven acá. La acción se aplica al personaje activo y el modal se cierra.
+const advModal = byId('advancedActionsModal');
+function openAdvancedActions() {
+  const entry = getActiveEntry();
+  if (!entry || entry.type !== 'human') {
+    setStatus('Elegí un personaje para usar acciones avanzadas.');
+    return;
+  }
+  const nameEl = byId('advActionsCharName');
+  if (nameEl) nameEl.textContent = entry.name;
+  if (advModal) advModal.style.display = 'flex';
+}
+function closeAdvancedActions() {
+  if (advModal) advModal.style.display = 'none';
+}
+byId('btnAdvancedActions')?.addEventListener('click', openAdvancedActions);
+byId('advActionsClose')?.addEventListener('click', closeAdvancedActions);
+advModal?.addEventListener('click', (e) => { if (e.target === advModal) closeAdvancedActions(); });
+// Aplicar una acción del modal: el handler global de .action-btn la aplica
+// al activo; acá solo aseguramos que el modal se cierre al elegir.
+advModal?.addEventListener('click', (e) => {
+  if (e.target.closest('.action-btn')) closeAdvancedActions();
+});
 qsa('.target-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const target = btn.getAttribute('data-target');

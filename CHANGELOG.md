@@ -2,6 +2,22 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-08-28] — Panel de acciones reordenado + modal ⚙️ Acciones avanzadas
+
+- **Grilla de Animaciones reordenada** (`index.html`): "🪑 Sentado" queda al
+  lado de "💻 Tecleando" (son parecidas), "🛌 Tirado en piso" pasa abajo de
+  todo de las frecuentes. Orden nuevo: Hablando · Tecleando · Sentado ·
+  De pie · Caminar · Correr · Saludar · Aplaudir · Señalar · Llevar objeto ·
+  Tirado en piso.
+- **⚙️ Acciones avanzadas (nuevo modal)**: las 7 acciones de 🪜 escalera
+  salieron del panel y viven en un modal propio (botón al pie de la grilla).
+  La idea: panel izquierdo y menú contextual solo con acciones HABITUALES;
+  las específicas de escena (hoy escalera; después sumarán las que vengan)
+  se eligen ahí, se aplican al personaje activo y el modal se cierra solo.
+- "🪑 Sentado" mantiene el flujo de elegir asiento: pide silla en la escena
+  (sillas y sillones verdes se iluminan al pasar el mouse; en sillones de 2
+  cuerpos se sienta en el lugar clickeado).
+
 ## [2026-08-28] — UI: miniaturas de escenario, branding abajo, menús que cierran, sin botón de silla en el menú
 
 - **Miniaturas de escenario** (`index.html` + `style.css`): el selector de

@@ -371,6 +371,30 @@
       </div>
     </div>
 
+    <!-- Acciones avanzadas: específicas de escena (hoy: escalera; acá irán
+         llegando las acciones menos habituales). El panel izquierdo y el
+         menú contextual quedan solo con las acciones frecuentes. -->
+    <div id="advancedActionsModal" class="startup-overlay" style="display:none;">
+      <div class="startup-card" style="max-width:480px; text-align:left;">
+        <h1 style="font-size:18px;">⚙️ Acciones avanzadas</h1>
+        <p class="startup-sub">Acciones específicas de <span id="advActionsCharName">este personaje</span>.</p>
+        <div class="target-category-label" style="margin-top:8px;">🪜 ESCALERA</div>
+        <div class="gesture-list" id="advActionsList" style="max-height:300px;">
+          <button class="action-btn" data-action="grab_ladder">🪜 Agarrar escalera</button>
+          <button class="action-btn" data-action="carry_ladder">🪜 Llevar escalera</button>
+          <button class="action-btn" data-action="drop_ladder">🪜 Dejar escalera</button>
+          <button class="action-btn" data-action="climb_ladder">🪜 Subir escalera</button>
+          <button class="action-btn" data-action="shoulder_lift">🪜 Cargar al hombro</button>
+          <button class="action-btn" data-action="shoulder_carry">🪜 Caminar con escalera</button>
+          <button class="action-btn" data-action="shoulder_drop">🪜 Bajar del hombro</button>
+        </div>
+        <p class="cinema-hint" style="margin-top:6px;">La escalera vive en la sala de sistemas; estas acciones la manipulan en la escena.</p>
+        <div class="startup-actions" style="justify-content:flex-start; margin-top:10px;">
+          <button class="blender-btn" id="advActionsClose">✖ Cerrar</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 2. Main Workspace Layout -->
     <div id="main-workspace">
       <!-- Left Panel (Sidebar) -->
@@ -664,7 +688,6 @@
               <button class="action-btn" data-action="talk">🗣️ Hablando</button>
               <button class="action-btn" data-action="sit_typing">💻 Tecleando</button>
               <button class="action-btn" data-action="sit">🪑 Sentado</button>
-              <button class="action-btn" data-action="lay">🛌 Tirado en piso</button>
               <button class="action-btn active" data-action="idle">🧍 De pie</button>
               <button class="action-btn" data-action="walk">🚶 Caminar</button>
               <button class="action-btn" data-action="run">🏃 Correr</button>
@@ -672,13 +695,8 @@
               <button class="action-btn" data-action="clap">👏 Aplaudir</button>
               <button class="action-btn" data-action="point">👉 Señalar</button>
               <button class="action-btn" data-action="hold">📦 Llevar objeto</button>
-              <button class="action-btn" data-action="grab_ladder">🪜 Agarrar escalera</button>
-              <button class="action-btn" data-action="carry_ladder">🪜 Llevar escalera</button>
-              <button class="action-btn" data-action="drop_ladder">🪜 Dejar escalera</button>
-              <button class="action-btn" data-action="climb_ladder">🪜 Subir escalera</button>
-              <button class="action-btn" data-action="shoulder_lift">🪜 Cargar al hombro</button>
-              <button class="action-btn" data-action="shoulder_carry">🪜 Caminar con escalera</button>
-              <button class="action-btn" data-action="shoulder_drop">🪜 Bajar del hombro</button>
+              <button class="action-btn" data-action="lay">🛌 Tirado en piso</button>
+              <button class="blender-btn" id="btnAdvancedActions" style="grid-column: 1 / -1;" title="Acciones específicas: escalera, y más con el tiempo">⚙️ Acciones avanzadas…</button>
             </div>
 
             <!-- Gestos de un disparo: se ejecutan una vez y vuelven a la acción base.
