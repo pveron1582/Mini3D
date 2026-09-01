@@ -61,6 +61,10 @@ export const view = {
   subjectId: null
 };
 
+// Bus de la timeline: cinematics.js no puede importar timeline.js (ciclo),
+// así que timeline registra acá sus getters (se llena al evaluarse timeline).
+export const timelineBus = { getSelectedShot: () => null };
+
 // Secuenciador de escenas: línea de tiempo de tomas de cámara
 export const timeline = {
   shots: [],     // { id, start, duration, camMode, subjectId, label, color }

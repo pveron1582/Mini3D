@@ -678,6 +678,16 @@ function selectedShot() {
   return timeline.shots.find(s => s.id === selectedShotId) || null;
 }
 
+// Toma seleccionada actualmente (la usan otros módulos, ej. cinematics para
+// saber si 1P/3P deben configurar ESA toma o solo la vista en vivo).
+export function getSelectedShot() {
+  return selectedShot();
+}
+// Registro en el bus (cinematics.js no puede importarnos: sería un ciclo)
+import { timelineBus } from '../state.js';
+timelineBus.getSelectedShot = getSelectedShot;
+timelineBus.renderShots = () => { renderShots(); renderRuler(); };
+
 function selectShot(id) {
   // Exclusividad: elegir una toma libera el subtítulo y el cartel (quiz)
   // en edición (cada bloque selecciona uno a la vez).
@@ -712,9 +722,14 @@ function selectShot(id) {
 // hay una toma seleccionada (no solo con personajes)
 function syncCameraControlsVisibility(shot) {
   const el = byId('cameraViewControls');
-  if (!el) return;
-  el.style.display = shot ? 'block' : 'none';
-  if (!shot) updateCameraViewVisibility();
+  if (el) el.style.display = shot ? 'block' : 'none';
+  if (!shot) {
+    // Sin toma seleccionada: cámara LIBRE que el usuario maneja a gusto
+    // (1P/3P dejan de estar anclados a un corte).
+    view.mode = 'orbit';
+    view.subjectId = null;
+    controls.enabled = true;
+  }
 }
 
 // Aplica un modo de cámara (de los botones de vista del panel) a la toma

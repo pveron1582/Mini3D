@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { byId, qs, qsa } from '../dom.js';
 import { scene, camera, canvas, controls } from '../core.js';
-import { cinema, cinemaPaths, playbackInstances, view, interactiveRegistry } from '../state.js';
+import { cinema, cinemaPaths, playbackInstances, view, interactiveRegistry, timelineBus } from '../state.js';
 import { getActiveObject, getActiveEntry, setActiveTarget } from '../ui/selection.js';
 import { raycaster, getPointerNDC, projectPointerToPlane } from '../ui/gizmo.js';
 import { setStatus } from '../media/recorder.js';
@@ -510,7 +510,11 @@ function refreshCinemaUI() {
   updateCinemaCharList();
 }
 
-// Lista por personaje (seleccionar / reproducir individual)
+// Lista por personaje: 2 filas de 3 botones.
+//   Fila 1: 🎬 editar camino · 💾 guardar · ✕ borrar recorrido
+//   Fila 2: ▶/⏸ reproducir · 1P · 3P (cámara exclusiva sobre ese personaje)
+// 1P/3P: si hay una TOMA seleccionada, configura esa toma (modo + subjectId)
+// y la escena la usa en ese tramo; si no, es vista en vivo exclusiva.
 function updateCinemaCharList() {
   const list = byId('cinemaCharList');
   if (!list) return;
@@ -526,19 +530,69 @@ function updateCinemaCharList() {
     const stored = cinemaPaths.get(entry.id);
     const hasPath = !!(stored && stored.waypoints && stored.waypoints.length >= 2);
     const playing = playbackInstances.has(entry.id);
+    const isCinemaTarget = cinema.active && cinema.targetId === entry.id;
+    const shot = timelineBus.getSelectedShot();
+
     const row = document.createElement('div');
     row.className = 'cinema-char-row' + (entry.id === activeId ? ' selected' : '');
     row.setAttribute('data-id', entry.id);
 
+    // --- Encabezado: nombre ---
     const icon = entry.type === 'human' ? '🧍' : '🐾';
-    const name = document.createElement('span');
+    const name = document.createElement('div');
     name.className = 'cinema-char-name';
     name.textContent = icon + ' ' + entry.name;
     row.appendChild(name);
 
-    // Botón Play (habilitado solo si tiene recorrido)
+    // --- Fila 1: editar camino · guardar · borrar ---
+    const row1 = document.createElement('div');
+    row1.className = 'cinema-btn-row';
+
+    const actBtn = document.createElement('button');
+    actBtn.className = 'blender-btn cinema-char-icon-btn' + (isCinemaTarget ? ' primary' : '');
+    actBtn.textContent = isCinemaTarget ? '🎥' : '🎬';
+    actBtn.title = isCinemaTarget
+      ? 'Terminar edición del recorrido de ' + entry.name
+      : 'Editar recorrido de ' + entry.name;
+    actBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      setActiveTarget(entry.id);
+      if (cinema.active && cinema.targetId === entry.id) cinemaDeactivate();
+      else cinemaActivate();
+    });
+    row1.appendChild(actBtn);
+
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'blender-btn cinema-char-icon-btn';
+    saveBtn.textContent = '💾';
+    saveBtn.title = 'Guardar cambios del recorrido y del personaje';
+    saveBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      // Guardar el recorrido en edición (si es de este personaje) y todo al historial
+      if (cinema.active && cinema.targetId === entry.id) cinemaStorePath(entry.id);
+      pushHistory();
+      setStatus('Cambios de ' + entry.name + ' guardados.');
+    });
+    row1.appendChild(saveBtn);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'blender-btn cinema-char-icon-btn cinema-char-del';
+    delBtn.textContent = '✕';
+    delBtn.disabled = !hasPath;
+    delBtn.title = hasPath ? 'Borrar recorrido de ' + entry.name : 'Sin recorrido para borrar';
+    delBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      cinemaDeletePathFor(entry.id);
+    });
+    row1.appendChild(delBtn);
+    row.appendChild(row1);
+
+    // --- Fila 2: reproducir/pausar · 1P · 3P ---
+    const row2 = document.createElement('div');
+    row2.className = 'cinema-btn-row';
+
     const playBtn = document.createElement('button');
-    playBtn.className = 'blender-btn cinema-char-play';
+    playBtn.className = 'blender-btn cinema-char-icon-btn' + (playing ? ' primary' : '');
     playBtn.textContent = playing ? '⏸' : '▶';
     playBtn.disabled = !hasPath;
     playBtn.title = hasPath ? 'Reproducir recorrido' : 'Sin recorrido configurado';
@@ -547,41 +601,63 @@ function updateCinemaCharList() {
       if (entry.id !== activeId) setActiveTarget(entry.id);
       togglePlayback(entry.id);
     });
-    row.appendChild(playBtn);
+    row2.appendChild(playBtn);
 
-    // Botón Activar/Desactivar cinemática (ícono, funciona como toggle)
-    const isCinemaTarget = cinema.active && cinema.targetId === entry.id;
-    const actBtn = document.createElement('button');
-    actBtn.className = 'blender-btn cinema-char-icon-btn' + (isCinemaTarget ? ' primary' : '');
-    actBtn.textContent = isCinemaTarget ? '🎥' : '🎬';
-    actBtn.title = isCinemaTarget
-      ? 'Terminar y guardar el recorrido de ' + entry.name
-      : 'Activar cinemática para ' + entry.name;
-    actBtn.addEventListener('click', (ev) => {
+    const isFpvHere = (view.mode === 'fpv' && view.subjectId === entry.id) ||
+      (shot && shot.camMode === 'fpv' && shot.subjectId === entry.id);
+    const fpvBtn = document.createElement('button');
+    fpvBtn.className = 'blender-btn cinema-char-icon-btn' + (isFpvHere ? ' primary' : '');
+    fpvBtn.textContent = '1P';
+    fpvBtn.title = 'Cámara en 1ª persona sobre ' + entry.name;
+    fpvBtn.addEventListener('click', (ev) => {
       ev.stopPropagation();
-      setActiveTarget(entry.id);
-      if (cinema.active && cinema.targetId === entry.id) cinemaDeactivate();
-      else cinemaActivate();
+      setFollowView(entry.id, 'fpv');
     });
-    row.appendChild(actBtn);
+    row2.appendChild(fpvBtn);
 
-    // Botón Borrar cinemática (ícono rojo)
-    const delBtn = document.createElement('button');
-    delBtn.className = 'blender-btn cinema-char-icon-btn cinema-char-del';
-    delBtn.textContent = '✖';
-    delBtn.disabled = !hasPath;
-    delBtn.title = hasPath ? 'Borrar recorrido de ' + entry.name : 'Sin recorrido para borrar';
-    delBtn.addEventListener('click', (ev) => {
+    const isThirdHere = (view.mode === 'third' && view.subjectId === entry.id) ||
+      (shot && shot.camMode === 'third' && shot.subjectId === entry.id);
+    const thirdBtn = document.createElement('button');
+    thirdBtn.className = 'blender-btn cinema-char-icon-btn' + (isThirdHere ? ' primary' : '');
+    thirdBtn.textContent = '3P';
+    thirdBtn.title = 'Cámara en 3ª persona sobre ' + entry.name;
+    thirdBtn.addEventListener('click', (ev) => {
       ev.stopPropagation();
-      cinemaDeletePathFor(entry.id);
+      setFollowView(entry.id, 'third');
     });
-    row.appendChild(delBtn);
+    row2.appendChild(thirdBtn);
+    row.appendChild(row2);
 
     row.addEventListener('click', () => {
       if (entry.id !== activeId) setActiveTarget(entry.id);
     });
     list.appendChild(row);
   });
+}
+
+// 1P/3P sobre un personaje: la cámara lo sigue A ÉL (exclusivo — si otro la
+// tenía, o estaba en Libre, pierde). Si hay una TOMA seleccionada, configura
+// ESA toma (camMode + subjectId) y corta a ella; si no, es vista en vivo.
+function setFollowView(personId, mode) {
+  const entry = interactiveRegistry.get(personId);
+  if (!entry) return;
+  const shot = timelineBus.getSelectedShot();
+  if (shot) {
+    // Configurar el corte seleccionado: este personaje protagoniza la toma
+    shot.camMode = mode;
+    shot.subjectId = personId;
+    timelineBus.renderShots();
+    cutCameraToShot(mode, personId, shot);
+    setStatus(`${mode === 'fpv' ? '1ª' : '3ª'} persona sobre ${entry.name} (toma seleccionada).`);
+  } else {
+    // Vista en vivo: exclusiva sobre este personaje
+    view.mode = mode;
+    view.subjectId = personId;
+    controls.enabled = false;
+    updateCinematicCamera(true);
+    setStatus(`${mode === 'fpv' ? '1ª' : '3ª'} persona sobre ${entry.name}.`);
+  }
+  refreshCinemaUI();
 }
 
 function cinemaDeletePathFor(id) {
