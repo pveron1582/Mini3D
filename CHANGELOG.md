@@ -2,6 +2,10 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-08] — Directorio `archivo/` para notas de diagnóstico
+
+- Nuevo `archivo/` con `fixed_cinematica_gemini.md` y `mejoras_gemini.md`
+  (antes sueltos en la raíz); la raíz vuelve a quedar limpia.
 ## [2026-09-08] — Pista PERSONAJES + reproducción determinista + guardado directo
 
 - **Nueva pista 🧍 PERSONAJES** (`js/cinema/charTrack.js`, nuevo): una lane por
