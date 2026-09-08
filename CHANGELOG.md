@@ -2,6 +2,12 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-08] — Cabezal a la regla + lugar auto-guardado en el cuadro
+
+- El cabezal rojo va anclado a la regla de segundos (antes flotaba arriba
+  del panel); se reancla si cambia el layout.
+- Definir acción/ánimo en el cuadro también guarda el lugar actual (antes
+  solo el 💾); aviso al abrir el editor.
 ## [2026-09-08] — Fix "todo a destiempo": escala única + duración al día
 
 - Cada pista dibujaba con su escala (personajes/quiz al doble que las

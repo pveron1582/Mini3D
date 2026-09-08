@@ -461,8 +461,24 @@ function updatePlayheadUI() {
   if (ph) {
     ph.style.display = (timeline.playing || timeline.time > 0) ? 'block' : 'none';
     ph.style.left = (playheadBaseX() + Math.max(0, timeline.time) * pxPerSec()) + 'px';
+    positionPlayheadKnob(ph);
   }
   if (clockEl) clockEl.textContent = fmt(timeline.time) + ' / ' + fmt(timeline.duration);
+}
+
+// El cabezal rojo va a la altura de la REGLA (donde se leen los segundos),
+// no arriba del panel: la barra de herramientas cambia de alto según el
+// ancho, así que se ancla al ruler en vivo (cacheado mientras no se mueva).
+let knobGeoKey = null;
+function positionPlayheadKnob(ph) {
+  const knob = ph.firstElementChild;
+  const ruler = byId('timelineRuler');
+  if (!knob || !ruler) return;
+  if (ph.style.display === 'none') { knobGeoKey = null; return; }
+  const key = ruler.offsetTop + 'x' + ruler.clientHeight;
+  if (key === knobGeoKey) return;
+  knobGeoKey = key;
+  knob.style.top = (ruler.offsetTop + ruler.clientHeight / 2 - knob.offsetHeight / 2) + 'px';
 }
 
 // La aguja vive en #scene-timeline (fuera del cuerpo con scroll) pero sus

@@ -338,8 +338,7 @@ setCharBlocks([], {});
 // --- bloques guardan pose (lugar + rotación) y la reproducen ---
 // Cada cuadro recuerda dónde quedó el personaje: al pasar de un cuadro a
 // otro salta a su pose, y terminada la escena conserva la última.
-const { charPoseAt, createInitialCharBlock } = await import(pathToFileURL('./js/cinema/charTrack.js'));
-const poseRig = addHumanCharacter('poseTestChar', 'Pose Test', 1, 2, 0, {});
+const { charPoseAt, createInitialCharBlock, captureBlockPose } = await import(pathToFileURL('./js/cinema/charTrack.js'));const poseRig = addHumanCharacter('poseTestChar', 'Pose Test', 1, 2, 0, {});
 // El bloque inicial (3 s) nace con el lugar de creación
 const poseInit = createInitialCharBlock('poseTestChar', 'idle');
 assert(poseInit.start === 0 && poseInit.duration === 3, 'bloque inicial: arranca en 0 y dura 3 s');
@@ -366,6 +365,12 @@ assert(Math.abs(poseEntry.group.position.x - 7) < 1e-6 && Math.abs(poseEntry.gro
 assert(Math.abs(poseEntry.group.rotation.y - 1.5) < 1e-6, 'reproducción: el personaje mira como quedó en el cuadro');
 evaluateAllPathsAt(99);
 assert(Math.abs(poseEntry.group.position.x - 7) < 1e-6, 'reproducción: al final conserva el último lugar');
+// Definir en el cuadro también fija el lugar (sin 💾 de por medio)
+const capBlock = { id: 'cbCap', start: 0, duration: 2, actions: { poseTestChar: { action: 'idle' } } };
+poseEntry.group.position.set(11, 0, 12);
+poseEntry.group.rotation.y = 0.7;
+captureBlockPose(capBlock);
+assert(Math.abs(capBlock.actions.poseTestChar.pos[0] - 11) < 1e-6 && Math.abs(capBlock.actions.poseTestChar.rotY - 0.7) < 1e-6, 'definir en el cuadro captura el lugar');
 setCharBlocks([], {});
 
 // --- reproducción con solo bloques (sin tomas): siempre funciona ---

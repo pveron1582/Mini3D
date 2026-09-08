@@ -362,10 +362,7 @@ export function renderCharBlocks() {
               // Guardar también DÓNDE está cada personaje del bloque ahora:
               // su posición y rotación actuales quedan en el cuadro — en
               // reproducción aparece ahí (lugar + acción + ánimo).
-              Object.keys(b.actions || {}).forEach(charId => {
-                const pose = currentPoseOf(charId);
-                if (pose) Object.assign(b.actions[charId], pose);
-              });
+              captureBlockPose(b);
               clearCharBlockSelection();
               pushHistory();
               setStatus('Bloque de personajes guardado (lugar + acción + ánimo).');
@@ -549,6 +546,7 @@ function openCharBlockEditor(b) {
   blockSnapshot = JSON.parse(JSON.stringify({ start: b.start, duration: b.duration, actions: b.actions }));
   blockEdit.set('charblock');
   renderCharBlocks();
+  setStatus('Editando el cuadro: acción, ánimo y lugar quedan guardados en él (💾 confirma, ✕ descarta).');
   window.dispatchEvent(new CustomEvent('edit-mode-request', { detail: { mode: 'personajes' } }));
 }
 
@@ -594,6 +592,9 @@ function renderCharBlockEditor() {
     actSel.value = a.action || 'idle';
     actSel.addEventListener('change', () => {
       a.action = actSel.value;
+      // Definir en el cuadro también fija DÓNDE está: el lugar actual queda
+      // guardado junto a la acción (no hace falta 💾 solo por moverlo).
+      captureBlockPose(selectedBlock);
       renderCharBlocks();
       pushHistory();
     });
@@ -610,6 +611,7 @@ function renderCharBlockEditor() {
     moodSel.value = a.mood || '';
     moodSel.addEventListener('change', () => {
       a.mood = moodSel.value || undefined;
+      captureBlockPose(selectedBlock);
       pushHistory();
     });
     row.appendChild(moodSel);
@@ -734,6 +736,16 @@ export function createInitialCharBlock(charId, action = 'idle', duration = INITI
   renderCharBlocks();
   if (timelineBus.refreshDuration) timelineBus.refreshDuration();
   return b;
+}
+
+// Guardar en el cuadro DÓNDE está cada personaje ahora (posición +
+// rotación): junto a la acción y el ánimo que define el panel.
+export function captureBlockPose(b) {
+  if (!b) return;
+  Object.keys(b.actions || {}).forEach(charId => {
+    const pose = currentPoseOf(charId);
+    if (pose) Object.assign(b.actions[charId], pose);
+  });
 }
 
 // Pose vigente por personaje en el instante t: la del ÚLTIMO bloque que ya
