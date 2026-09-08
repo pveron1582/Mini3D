@@ -23,6 +23,50 @@ scene.add(characterGroup);
 const mix = (a, b, k) => a + (b - a) * k;
 const genv = (e, duration) => Math.sin(Math.PI * Math.max(0, Math.min(1, e / duration)));
 
+// ==========================================
+// TRANSICIONES SUAVES ENTRE ACCIONES (backlog #5)
+// ==========================================
+// Al cambiar de acción, la pose no salta en seco: se interpola cada
+// articulación desde la pose anterior hasta la nueva durante BLEND_DUR.
+// Genérico (sirve para humanos, perro y gato): foto de transforms al cambiar
+// + lerp/slerp al final de cada frame de animación. Solo cuesta traversar el
+// rig mientras dura la mezcla (0.3 s). La raíz (posición en el mundo) queda
+// afuera: la manejan la escena (caminos, gizmo, asientos).
+const BLEND_DUR = 0.3;
+const _bq1 = new THREE.Quaternion();
+const _bq2 = new THREE.Quaternion();
+
+function snapshotRigPose(rig) {
+  const snap = new Map();
+  rig.root.traverse(o => {
+    if (o === rig.root) return;
+    snap.set(o, { p: o.position.clone(), e: o.rotation.clone(), s: o.scale.clone() });
+  });
+  return snap;
+}
+
+function beginRigBlend(rig) {
+  rig._blendFrom = snapshotRigPose(rig);
+  rig._blendT0 = rig._now || 0;
+}
+
+function applyRigBlend(rig, now) {
+  const from = rig._blendFrom;
+  if (!from) return;
+  const k = (now - rig._blendT0) / BLEND_DUR;
+  // Fuera de la ventana (o tiempo hacia atrás): se termina sin mezclar.
+  if (!(k >= 0) || k >= 1) { rig._blendFrom = null; return; }
+  const e = k * k * (3 - 2 * k); // smoothstep: arranca y frena suave
+  rig.root.traverse(o => {
+    if (o === rig.root) return;
+    const f = from.get(o);
+    if (!f) return;
+    o.position.lerpVectors(f.p, o.position, e);
+    o.quaternion.slerpQuaternions(_bq1.setFromEuler(f.e), _bq2.setFromEuler(o.rotation), e);
+    o.scale.lerpVectors(f.s, o.scale, e);
+  });
+}
+
 export const GESTURE_DEFS = {
   point: { duration: 2.0, label: '👉 Señalar', animate: (e, p) => {
     const k = genv(e, 2.0);
@@ -629,6 +673,7 @@ function createHumanoidModel(id, name, posX, posZ, colors, opts = {}) {
       if (def && elapsed < def.duration) {
         def.animate(elapsed, parts);
         applyMood();
+        applyRigBlend(rig, t);
         return;
       }
       rig.gesture = null; // terminado: continúa la acción base más abajo
@@ -919,6 +964,7 @@ function createHumanoidModel(id, name, posX, posZ, colors, opts = {}) {
       parts.h_mouth.scale.y = open;
       parts.h_mouth.position.y = -0.1 - (open - 1) * 0.012; // baja un poco al abrirse
     }
+    applyRigBlend(rig, t);
   };
 
   // Aplica el estado emocional a la cara (cejas y boca). Se llama cada frame
@@ -972,6 +1018,7 @@ function createHumanoidModel(id, name, posX, posZ, colors, opts = {}) {
         return;
       }
       rig.gesture = null; // una acción sostenida cancela cualquier gesto en curso
+      if (rig.currentAction !== act) beginRigBlend(rig);
       rig.currentAction = act;
       rig.cadence = 1; // cadencia natural salvo que la cinemática la ajuste
       if (store.activeTarget === id) updateActionButtonsState(act);
@@ -984,6 +1031,7 @@ function createHumanoidModel(id, name, posX, posZ, colors, opts = {}) {
     playGesture: (gname) => {
       const def = GESTURE_DEFS[gname];
       if (!def) return;
+      beginRigBlend(rig);
       rig.gesture = gname;
       rig.gestureStart = rig._now;
       setStatus(`${name}: ${def.label}`);
@@ -1232,6 +1280,7 @@ function buildDog(posX, posZ, opts = {}) {
   }
 
   const animateDog = (t) => {
+    rig._now = t;
     resetDogPose();
 
     if (rig.currentAction === 'idle') {
@@ -1306,6 +1355,7 @@ function buildDog(posX, posZ, opts = {}) {
       parts.d_head.rotation.x = Math.sin(phase) * 0.1;
       parts.d_body.position.y = 0.65 + Math.abs(Math.sin(phase)) * 0.07;
     }
+    applyRigBlend(rig, t);
   };
 
   const rig = {
@@ -1317,6 +1367,7 @@ function buildDog(posX, posZ, opts = {}) {
     naturalRun: 5.0,
     groundY: 0.05,
     setAction: (act) => {
+      if (rig.currentAction !== act) beginRigBlend(rig);
       rig.currentAction = act;
       rig.cadence = 1; // cadencia natural salvo que la cinemática la ajuste
       if (store.activeTarget === id) updateActionButtonsState(act);
@@ -1444,6 +1495,7 @@ function buildCat(posX, posZ, opts = {}) {
   }
 
   const animateCat = (t) => {
+    rig._now = t;
     resetCatPose();
 
     if (rig.currentAction === 'idle') {
@@ -1502,6 +1554,7 @@ function buildCat(posX, posZ, opts = {}) {
       parts.c_tail.rotation.y = Math.sin(phase * 2.0) * 0.4;
       parts.c_body.position.y = 0.42 + Math.abs(Math.sin(phase)) * 0.05;
     }
+    applyRigBlend(rig, t);
   };
 
   const rig = {
@@ -1513,6 +1566,7 @@ function buildCat(posX, posZ, opts = {}) {
     naturalRun: 4.5,
     groundY: 0.02,
     setAction: (act) => {
+      if (rig.currentAction !== act) beginRigBlend(rig);
       rig.currentAction = act;
       rig.cadence = 1; // cadencia natural salvo que la cinemática la ajuste
       if (store.activeTarget === id) updateActionButtonsState(act);

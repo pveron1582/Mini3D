@@ -264,10 +264,11 @@ gestoRig.setAction('type_standing');
 assert(gestoRig.currentAction === 'type_standing', 'acción type_standing (tecleando de pie) existe y aplica');
 
 // --- lip-sync (backlog #2): la boca abre/cierra mientras dura `talk` ---
+// (Muestras fuera de la ventana de blending 0.3s: a 0.1s aún está mezclando.)
 gestoRig.setAction('talk');
-gestoRig.run(0.1); // frame con la boca bastante abierta
+gestoRig.run(0.5); // frame con la boca bastante abierta
 const openScale = gestoRig.parts.h_mouth.scale.y;
-gestoRig.run(0.7); // ~medio ciclo después: mucho más cerrada
+gestoRig.run(1.1); // ~medio ciclo después: mucho más cerrada
 const closedScale = gestoRig.parts.h_mouth.scale.y;
 assert(openScale > 1.6, 'lip-sync: boca se abre al hablar (scale.y alto)');
 assert(Math.abs(closedScale - openScale) > 1, 'lip-sync: la boca varía su apertura con el tiempo');
@@ -279,9 +280,9 @@ assert(Math.abs(gestoRig.parts.h_mouth.scale.y - 1) < 0.02, 'lip-sync: fuera de 
 // --- sit_talk: hablando SENTADO (el jefe no se para de la silla) ---
 // La pose mantiene las piernas de sit y agrega gesticulación + lip-sync.
 gestoRig.setAction('sit_talk');
-gestoRig.run(0.1);
+gestoRig.run(0.5);
 const sitTalkOpen = gestoRig.parts.h_mouth.scale.y;
-gestoRig.run(0.7);
+gestoRig.run(1.1);
 const sitTalkClosed = gestoRig.parts.h_mouth.scale.y;
 assert(sitTalkOpen > 1.6, 'sit_talk: lip-sync activo (boca se abre sentado)');
 assert(Math.abs(sitTalkClosed - sitTalkOpen) > 1, 'sit_talk: la boca varía su apertura');
@@ -460,6 +461,27 @@ const serDog = withPets.characters.find(c => c.id === 'petDog1');
 const serCat = withPets.characters.find(c => c.id === 'petCat1');
 assert(!!serDog && serDog.pet === 'dog' && serDog.colors.fur === DOG_VARIANTS[1].colors.fur, 'perro serializado con variante');
 assert(!!serCat && serCat.pet === 'cat' && serCat.colors.fur === CAT_VARIANTS[2].colors.fur, 'gato serializado con variante');
+
+// --- transiciones suaves: la pose interpola 0.3s al cambiar de acción ---
+const blendRig = addHumanCharacter('blendTestChar', 'Blend Test', 5, 5, 0, {});
+blendRig.run(10); // idle estable
+blendRig.setAction('sit');
+assert(blendRig._blendFrom instanceof Map, 'blending: foto de la pose al cambiar');
+blendRig.run(10.15); // mitad de la mezcla
+const midLeg = blendRig.parts.h_legL.rotation.x;
+assert(midLeg < -0.1 && midLeg > -Math.PI / 2, 'blending: a mitad camino entre idle y sit');
+assert(Math.abs(blendRig.root.position.x - 5) < 1e-9, 'blending: no mueve la raíz');
+blendRig.run(10.31); // mezcla terminada
+assert(blendRig._blendFrom === null, 'blending: termina a los 0.3s');
+assert(Math.abs(blendRig.parts.h_legL.rotation.x - (-Math.PI / 2)) < 1e-6, 'blending: pose final exacta');
+blendRig.setAction('sit');
+assert(blendRig._blendFrom === null, 'blending: repetir acción no mezcla');
+const blendDog = addDogCharacter('blendDog', 'Blend Perro', 6, 6, 0, DOG_VARIANTS[0].colors);
+blendDog.run(10);
+blendDog.setAction('sit');
+blendDog.run(10.15);
+const midBody = blendDog.parts.d_body.position.y;
+assert(midBody < 0.65 && midBody > 0.44, 'blending perro: interpola el cuerpo');
 
 // --- sentarse en asiento (sit_at): evento con silla + ancla ---
 const { sitAtAnchor } = await import(pathToFileURL('./js/characters/characters.js'));

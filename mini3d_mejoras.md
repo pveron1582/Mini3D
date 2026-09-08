@@ -107,11 +107,11 @@ Acción única (gestos) y "🪑 Elegir asiento…" → click en la silla lo posi
 DIRECTO (sin animación) para posar la escena. Anclas `seat_<id>` en todas las
 sillas (oficina, comedor, gerencia, invitado, sillones).
 
-### 5. Transiciones suaves entre acciones (MEDIO impacto / esfuerzo medio)
-Hoy las poses cambian en seco. Interpolar ángulos de articulaciones durante
-~0.3 s entre acción previa y nueva.
-- Dónde: `js/characters.js` (blending por rig; cuidado con el costo en PCs
-  modestas — es solo lerp, debería estar bien).
+### 5. ~~Transiciones suaves entre acciones~~ ✅ (2026-09-08)
+HECHO: al cambiar de acción (o arrancar un gesto) cada articulación interpola
+desde la pose anterior durante 0.3 s (smoothstep + slerp, genérico para
+humanos, perro y gato; la raíz queda afuera — la maneja la escena). Repetir la
+misma acción no re-dispara la mezcla. Tests en la suite.
 
 ### 6. Cámara con movimiento dentro de la toma (MEDIO impacto / esfuerzo medio)
 Tomas fijas con dolly/zoom gradual: campos opcionales `camPosEnd` /

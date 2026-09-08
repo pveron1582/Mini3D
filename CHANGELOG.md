@@ -2,6 +2,11 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-08] — Transiciones suaves entre acciones (backlog #5)
+
+- Al cambiar de acción cada articulación interpola 0.3 s (smoothstep +
+  slerp) en humanos, perro y gato; gestos también entran suave. La raíz no
+  se mezcla. Tests nuevos (muestras de lip-sync movidas fuera de la ventana).
 ## [2026-09-08] — Perros y gatos en el creador, con 3 variantes cada uno
 
 - El ➕ Añadir personaje ahora ofrece 🧍 Persona, 🐕 Perro y 🐈 Gato; las
