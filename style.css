@@ -843,6 +843,12 @@ body, html {
   color: #fff;
 }
 
+.hud-btn.active {
+  background-color: var(--accent-primary);
+  color: #fff;
+  border-color: var(--accent-primary);
+}
+
 /* 3. Bottom Timeline Bar */
 #bottom-timeline {
   height: 44px;

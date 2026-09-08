@@ -1,4 +1,4 @@
-import { camera, controls, renderer, canvas } from '../core.js';
+import { camera, controls, renderer, canvas, setSmoothMove } from '../core.js';
 import { byId, qs, qsa } from '../dom.js';
 import { gridHelper, subGrid, axesGroup, cursor3D } from '../lights.js';
 import { setEnvironment } from '../environment.js';
@@ -14,6 +14,7 @@ const resetCamBtn = byId('resetCamBtn');
 const snapViewFront = byId('snapViewFront');
 const snapViewTop = byId('snapViewTop');
 const snapViewSide = byId('snapViewSide');
+const smoothMoveBtn = byId('smoothMoveBtn');
 
 // ==========================================
 // VUELO DE CÁMARA AL OBJETIVO (focus + zoom intermedio)
@@ -80,6 +81,14 @@ addSnap(snapViewSide, () => {
   camera.position.set(13.0, 2.5, 0);
   controls.target.set(0, 1.0, 0);
   setCamView('side');
+});
+// 🐢 Movimiento suave: un solo botón vuelve precisos la rueda (dolly), el
+// botón derecho (vuelo) y el botón izquierdo (rotación). Sin el botón, todo
+// se mueve como siempre.
+smoothMoveBtn?.addEventListener('click', () => {
+  const on = !smoothMoveBtn.classList.contains('active');
+  smoothMoveBtn.classList.toggle('active', on);
+  setSmoothMove(on);
 });
 toggleGridBtn?.addEventListener('click', () => {
   gridHelper.visible = !gridHelper.visible;

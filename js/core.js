@@ -39,9 +39,12 @@ controls.panSpeed = 2.2;
 // de vista (dolly libre). El zoom de OrbitControls queda desactivado.
 controls.enableZoom = false;
 
+// Paso del dolly con la rueda (m por unidad de delta): se achica en modo suave.
+let wheelStep = 0.02;
+
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
-  const step = -Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 120) * 0.02;
+  const step = -Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 120) * wheelStep;
   const dir = camera.getWorldDirection(new THREE.Vector3());
   camera.position.addScaledVector(dir, step);
   controls.target.addScaledVector(dir, step);
@@ -57,7 +60,7 @@ controls.target.set(0, 0.5, 0);
 // desplazamiento propio a velocidad constante (~0.02 m por píxel), en el
 // plano de la pantalla: un arrastre cruza la oficina entera sin importar
 // el nivel de zoom.
-const FLY_SPEED = 0.07; // metros por píxel de arrastre (bien ágil para recorrer la escena)
+let FLY_SPEED = 0.07; // metros por píxel de arrastre (bien ágil para recorrer la escena)
 
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
@@ -86,3 +89,25 @@ window.addEventListener('pointerup', (e) => {
     controls.enabled = true;
   }
 });
+
+// ==========================================
+// MODO SUAVE (movimiento preciso con un solo botón)
+// ==========================================
+// Un solo interruptor (🐢 Suave junto a Frontal/Superior/Lateral) que vuelve
+// precisos los 3 movimientos de cámara: dolly con la rueda, vuelo con botón
+// derecho y rotación con botón izquierdo. Apagado = velocidades actuales.
+export let smoothMove = false;
+
+const MOVE_SPEEDS = {
+  normal: { rotate: 1.0, pan: 2.2, fly: 0.07, wheel: 0.02 },
+  smooth: { rotate: 0.35, pan: 0.7, fly: 0.02, wheel: 0.006 }
+};
+
+export function setSmoothMove(on) {
+  smoothMove = !!on;
+  const s = smoothMove ? MOVE_SPEEDS.smooth : MOVE_SPEEDS.normal;
+  controls.rotateSpeed = s.rotate;
+  controls.panSpeed = s.pan;
+  FLY_SPEED = s.fly;
+  wheelStep = s.wheel;
+}

@@ -2,6 +2,12 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-08] — Botón 🐢 Suave: movimiento de cámara preciso
+
+- Un solo interruptor junto a Frontal/Superior/Lateral (`smoothMoveBtn`):
+  con modo suave la rueda (dolly), el botón derecho (vuelo) y el botón
+  izquierdo (rotación) van a ~1/3 de velocidad para más precisión
+  (`setSmoothMove` en `js/core.js`); apagado = velocidades actuales.
 ## [2026-09-08] — Cerrar proyecto + atajos Ctrl+N / Ctrl+Q
 
 - **✖ Cerrar** en Archivo y botón junto al 💾 (`btnCloseProject`, `mnuClose`):
