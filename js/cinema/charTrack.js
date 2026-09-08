@@ -8,8 +8,10 @@
 //     de recorrido clásico sobre el piso.
 // Solo se muestran las lanes con algo (acción base, bloques o recorrido);
 // el rótulo de cada lane colapsa/expande su contenido.
-// La posición física sigue en los recorridos (cinemaPaths): esta pista es
-// la fuente de verdad de QUÉ HACE cada personaje y CUÁNDO.
+// La posición física sigue en los recorridos (cinemaPaths) para los que
+// caminan; para los que NO tienen camino, cada bloque guarda su POSE
+// (posición + rotación) al 💾 — en reproducción el personaje aparece donde
+// quedó en cada cuadro, aunque sea de un salto.
 
 import { charBlocks, timeline, interactiveRegistry, blockEdit, charLaneBus, charFullRange, store } from '../state.js';
 import { byId } from '../dom.js';
@@ -364,9 +366,16 @@ export function renderCharBlocks() {
             save.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
             save.addEventListener('click', (ev) => {
               ev.stopPropagation();
+              // Guardar también DÓNDE está cada personaje del bloque ahora:
+              // su posición y rotación actuales quedan en el cuadro — en
+              // reproducción aparece ahí (lugar + acción + ánimo).
+              Object.keys(b.actions || {}).forEach(charId => {
+                const pose = currentPoseOf(charId);
+                if (pose) Object.assign(b.actions[charId], pose);
+              });
               clearCharBlockSelection();
               pushHistory();
-              setStatus('Bloque de personajes guardado.');
+              setStatus('Bloque de personajes guardado (lugar + acción + ánimo).');
             });
             el.appendChild(save);
 
@@ -704,6 +713,16 @@ function beginCharBlockDrag(e, b, el) {
 // cosas en la línea.
 export const INITIAL_CHAR_BLOCK_DURATION = 3;
 
+// Pose actual de un personaje en la escena (para guardar en su bloque).
+function currentPoseOf(charId) {
+  const entry = interactiveRegistry.get(charId);
+  if (!entry || !entry.group) return null;
+  return {
+    pos: [entry.group.position.x, entry.group.position.y, entry.group.position.z],
+    rotY: entry.group.rotation.y
+  };
+}
+
 export function createInitialCharBlock(charId, action = 'idle', duration = INITIAL_CHAR_BLOCK_DURATION) {
   const b = {
     id: 'cb' + (++blockCounter),
@@ -711,9 +730,31 @@ export function createInitialCharBlock(charId, action = 'idle', duration = INITI
     duration: Math.max(0.5, duration),
     actions: { [charId]: { action } }
   };
+  // El bloque nace con el lugar donde apareció el personaje.
+  const pose = currentPoseOf(charId);
+  if (pose) Object.assign(b.actions[charId], pose);
   charBlocks.push(b);
   renderCharBlocks();
   return b;
+}
+
+// Pose vigente por personaje en el instante t: la del ÚLTIMO bloque que ya
+// arrancó (aunque haya terminado — el personaje conserva su último lugar
+// hasta que otro cuadro lo mueva, incluso de un salto). Antes del primer
+// bloque no hay pose (vale el estado inicial).
+export function charPoseAt(t) {
+  const pose = new Map();
+  charBlocks
+    .slice()
+    .sort((a, b) => a.start - b.start)
+    .forEach(b => {
+      if (b.start > t) return;
+      Object.keys(b.actions || {}).forEach(charId => {
+        const a = b.actions[charId];
+        if (a && Array.isArray(a.pos)) pose.set(charId, { pos: a.pos, rotY: a.rotY });
+      });
+    });
+  return pose;
 }
 
 // ---------- Botón ＋ de la pista ----------
@@ -735,6 +776,9 @@ function addBlockFor(entry) {
     duration: 2,
     actions: { [entry.id]: { action: base } }
   };
+  // El bloque nace con el lugar donde está el personaje ahora.
+  const pose = currentPoseOf(entry.id);
+  if (pose) Object.assign(b.actions[entry.id], pose);
   charBlocks.push(b);
   openCharBlockEditor(b);
   pushHistory();

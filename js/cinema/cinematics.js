@@ -6,7 +6,7 @@ import { getActiveObject, getActiveEntry, setActiveTarget } from '../ui/selectio
 import { raycaster, getPointerNDC, projectPointerToPlane } from '../ui/gizmo.js';
 import { setStatus } from '../media/recorder.js';
 import { solvePath } from './navigation.js';
-import { charActionsAt } from './charTrack.js';
+import { charActionsAt, charPoseAt } from './charTrack.js';
 import { pushHistory } from '../undo.js';
 import { anchorSeats } from '../characters/anchors.js';
 import { getWallColliders, getDoorColliders } from '../office/walls.js';
@@ -1041,19 +1041,36 @@ export function evaluateAllPathsAt(t) {
   // de QUÉ hace cada personaje; los recorridos solo mueven). Si un personaje
   // tiene acción de bloque, esa manda; si no, aplica la de su recorrido.
   const blockActions = charActionsAt(t);
+  // Poses guardadas por cuadro (💾): dónde quedó cada personaje en cada
+  // bloque. Sin recorrido, el personaje aparece en su pose vigente (salto
+  // entre cuadros incluido) y la conserva cuando la escena sigue sin bloques.
+  const blockPoses = charPoseAt(t);
   interactiveRegistry.forEach((entry, id) => {
     if (!(entry.type === 'human' || entry.type === 'pet')) return;
     const ba = blockActions.get(id);
-    if (!ba) return;
-    if (entry.rig && entry.rig.currentAction !== ba.action) {
-      entry.rig.setAction(ba.action);
+    const pose = blockPoses.get(id);
+    // Sin contenido en la pista (ni acción ni pose vigentes): no se toca,
+    // queda donde está en el editor — como siempre.
+    if (!ba && !pose) return;
+    if (ba) {
+      if (entry.rig && entry.rig.currentAction !== ba.action) {
+        entry.rig.setAction(ba.action);
+      }
+      if (entry.rig && ba.mood && entry.rig.setMood) {
+        entry.rig.setMood(ba.mood);
+      }
     }
-    if (entry.rig && ba.mood && entry.rig.setMood) {
-      entry.rig.setMood(ba.mood);
-    }
-    // Sin recorrido: el personaje queda en su pose de bloque, en su lugar
+    // Sin recorrido: el personaje queda en su pose de bloque, en su lugar.
+    // La pose se aplica aunque la acción del cuadro ya haya expirado (ej.
+    // hablar): el último lugar se conserva siempre hasta que otro cuadro,
+    // un recorrido o el estado inicial lo cambien.
     const stored = cinemaPaths.get(id);
     if (!stored || !stored.waypoints || stored.waypoints.length < 2) {
+      if (pose && pose.pos) {
+        entry.group.position.set(pose.pos[0], applyFloorLaw(entry, pose.pos[1]), pose.pos[2]);
+        if (pose.rotY !== undefined) entry.group.rotation.y = pose.rotY;
+        return;
+      }
       const st = entry.initialState;
       if (st && st.pos) {
         entry.group.position.set(st.pos[0], applyFloorLaw(entry, st.pos[1]), st.pos[2]);

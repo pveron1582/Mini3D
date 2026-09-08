@@ -2,6 +2,15 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-08] — Bloques de personajes guardan lugar + acción + ánimo
+
+- El 💾 del cuadro captura también DÓNDE está el personaje (posición +
+  rotación) además de la acción y el ánimo del panel (`charPoseAt` nuevo en
+  `js/cinema/charTrack.js`, aplicado en `evaluateAllPathsAt`).
+- En reproducción/scrub cada cuadro muestra al personaje tal como quedó
+  (salto entre cuadros incluido) y al terminar la escena conserva el último
+  lugar y acción; sin camino el bloque manda, con camino manda el recorrido.
+- El bloque inicial y el ＋ nacen con la pose actual. Tests nuevos en la suite.
 ## [2026-09-08] — Personaje nuevo: bloque inicial de 3 s (no toda la escena)
 
 - Al ➕ Añadir Personaje se crea un bloque "De pie" de 3 s al inicio

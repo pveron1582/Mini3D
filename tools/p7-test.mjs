@@ -334,6 +334,39 @@ assert(st && st.action === 'sit_typing', 'antes del bloque: acción base');
 // Limpieza para no contaminar el resto de la suite
 setCharBlocks([], {});
 
+// --- bloques guardan pose (lugar + rotación) y la reproducen ---
+// Cada cuadro recuerda dónde quedó el personaje: al pasar de un cuadro a
+// otro salta a su pose, y terminada la escena conserva la última.
+const { charPoseAt, createInitialCharBlock } = await import(pathToFileURL('./js/cinema/charTrack.js'));
+const poseRig = addHumanCharacter('poseTestChar', 'Pose Test', 1, 2, 0, {});
+// El bloque inicial (3 s) nace con el lugar de creación
+const poseInit = createInitialCharBlock('poseTestChar', 'idle');
+assert(poseInit.start === 0 && poseInit.duration === 3, 'bloque inicial: arranca en 0 y dura 3 s');
+assert(Math.abs(poseInit.actions.poseTestChar.pos[0] - 1) < 1e-6 && Math.abs(poseInit.actions.poseTestChar.pos[2] - 2) < 1e-6, 'bloque inicial: captura el lugar de creación');
+assert(Math.abs((poseInit.actions.poseTestChar.rotY || 0) - 0) < 1e-6, 'bloque inicial: captura la rotación de creación');
+// Dos cuadros con lugares distintos
+setCharBlocks([
+  { id: 'cbP1', start: 0, duration: 2, actions: { poseTestChar: { action: 'talk', mood: 'happy', pos: [1, 0, 2], rotY: 0 } } },
+  { id: 'cbP2', start: 5, duration: 2, actions: { poseTestChar: { action: 'idle', pos: [7, 0, 8], rotY: 1.5 } } }
+], {});
+let pp = charPoseAt(1).get('poseTestChar');
+assert(pp && pp.pos[0] === 1 && pp.pos[2] === 2, 'pose del cuadro vigente durante su tramo');
+assert(charActionsAt(1).get('poseTestChar').mood === 'happy', 'el cuadro recuerda el ánimo');
+pp = charPoseAt(3).get('poseTestChar');
+assert(pp && pp.pos[0] === 1, 'entre cuadros se conserva la última pose');
+pp = charPoseAt(6).get('poseTestChar');
+assert(pp && pp.pos[0] === 7 && Math.abs(pp.rotY - 1.5) < 1e-9, 'al entrar al cuadro siguiente salta a su pose');
+pp = charPoseAt(99).get('poseTestChar');
+assert(pp && pp.pos[0] === 7, 'terminada la escena conserva el último lugar');
+// La evaluación lo aplica en escena (sin recorrido: pose del bloque)
+evaluateAllPathsAt(6);
+const poseEntry = interactiveRegistry.get('poseTestChar');
+assert(Math.abs(poseEntry.group.position.x - 7) < 1e-6 && Math.abs(poseEntry.group.position.z - 8) < 1e-6, 'reproducción: el personaje aparece en el lugar del cuadro');
+assert(Math.abs(poseEntry.group.rotation.y - 1.5) < 1e-6, 'reproducción: el personaje mira como quedó en el cuadro');
+evaluateAllPathsAt(99);
+assert(Math.abs(poseEntry.group.position.x - 7) < 1e-6, 'reproducción: al final conserva el último lugar');
+setCharBlocks([], {});
+
 // --- convención de orientación (blindaje anti "dados vuelta") ---
 const { rotYToLookAt } = await import(pathToFileURL('./js/characters/characters.js'));
 const approx = (a, b, tol = 0.02) => Math.abs(a - b) <= tol;
