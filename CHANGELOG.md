@@ -2,6 +2,13 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-08] — Fix "todo a destiempo": escala única + duración al día
+
+- Cada pista dibujaba con su escala (personajes/quiz al doble que las
+  tomas, quiz 6px corrido): nuevo `js/cinema/tlScale.js` con píxeles-por-
+  segundo y rótulo únicos para todas.
+- La duración y la regla se recalculan al crear/mover/borrar bloques, al
+  confirmar tomas y al dar play (antes la regla quedaba vieja).
 ## [2026-09-08] — Dolly/zoom dentro de la toma (backlog #6)
 
 - La toma guarda encuadre de FIN ("📍 Marcar fin aquí" en 🎥 Cámara):

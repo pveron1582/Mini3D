@@ -12,20 +12,12 @@ import { byId } from '../dom.js';
 import { showQuiz, resetQuiz, quizIsActive } from '../media/quiz.js';
 import { pushHistory } from '../undo.js';
 import { setStatus } from '../media/recorder.js';
+import { pxPerSec, LANE_LABEL_W } from './tlScale.js';
 
 let quizCounter = 0;
 export function bumpQuizCounter(n) { quizCounter = Math.max(quizCounter, n); }
 
 // ---------- Bloques de la pista ----------
-const LANE_LABEL_W = 110; // mismo ancho del rótulo que las otras pistas
-
-function pxPerSec() {
-  // La escala la marca la pista de tomas: misma duración, mismo ancho.
-  const track = byId('timelineTrack');
-  if (!track) return 40;
-  const w = track.clientWidth - LANE_LABEL_W - 24;
-  return Math.max(10, w / Math.max(1, timeline.duration || 10));
-}
 
 let selectedQuiz = null;
 let quizSnapshot = null;  // snapshot del cartel al seleccionarlo (✕ descarta)

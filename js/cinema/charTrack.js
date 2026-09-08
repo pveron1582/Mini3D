@@ -13,17 +13,16 @@
 // (posición + rotación) al 💾 — en reproducción el personaje aparece donde
 // quedó en cada cuadro, aunque sea de un salto.
 
-import { charBlocks, timeline, interactiveRegistry, blockEdit, charLaneBus, charFullRange, store } from '../state.js';
+import { charBlocks, timeline, interactiveRegistry, blockEdit, charLaneBus, charFullRange, store, timelineBus } from '../state.js';
 import { byId } from '../dom.js';
 import { setActiveTarget } from '../ui/selection.js';
 import { pushHistory } from '../undo.js';
 import { setStatus } from '../media/recorder.js';
 import { collectTimelineSnapTimes, snapTimeToRefs, TL_SNAP_PX } from './tlSnap.js';
+import { pxPerSec, LANE_LABEL_W } from './tlScale.js';
 
 let blockCounter = 0;
 export function bumpCharBlockCounter(n) { blockCounter = Math.max(blockCounter, n); }
-
-const LANE_LABEL_W = 116; // mismo ancho del rótulo que las otras pistas
 
 // ---------- Estado ----------
 let selectedBlock = null;      // bloque de acciones en edición (panel Personajes)
@@ -136,12 +135,6 @@ function charIdsWithContent() {
 }
 
 // ---------- Render de las pistas ----------
-function pxPerSec() {
-  const track = byId('timelineTrack');
-  if (!track) return 40;
-  const w = track.clientWidth - LANE_LABEL_W - 24;
-  return Math.max(10, w / Math.max(1, timeline.duration || 10));
-}
 
 function blockLabel(b) {
   const names = Object.keys(b.actions || {}).map(id => {
@@ -394,6 +387,7 @@ export function renderCharBlocks() {
               blockEdit.set(null);
               renderCharBlocks();
               pushHistory();
+              if (timelineBus.refreshDuration) timelineBus.refreshDuration();
               setStatus(`Bloque de ${entry.name} eliminado.`);
             });
             el.appendChild(trash);
@@ -699,7 +693,10 @@ function beginCharBlockDrag(e, b, el) {
   const onUp = () => {
     window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);
-    if (dragState && dragState.moved) pushHistory();
+    if (dragState && dragState.moved) {
+      pushHistory();
+      if (timelineBus.refreshDuration) timelineBus.refreshDuration();
+    }
     dragState = null;
   };
   window.addEventListener('pointermove', onMove);
@@ -735,6 +732,7 @@ export function createInitialCharBlock(charId, action = 'idle', duration = INITI
   if (pose) Object.assign(b.actions[charId], pose);
   charBlocks.push(b);
   renderCharBlocks();
+  if (timelineBus.refreshDuration) timelineBus.refreshDuration();
   return b;
 }
 
@@ -782,6 +780,7 @@ function addBlockFor(entry) {
   charBlocks.push(b);
   openCharBlockEditor(b);
   pushHistory();
+  if (timelineBus.refreshDuration) timelineBus.refreshDuration();
   setStatus(`Bloque nuevo de ${entry.name}: elegí qué hace y hasta cuándo. 💾 guarda, ✕ descarta.`);
 }
 

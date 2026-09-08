@@ -415,8 +415,7 @@ clearAudio();
 assert(audioTracks.length === 0, 'audio: limpiar deja cero pistas');
 
 // --- spawn en el centro de la vista (donde mira la cámara) ---
-const { viewCenterGround } = await import(pathToFileURL('./js/core.js'));
-const vc = viewCenterGround();
+const { viewCenterGround } = await import(pathToFileURL('./js/core.js'));const vc = viewCenterGround();
 assert(Number.isFinite(vc.x) && Number.isFinite(vc.z), 'centro de vista: punto finito sobre el piso');
 const savedPos = camera.position.clone();
 const savedTgt = controls.target.clone();
@@ -427,6 +426,16 @@ const vcH = viewCenterGround();
 assert(Math.abs(vcH.x - 3) < 1e-6 && Math.abs(vcH.z - 4) < 1e-6, 'horizonte: usa el objetivo como reserva');
 camera.position.copy(savedPos);
 controls.target.copy(savedTgt);
+
+// --- escala única de la timeline: todas las pistas dibujan igual ---
+const { pxPerSec, LANE_LABEL_W } = await import(pathToFileURL('./js/cinema/tlScale.js'));
+assert(LANE_LABEL_W === 116, 'rótulo único de 116px en todas las pistas');
+const savedDuration = timeline.duration;
+timeline.duration = 9;
+assert(Math.abs(pxPerSec() - ((1280 - 116) / 20)) < 1e-9, 'escala única: tramos cortos usan 20s');
+timeline.duration = 40;
+assert(Math.abs(pxPerSec() - ((1280 - 116) / 40)) < 1e-9, 'escala única: cubre la duración real');
+timeline.duration = savedDuration;
 
 // --- convención de orientación (blindaje anti "dados vuelta") ---
 const { rotYToLookAt } = await import(pathToFileURL('./js/characters/characters.js'));

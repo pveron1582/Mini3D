@@ -7,6 +7,7 @@ import { resetQuiz, quizTick } from '../media/quiz.js';
 import { quizPlayTick, renderQuizLane, clearQuizSelection, quizSelection } from './quizTrack.js';
 import { renderCharBlocks, charBlockSelection } from './charTrack.js';
 import { collectTimelineSnapTimes, snapTimeToRefs, TL_SNAP_PX } from './tlSnap.js';
+import { pxPerSec, LANE_LABEL_W } from './tlScale.js';
 import { subtitleTrack, refreshSubtitles } from '../media/subtitles.js';
 import { audioPlay, audioStop } from '../media/audio.js';
 import { stopAllPlaybacks, cutCameraToShot, setCamView, cinemaStorePath, updateCameraViewVisibility, evaluateAllPathsAt, cinemaDeactivate, cinemaClearVisuals, cinemaClearAllVisuals, cinemaSetMode, refreshCharLanes, applyShotDolly } from './cinematics.js';
@@ -28,7 +29,6 @@ const CAM_NAMES = {
   cine1: 'Cine 1', cine2: 'Cine 2', cine3: 'Cine 3', orbit: 'Vista Libre',
   fixed: 'Fija / Zoom', aerial: 'Aérea', front: 'Frente', profile: 'Perfil'
 };
-const LANE_LABEL_W = 116;
 const round2 = (n) => Math.round(n * 100) / 100;
 
 let shotCounter = 0;
@@ -150,6 +150,7 @@ export function playScene() {
     return false;
   }
   refreshDuration();
+  renderRuler();
 
   stopAllPlaybacks();
   // La escena se reproduce con la previsión determinista `evaluateAllPathsAt`
@@ -257,12 +258,6 @@ const stopSceneBtn = btnSafe('btnStopScene');
 const loopSceneBtn = btnSafe('btnLoopScene');
 
 function btnSafe(id) { return byId(id); }
-
-function pxPerSec() {
-  if (!track) return 40;
-  const viewSpan = Math.max(timeline.duration, 20);
-  return Math.max(1, (track.clientWidth - LANE_LABEL_W) / viewSpan);
-}
 
 function fmt(t) { return t.toFixed(1) + 's'; }
 
@@ -764,6 +759,9 @@ export function getSelectedShot() {
 import { timelineBus } from '../state.js';
 timelineBus.getSelectedShot = getSelectedShot;
 timelineBus.renderShots = () => { renderShots(); renderRuler(); };
+// Recalcula la duración (la piden los bloques de personajes al crearse,
+// moverse o borrarse: la escena dura lo que dure su contenido).
+timelineBus.refreshDuration = () => { refreshDuration(); renderRuler(); };
 // Guarda el encuadre actual de la cámara en la toma seleccionada (si es una
 // vista que guarda encuadre: free/orbit/fixed). Lo usa projectFiles.js al
 // serializar para que el diskete de la escena también persista la cámara.
@@ -846,6 +844,7 @@ function commitEdit() {
   refreshDuration();
   timeline.shots.sort((a, b) => a.start - b.start);
   renderShots();
+  renderRuler();
   pushHistory();
 }
 
@@ -1291,6 +1290,7 @@ export function refreshTimelineUI() {
   refreshDuration();
   selectedShotId = null;
   renderShots();
+  renderRuler();
   clearSubSelection();
   updateTransportUI();
   renderCharBlocks();
