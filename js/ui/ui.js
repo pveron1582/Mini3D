@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { byId, qs, qsa } from '../dom.js';
-import { camera, canvas, controls } from '../core.js';
+import { camera, canvas, controls, viewCenterGround } from '../core.js';
 import { store, cinema, view, playbackInstances, interactiveRegistry, blockEdit } from '../state.js';
 import { getActiveEntry, getActiveObject, setActiveTarget, updateSelectionRing, clearActiveTarget } from './selection.js';
 import {
@@ -496,10 +496,10 @@ queueMicrotask(() => onTargetSelected((id) => {
   }
 }));
 
-// Posición de spawn: frente a la vista (donde apunta la cámara)
+// Posición de spawn: centro de la vista (donde apunta la cámara ahora)
 function constructionSpawnPos() {
-  const t = controls.target;
-  return [Math.round(t.x * 2) / 2, Math.round(t.z * 2) / 2];
+  const c = viewCenterGround();
+  return [Math.round(c.x * 2) / 2, Math.round(c.z * 2) / 2];
 }
 
 byId('btnConAddFloor')?.addEventListener('click', () => {

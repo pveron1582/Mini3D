@@ -2,6 +2,11 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-08] — Todo lo nuevo aparece en el centro de la vista
+
+- Nuevo `viewCenterGround()` (`js/core.js`): rayo cámara→piso. Personajes,
+  piezas del catálogo y construcción spawnean donde mirás (antes al objetivo
+  de órbita, que no siempre coincide). Duplicar sigue al lado del original.
 ## [2026-09-08] — Audio por escena: música + efectos (backlog #3)
 
 - Sección 🔊 Audio: pistas con tipo, volumen, inicio y loop; suenan al

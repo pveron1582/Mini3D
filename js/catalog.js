@@ -2,7 +2,7 @@
 // Cada entrada del catálogo instancia un objeto nuevo con ID autogenerado,
 // lo registra como seleccionable y lo integra con undo (pushHistory) y con la
 // serialización de proyectos (serializeProject/applyProject via syncSpawned).
-import { controls } from './core.js';
+import { viewCenterGround } from './core.js';
 import { interactiveRegistry, store } from './state.js';
 import { getActiveEntry, setActiveTarget, clearActiveTarget } from './ui/selection.js';
 import {
@@ -51,10 +51,11 @@ function bumpCounterFromId(catId, id) {
   if (m) spawnCounts[catId] = Math.max(spawnCounts[catId] || 0, parseInt(m[1], 10));
 }
 
-// Punto libre cerca del centro de la vista (controls.target), en grilla de 0.5m
+// Punto libre en el centro de la vista (donde mira la cámara ahora),
+// en grilla de 0.5m
 function findFreeSpot() {
-  const t = controls.target;
-  const bx = Math.round(t.x * 2) / 2, bz = Math.round(t.z * 2) / 2;
+  const c = viewCenterGround();
+  const bx = Math.round(c.x * 2) / 2, bz = Math.round(c.z * 2) / 2;
   const offsets = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1], [2, 0], [-2, 0], [0, 2], [0, -2]];
   for (const [dx, dz] of offsets) {
     const x = bx + dx, z = bz + dz;

@@ -392,6 +392,20 @@ assert(Array.isArray(audioBus.getExportTracks()) && audioBus.getExportTracks().l
 clearAudio();
 assert(audioTracks.length === 0, 'audio: limpiar deja cero pistas');
 
+// --- spawn en el centro de la vista (donde mira la cámara) ---
+const { viewCenterGround, camera, controls } = await import(pathToFileURL('./js/core.js'));
+const vc = viewCenterGround();
+assert(Number.isFinite(vc.x) && Number.isFinite(vc.z), 'centro de vista: punto finito sobre el piso');
+const savedPos = camera.position.clone();
+const savedTgt = controls.target.clone();
+controls.target.set(3, 0.5, 4);
+camera.position.set(3, 2, 4);
+camera.lookAt(3, 2, 30); // rayo horizontal: el piso nunca se cruza
+const vcH = viewCenterGround();
+assert(Math.abs(vcH.x - 3) < 1e-6 && Math.abs(vcH.z - 4) < 1e-6, 'horizonte: usa el objetivo como reserva');
+camera.position.copy(savedPos);
+controls.target.copy(savedTgt);
+
 // --- convención de orientación (blindaje anti "dados vuelta") ---
 const { rotYToLookAt } = await import(pathToFileURL('./js/characters/characters.js'));
 const approx = (a, b, tol = 0.02) => Math.abs(a - b) <= tol;

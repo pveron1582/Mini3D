@@ -91,6 +91,25 @@ window.addEventListener('pointerup', (e) => {
 });
 
 // ==========================================
+// CENTRO DE LA VISTA (para spawnear)
+// ==========================================
+// Punto del suelo que está en el centro de la pantalla desde donde se mira
+// ahora: rayo cámara→centro del viewport ∩ plano del piso. Todo lo nuevo
+// (personajes, piezas, construcción) aparece AHÍ — si te movés a otro lugar
+// y agregás algo, ese es el centro. Si la cámara mira al horizonte o el
+// suelo quedó atrás, se usa el objetivo de órbita como reserva.
+export function viewCenterGround(planeY = 0) {
+  const dir = camera.getWorldDirection(new THREE.Vector3());
+  if (Math.abs(dir.y) > 1e-4) {
+    const t = (planeY - camera.position.y) / dir.y;
+    if (t > 0) {
+      return { x: camera.position.x + dir.x * t, z: camera.position.z + dir.z * t };
+    }
+  }
+  return { x: controls.target.x, z: controls.target.z };
+}
+
+// ==========================================
 // MODO SUAVE (movimiento preciso con un solo botón)
 // ==========================================
 // Un solo interruptor (🐢 Suave junto a Frontal/Superior/Lateral) que vuelve

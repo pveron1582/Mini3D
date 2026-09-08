@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { byId, qs, qsa } from '../dom.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { controls } from '../core.js';
+import { viewCenterGround } from '../core.js';
 import { interactiveRegistry } from '../state.js';
 import { createInitialCharBlock } from '../cinema/charTrack.js';
 import { createHumanPreview, addHumanCharacter } from './characters.js';
@@ -279,9 +279,9 @@ byId('ccAccept')?.addEventListener('click', () => {
     }
     return;
   }
-  const t = controls.target;
-  const x = Math.round(t.x * 2) / 2;
-  const z = Math.round(t.z * 2) / 2;
+  const c = viewCenterGround();
+  const x = Math.round(c.x * 2) / 2;
+  const z = Math.round(c.z * 2) / 2;
   addHumanCharacter(id, name, x, z, 0, colors);
   // Aparece su PISTA en la línea de tiempo con un bloque inicial "De pie" de
   // 3 s: desde ahí se estira (toda la escena o lo que dure la secuencia) o se
