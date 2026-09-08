@@ -1095,15 +1095,19 @@ human9Rig.currentAction = 'sit_typing';
 human9Rig.mood = 'neutral';
 
 // --- DOG PRO ---
-function buildDog(posX, posZ) {
+function buildDog(posX, posZ, opts = {}) {
+  const { id = 'dog', name = 'Perro Pro', colors = {}, register = true, parent = null } = opts;
+  const fur = colors.fur ?? 0xd98236;
+  const patch = colors.patch ?? 0xffeedd;
+  const collarColor = colors.collar ?? 0xd63031;
   const g = new THREE.Group();
   // +0.05: margen para que las patas no se hundan visualmente en el piso
   g.position.set(posX, 0.05, posZ);
 
-  const matFur = new THREE.MeshStandardMaterial({ color: 0xd98236, roughness: 0.75 });
-  const matWhiteFur = new THREE.MeshStandardMaterial({ color: 0xffeedd, roughness: 0.7 });
+  const matFur = new THREE.MeshStandardMaterial({ color: fur, roughness: 0.75 });
+  const matWhiteFur = new THREE.MeshStandardMaterial({ color: patch, roughness: 0.7 });
   const matNose = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.2, metalness: 0.1 });
-  const matCollar = new THREE.MeshStandardMaterial({ color: 0xd63031, roughness: 0.4 });
+  const matCollar = new THREE.MeshStandardMaterial({ color: collarColor, roughness: 0.4 });
   const matEyes = new THREE.MeshBasicMaterial({ color: 0x111111 });
 
   const bodyGroup = new THREE.Group();
@@ -1191,7 +1195,7 @@ function buildDog(posX, posZ) {
   tailGroup.add(t1);
   bodyGroup.add(tailGroup);
 
-  characterGroup.add(g);
+  (parent || characterGroup).add(g);
 
   const parts = {
     d_root: g, d_body: bodyGroup, d_head: headGroup, d_tail: tailGroup,
@@ -1315,13 +1319,13 @@ function buildDog(posX, posZ) {
     setAction: (act) => {
       rig.currentAction = act;
       rig.cadence = 1; // cadencia natural salvo que la cinemática la ajuste
-      if (store.activeTarget === 'dog') updateActionButtonsState(act);
-      setStatus(`Perro: "${act}"`);
+      if (store.activeTarget === id) updateActionButtonsState(act);
+      setStatus(`${name}: "${act}"`);
     },
     run: animateDog
   };
 
-  registerSelectable('dog', 'Perro Pro', g, 'pet', rig);
+  if (register) registerSelectable(id, name, g, 'pet', rig);
   return rig;
 }
 
@@ -1329,13 +1333,16 @@ dogRig = buildDog(1.4, 3.3);
 dogRig.root.rotation.y = Math.PI; // mira al sur, hacia la entrada
 
 // --- CAT PRO ---
-function buildCat(posX, posZ) {
+function buildCat(posX, posZ, opts = {}) {
+  const { id = 'cat', name = 'Gato Pro', colors = {}, register = true, parent = null } = opts;
+  const fur = colors.fur ?? 0xf5f6fa;
+  const patch = colors.patch ?? 0xe67e22;
   const g = new THREE.Group();
   // +0.02: margen para que las patas no se hundan visualmente en el piso
   g.position.set(posX, 0.02, posZ);
 
-  const matCatFur = new THREE.MeshStandardMaterial({ color: 0xf5f6fa, roughness: 0.6 });
-  const matCatGinger = new THREE.MeshStandardMaterial({ color: 0xe67e22, roughness: 0.6 });
+  const matCatFur = new THREE.MeshStandardMaterial({ color: fur, roughness: 0.6 });
+  const matCatGinger = new THREE.MeshStandardMaterial({ color: patch, roughness: 0.6 });
   const matNose = new THREE.MeshStandardMaterial({ color: 0xff9ff3 });
   const matEyes = new THREE.MeshBasicMaterial({ color: 0x2ecc71 });
 
@@ -1409,7 +1416,7 @@ function buildCat(posX, posZ) {
   tail.add(tMesh);
   body.add(tail);
 
-  characterGroup.add(g);
+  (parent || characterGroup).add(g);
 
   const parts = {
     c_root: g, c_body: body, c_head: head, c_tail: tail,
@@ -1508,18 +1515,23 @@ function buildCat(posX, posZ) {
     setAction: (act) => {
       rig.currentAction = act;
       rig.cadence = 1; // cadencia natural salvo que la cinemática la ajuste
-      if (store.activeTarget === 'cat') updateActionButtonsState(act);
-      setStatus(`Gato: "${act}"`);
+      if (store.activeTarget === id) updateActionButtonsState(act);
+      setStatus(`${name}: "${act}"`);
     },
     run: animateCat
   };
 
-  registerSelectable('cat', 'Gato Pro', g, 'pet', rig);
+  if (register) registerSelectable(id, name, g, 'pet', rig);
   return rig;
 }
 
 catRig = buildCat(-3.2, 3.4);
 catRig.root.rotation.y = -Math.PI / 2; // mira hacia el oeste
+
+// Constructores de mascotas para el creador: viven anidados acá (los
+// defaults son perezosos) y se exponen para las mascotas personalizadas.
+dogBuilder = buildDog;
+catBuilder = buildCat;
 
   const RIG_OFFSETS = [
     [human1Rig, 0], [human2Rig, 1.2], [human3Rig, 2.4], [human4Rig, 3.6],
@@ -1539,6 +1551,19 @@ catRig.root.rotation.y = -Math.PI / 2; // mira hacia el oeste
 
 let defaultCharactersHidden = false;
 let customAnimOffset = 12;
+// Constructores de mascotas (los define ensureDefaultCharacters al crear los
+// defaults; las altas personalizadas los piden vía ensurePetBuilders).
+let dogBuilder = null;
+let catBuilder = null;
+
+function ensurePetBuilders() {
+  if (!dogBuilder || !catBuilder) {
+    ensureDefaultCharacters();
+    // Si el proyecto arranca vacío, los defaults recién creados quedan
+    // ocultos como corresponde (solo se quería el constructor).
+    setDefaultCharactersVisible(!defaultCharactersHidden);
+  }
+}
 
 function setDefaultCharactersVisible(visible) {
   // Si nunca se crearon, no hay nada que mostrar/ocultar.
@@ -1577,11 +1602,57 @@ export function createHumanPreview(id, name, colors, parent) {
 export function addHumanCharacter(id, name, x, z, rotY = 0, colors = {}) {
   const rig = createHumanoidModel(id, name, x, z, colors);
   rig.root.rotation.y = rotY;
-  rig.root.userData.customCharacter = { name, colors };
+  rig.root.userData.customCharacter = { name, colors, kind: 'human' };
   const offset = customAnimOffset;
   customAnimOffset += 1.3;
   registerTicker((_simDt, globalTime) => rig.run(globalTime + offset));
   return rig;
+}
+
+// 3 variantes de perro y 3 de gato para el creador (colores de pelaje).
+export const DOG_VARIANTS = [
+  { id: 'marron', label: '🐕 Marrón', colors: { fur: 0xd98236, patch: 0xffeedd, collar: 0xd63031 } },
+  { id: 'negro', label: '🐕‍🦺 Negro', colors: { fur: 0x2d2a32, patch: 0x8f8a9a, collar: 0xf5c518 } },
+  { id: 'blanco', label: '🐩 Blanco', colors: { fur: 0xf2ede4, patch: 0xd9c9a8, collar: 0x2e86d8 } }
+];
+export const CAT_VARIANTS = [
+  { id: 'blanco', label: '🐈 Blanco', colors: { fur: 0xf5f6fa, patch: 0xe67e22 } },
+  { id: 'negro', label: '🐈‍⬛ Negro', colors: { fur: 0x23232e, patch: 0x4a4a5e } },
+  { id: 'gris', label: '🐈 Gris', colors: { fur: 0x8d99ae, patch: 0x4a5568 } }
+];
+
+function addCustomPetTicker(rig) {
+  const offset = customAnimOffset;
+  customAnimOffset += 1.3;
+  registerTicker((_simDt, globalTime) => rig.run(globalTime + offset));
+}
+
+export function addDogCharacter(id, name, x, z, rotY = 0, colors = {}) {
+  ensurePetBuilders();
+  const rig = dogBuilder(x, z, { id, name, colors });
+  rig.root.rotation.y = rotY;
+  rig.root.userData.customCharacter = { name, colors, kind: 'pet', pet: 'dog' };
+  addCustomPetTicker(rig);
+  return rig;
+}
+
+export function addCatCharacter(id, name, x, z, rotY = 0, colors = {}) {
+  ensurePetBuilders();
+  const rig = catBuilder(x, z, { id, name, colors });
+  rig.root.rotation.y = rotY;
+  rig.root.userData.customCharacter = { name, colors, kind: 'pet', pet: 'cat' };
+  addCustomPetTicker(rig);
+  return rig;
+}
+
+export function createDogPreview(id, name, colors, parent) {
+  ensurePetBuilders();
+  return dogBuilder(0, 0, { id, name, colors, register: false, parent });
+}
+
+export function createCatPreview(id, name, colors, parent) {
+  ensurePetBuilders();
+  return catBuilder(0, 0, { id, name, colors, register: false, parent });
 }
 
 export function syncCustomCharacters(list = []) {
@@ -1601,8 +1672,11 @@ export function syncCustomCharacters(list = []) {
       if (c.rotY !== undefined) existing.group.rotation.y = c.rotY;
       return;
     }
-    const rig = addHumanCharacter(c.id, c.name, 0, 0, c.rotY || 0, c.colors || {});
-    if (Array.isArray(c.pos)) rig.root.position.set(c.pos[0], c.pos[1] ?? 0.17, c.pos[2]);
+    // Mascotas personalizadas (perro/gato del creador) vs humanos.
+    const groundY = c.pet === 'dog' ? 0.05 : (c.pet === 'cat' ? 0.02 : 0.17);
+    const add = c.pet === 'dog' ? addDogCharacter : (c.pet === 'cat' ? addCatCharacter : addHumanCharacter);
+    const rig = add(c.id, c.name, 0, 0, c.rotY || 0, c.colors || {});
+    if (Array.isArray(c.pos)) rig.root.position.set(c.pos[0], c.pos[1] ?? groundY, c.pos[2]);
   });
 }
 

@@ -37,11 +37,11 @@ export function refreshCharacterButtons() {
   box.innerHTML = '';
   let any = false;
   interactiveRegistry.forEach(entry => {
-    if (entry.type !== 'human' || entry.deleted || !entry.group.userData.customCharacter) return;
+    if ((entry.type !== 'human' && entry.type !== 'pet') || entry.deleted || !entry.group.userData.customCharacter) return;
     any = true;
     const b = document.createElement('button');
     b.className = 'target-btn' + (entry.id === store.activeTarget ? ' active' : '');
-    b.textContent = '🧍 ' + entry.name;
+    b.textContent = (entry.type === 'pet' ? '🐾 ' : '🧍 ') + entry.name;
     b.addEventListener('click', () => setActiveTarget(entry.id));
     box.appendChild(b);
   });

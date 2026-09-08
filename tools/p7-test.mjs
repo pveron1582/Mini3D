@@ -436,6 +436,31 @@ const withOutfit = serializeProject();
 const serChef = withOutfit.characters.find(c => c.id === 'customChar2');
 assert(!!serChef && serChef.colors.outfit === 'chef' && serChef.colors.sunglasses === true, 'outfit y accesorios del personaje serializados');
 
+// --- mascotas del creador: 3 variantes de perro y 3 de gato ---
+const { DOG_VARIANTS, CAT_VARIANTS, addDogCharacter, addCatCharacter, createDogPreview, createCatPreview } = await import(pathToFileURL('./js/characters/characters.js'));
+assert(DOG_VARIANTS.length === 3 && CAT_VARIANTS.length === 3, '3 variantes de perro y 3 de gato');
+const petDog = addDogCharacter('petDog1', 'Firulais Test', 1, 1, 0, DOG_VARIANTS[1].colors);
+const petDogEntry = interactiveRegistry.get('petDog1');
+assert(petDogEntry && petDogEntry.type === 'pet', 'perro agregado como mascota');
+assert(petDogEntry.group.userData.customCharacter.pet === 'dog', 'perro guarda su especie');
+assert(Math.abs(petDogEntry.group.position.y - 0.05) < 1e-6, 'perro apoyado en el piso');
+const petCat = addCatCharacter('petCat1', 'Mishi Test', 2, 2, 0, CAT_VARIANTS[2].colors);
+const petCatEntry = interactiveRegistry.get('petCat1');
+assert(petCatEntry && petCatEntry.type === 'pet', 'gato agregado como mascota');
+assert(petCatEntry.group.userData.customCharacter.pet === 'cat', 'gato guarda su especie');
+// La vista previa no registra en la escena
+const THREE_MOD = await import('three');
+const prevParent = new THREE_MOD.Group();
+createDogPreview('prevDog', 'Previa', DOG_VARIANTS[0].colors, prevParent);
+createCatPreview('prevCat', 'Previa', CAT_VARIANTS[0].colors, prevParent);
+assert(!interactiveRegistry.has('prevDog') && !interactiveRegistry.has('prevCat'), 'preview de mascotas no registra');
+// Las mascotas viajan en el JSON con especie y colores
+const withPets = serializeProject();
+const serDog = withPets.characters.find(c => c.id === 'petDog1');
+const serCat = withPets.characters.find(c => c.id === 'petCat1');
+assert(!!serDog && serDog.pet === 'dog' && serDog.colors.fur === DOG_VARIANTS[1].colors.fur, 'perro serializado con variante');
+assert(!!serCat && serCat.pet === 'cat' && serCat.colors.fur === CAT_VARIANTS[2].colors.fur, 'gato serializado con variante');
+
 // --- sentarse en asiento (sit_at): evento con silla + ancla ---
 const { sitAtAnchor } = await import(pathToFileURL('./js/characters/characters.js'));
 const { anchorPose, anchorSeats } = await import(pathToFileURL('./js/characters/anchors.js'));

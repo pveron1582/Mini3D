@@ -284,11 +284,29 @@
     <!-- Creador de personajes -->
     <div id="charCreatorModal" class="startup-overlay" style="display:none;">
       <div class="startup-card" style="max-width:880px; text-align:left;">
-        <h1 style="font-size:18px;">🧍 Nuevo personaje</h1>
+        <h1 style="font-size:18px;">➕ Añadir personaje</h1>
         <p class="startup-sub">Arrastrá para rotar, usá la rueda para zoom y el botón derecho para mover la vista.</p>
         <div style="display:flex; gap:12px; flex-wrap:wrap;">
           <div id="ccPreview" style="width:460px; height:420px; background:#14171d; border:1px solid #2c3340; border-radius:8px; overflow:hidden;"></div>
           <div style="flex:1; min-width:260px; display:flex; flex-direction:column; gap:8px;">
+            <label class="startup-label">Tipo</label>
+            <div style="display:flex; gap:14px; align-items:center;">
+              <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
+                <input type="radio" name="ccSpecies" id="ccSpeciesHuman" value="human" checked /> 🧍 Persona
+              </label>
+              <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
+                <input type="radio" name="ccSpecies" id="ccSpeciesDog" value="dog" /> 🐕 Perro
+              </label>
+              <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
+                <input type="radio" name="ccSpecies" id="ccSpeciesCat" value="cat" /> 🐈 Gato
+              </label>
+            </div>
+            <div id="ccPetOpts" style="display:none; flex-direction:column; gap:8px;">
+              <label class="startup-label">Variante
+                <select id="ccPetVariant" class="tl-input"></select>
+              </label>
+            </div>
+            <div id="ccHumanOpts" style="display:flex; flex-direction:column; gap:8px;">
             <label class="startup-label">Género</label>
             <div style="display:flex; gap:14px; align-items:center;">
               <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
@@ -350,6 +368,7 @@
               <label style="display:flex; align-items:center; gap:4px; cursor:pointer;">
                 <input type="checkbox" id="ccCap" /> 🧢 Gorra
               </label>
+            </div>
             </div>
           </div>
         </div>

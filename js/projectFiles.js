@@ -222,7 +222,9 @@ export function serializeProject(opts = {}) {
       name: entry.name,
       pos: [round2(entry.group.position.x), round2(entry.group.position.y), round2(entry.group.position.z)],
       rotY: round2(entry.group.rotation.y),
-      colors: entry.group.userData.customCharacter.colors
+      colors: entry.group.userData.customCharacter.colors,
+      kind: entry.group.userData.customCharacter.kind || 'human',
+      pet: entry.group.userData.customCharacter.pet || undefined
     });
   });
 

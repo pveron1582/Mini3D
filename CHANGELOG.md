@@ -2,6 +2,13 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-08] — Perros y gatos en el creador, con 3 variantes cada uno
+
+- El ➕ Añadir personaje ahora ofrece 🧍 Persona, 🐕 Perro y 🐈 Gato; las
+  mascotas tienen 3 variantes de pelaje, vista previa y nombres al azar.
+- Las mascotas persisten en el JSON (especie + colores) y aparecen en los
+  botones de personajes; las fábricas aceptan colores sin cambiar los
+  defaults.
 ## [2026-09-08] — Todo lo nuevo aparece en el centro de la vista
 
 - Nuevo `viewCenterGround()` (`js/core.js`): rayo cámara→piso. Personajes,

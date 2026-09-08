@@ -4,7 +4,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { viewCenterGround } from '../core.js';
 import { interactiveRegistry } from '../state.js';
 import { createInitialCharBlock } from '../cinema/charTrack.js';
-import { createHumanPreview, addHumanCharacter } from './characters.js';
+import { createHumanPreview, addHumanCharacter, createDogPreview, createCatPreview, addDogCharacter, addCatCharacter, DOG_VARIANTS, CAT_VARIANTS } from './characters.js';
 import { setActiveTarget } from '../ui/selection.js';
 import { populateOutliner } from '../ui/ui.js';
 import { pushHistory } from '../undo.js';
@@ -30,12 +30,52 @@ const ccGenderF = byId('ccGenderF');
 const MALE_NAMES = ['Alejandro', 'Bruno', 'Carlos', 'Diego', 'Emiliano', 'Facundo', 'Gonzalo', 'Hern�n', 'Ignacio', 'Javier', 'Lucas', 'Mart�n', 'Nicol�s', '�scar', 'Pablo', 'Ramiro', 'Santiago', 'Tom�s', 'Valent�n', 'Mateo'];
 const FEMALE_NAMES = ['Ana', 'Bianca', 'Camila', 'Daniela', 'Elena', 'Florencia', 'Guadalupe', 'Hilda', 'Isabel', 'Julia', 'Luc�a', 'Marta', 'Natalia', 'Olga', 'Paula', 'Roc�o', 'Silvana', 'Tamara', 'Valentina', 'Micaela'];
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-// Nombre aleatorio acorde al g�nero, evitando los ya usados en la escena
-// (si los 20 est�n tomados, cae en uno cualquiera y la validaci�n avisa).
+// Nombre aleatorio acorde al género, evitando los ya usados en la escena
+// (si los 20 están tomados, cae en uno cualquiera y la validación avisa).
 function randomName() {
+  const species = currentSpecies();
+  if (species === 'dog') return pick(DOG_NAMES.filter(n => !isNameTaken(n)));
+  if (species === 'cat') return pick(CAT_NAMES.filter(n => !isNameTaken(n)));
   const isF = ccGenderF && ccGenderF.checked;
   const pool = (isF ? FEMALE_NAMES : MALE_NAMES).filter(n => !isNameTaken(n));
   return pick(pool.length ? pool : (isF ? FEMALE_NAMES : MALE_NAMES));
+}
+
+const DOG_NAMES = ['Firulais', 'Rocco', 'Toby', 'Max', 'Rocky', 'Duke', 'Bobby', 'Simba'];
+const CAT_NAMES = ['Mishi', 'Pelusa', 'Tom', 'Luna', 'Simón', 'Michi', 'Félix', 'Nala'];
+
+// ---------- Especie: persona / perro / gato ----------
+function currentSpecies() {
+  if (byId('ccSpeciesDog')?.checked) return 'dog';
+  if (byId('ccSpeciesCat')?.checked) return 'cat';
+  return 'human';
+}
+
+function currentPetVariant() {
+  const list = currentSpecies() === 'cat' ? CAT_VARIANTS : DOG_VARIANTS;
+  const sel = byId('ccPetVariant');
+  return list.find(v => v.id === (sel && sel.value)) || list[0];
+}
+
+function refreshSpeciesUI() {
+  const species = currentSpecies();
+  const humanOpts = byId('ccHumanOpts');
+  const petOpts = byId('ccPetOpts');
+  if (humanOpts) humanOpts.style.display = species === 'human' ? 'flex' : 'none';
+  if (petOpts) petOpts.style.display = species === 'human' ? 'none' : 'flex';
+  if (species !== 'human') {
+    const sel = byId('ccPetVariant');
+    if (sel) {
+      sel.innerHTML = '';
+      (species === 'cat' ? CAT_VARIANTS : DOG_VARIANTS).forEach(v => {
+        const o = document.createElement('option');
+        o.value = v.id; o.textContent = v.label;
+        sel.appendChild(o);
+      });
+    }
+    if (ccName) ccName.value = randomName();
+  }
+  rebuildPreview();
 }
 
 // Presets por g�nero: al elegir Mujer el modelo viene YA configurado con un
@@ -67,7 +107,9 @@ function applyPreset(preset) {
 function resetCreator() {
   if (byId('ccGenderM')) byId('ccGenderM').checked = true;
   if (ccGenderF) ccGenderF.checked = false;
+  if (byId('ccSpeciesHuman')) byId('ccSpeciesHuman').checked = true;
   applyPreset(MALE_PRESET);
+  refreshSpeciesUI();
 }
 
 let renderer = null;
@@ -177,7 +219,20 @@ function rebuildPreview() {
     disposeObject(rig.root);
     rig = null;
   }
-  rig = createHumanPreview('ccPreview', 'Vista previa', readColors(), scene);
+  const species = currentSpecies();
+  if (species === 'dog') {
+    rig = createDogPreview('ccPreview', 'Vista previa', currentPetVariant().colors, scene);
+    camera.position.set(1.8, 1.1, 2.2);
+    orbit.target.set(0, 0.55, 0);
+  } else if (species === 'cat') {
+    rig = createCatPreview('ccPreview', 'Vista previa', currentPetVariant().colors, scene);
+    camera.position.set(1.4, 0.9, 1.7);
+    orbit.target.set(0, 0.35, 0);
+  } else {
+    rig = createHumanPreview('ccPreview', 'Vista previa', readColors(), scene);
+    camera.position.set(2.8, 1.8, 3.4);
+    orbit.target.set(0, 1.0, 0);
+  }
 }
 
 function loop(t) {
@@ -245,6 +300,16 @@ byId('ccNameDice')?.addEventListener('click', () => { if (ccName) ccName.value =
   });
 });
 
+// Cambiar de especie: muestra sus opciones (variante para mascotas), genera
+// un nombre acorde y refresca la vista previa.
+[byId('ccSpeciesHuman'), byId('ccSpeciesDog'), byId('ccSpeciesCat')].forEach(r => {
+  r?.addEventListener('change', () => {
+    if (currentSpecies() === 'human' && ccName) ccName.value = randomName();
+    refreshSpeciesUI();
+  });
+});
+byId('ccPetVariant')?.addEventListener('change', rebuildPreview);
+
 // Cambiar de vestimenta aplica su paleta sugerida y refresca la vista previa.
 [ccOutfit, ccSunglasses, ccHat, ccCapAcc, ccTie].forEach(el => {
   if (el) el.addEventListener('change', () => { applyOutfitPalette(); rebuildPreview(); });
@@ -266,13 +331,12 @@ function isNameTaken(name) {
 
 byId('ccAccept')?.addEventListener('click', () => {
   // La paleta sugerida no se serializa: solo los flags/colores finales.
-  const { outfitHint, ...colors } = readColors(); // eslint-disable-line no-unused-vars
   let name = (ccName && ccName.value || '').trim();
   const id = nextCustomId();
   if (!name) name = 'Personaje ' + id.replace('customChar', '');
-  // Nombre �nico: si ya existe en la escena, se pide otro (no se crea nada).
+  // Nombre único: si ya existe en la escena, se pide otro (no se crea nada).
   if (isNameTaken(name)) {
-    setStatus(`Ya existe "${name}" en la escena: eleg� otro nombre.`);
+    setStatus(`Ya existe "${name}" en la escena: elegí otro nombre.`);
     if (ccName) {
       ccName.focus();
       ccName.select();
@@ -282,7 +346,13 @@ byId('ccAccept')?.addEventListener('click', () => {
   const c = viewCenterGround();
   const x = Math.round(c.x * 2) / 2;
   const z = Math.round(c.z * 2) / 2;
-  addHumanCharacter(id, name, x, z, 0, colors);
+  const species = currentSpecies();
+  if (species === 'dog') addDogCharacter(id, name, x, z, 0, currentPetVariant().colors);
+  else if (species === 'cat') addCatCharacter(id, name, x, z, 0, currentPetVariant().colors);
+  else {
+    const { outfitHint, ...colors } = readColors(); // eslint-disable-line no-unused-vars
+    addHumanCharacter(id, name, x, z, 0, colors);
+  }
   // Aparece su PISTA en la línea de tiempo con un bloque inicial "De pie" de
   // 3 s: desde ahí se estira (toda la escena o lo que dure la secuencia) o se
   // agregan más bloques para que haga varias cosas.
