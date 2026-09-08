@@ -112,6 +112,10 @@ export const charBlocks = [];
 // aplica de 0s hasta el fin — ej. empleados tecleando toda la cinemática.
 export const charFullRange = {};
 
+// Bus de audio para la grabadora: audio.js no puede ser importado por
+// recorder.js (ciclo), así que registra acá cómo pedirle sus tracks.
+export const audioBus = { getExportTracks: () => [] };
+
 // Bus de recorridos para la pista de personajes: charTrack.js no puede
 // importar cinematics.js (ciclo), así que cinematics registra acá sus
 // consultas sobre los recorridos (waypoints) de cada personaje.

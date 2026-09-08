@@ -53,6 +53,7 @@ La filosofía del proyecto:
   seleccionables), `multiselect.js` (Ctrl+clic, marquesina, grupo) y
   `viewport.js` (vistas de cámara + vuelo al objetivo).
 - `js/media/` — capas sobre el video: `recorder.js` (grabación/export),
+  `audio.js` (pistas de música + efectos, WebAudio → export combinado),
   `subtitles.js` (subtítulos en canvas WebGL) y `quiz.js` (cartel de pregunta
   con reloj).
 - `js/office/` — entorno oficina, dividido por subsistema (split P1):

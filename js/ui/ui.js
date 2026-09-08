@@ -882,6 +882,7 @@ function applyEditMode() {
   const transformSection = byId('section-transform');
   const cinematicSection = byId('section-cinematic');
   const outlinerSection = byId('section-outliner');
+  const audioSection = byId('section-audio');
   const wallSection = byId('section-wall');
   if (objectsPanel) objectsPanel.style.display = mode === 'objetos' ? '' : 'none';
   if (subtitlesPanel) subtitlesPanel.style.display = mode === 'subtitulos' ? '' : 'none';
@@ -891,6 +892,8 @@ function applyEditMode() {
   if (transformSection) transformSection.style.display = showChars || mode === 'objetos' ? '' : 'none';
   if (cinematicSection) cinematicSection.style.display = mode === 'cinematica' ? '' : 'none';
   if (outlinerSection) outlinerSection.style.display = showChars ? '' : 'none';
+  // El audio es global de la escena: visible en todos los modos.
+  if (audioSection) audioSection.style.display = '';
   if (wallSection) wallSection.style.display = 'none';
   if (mode === 'objetos') refreshSceneObjectsList();
   // Al entrar a Cinemática, refrescar la lista de personajes con sus

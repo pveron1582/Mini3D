@@ -18,6 +18,7 @@ import './cinema/cinematics.js';
 import './ui/ui.js';
 import './environment.js';
 import './media/recorder.js';
+import './media/audio.js';
 import './characters/characters.js';
 import './characters/characterCreator.js';
 import './ui/viewport.js';

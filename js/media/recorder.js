@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { byId, qs, qsa } from '../dom.js';
 import { canvas, renderer, camera } from '../core.js';
-import { store, recorderState } from '../state.js';
+import { store, recorderState, audioBus } from '../state.js';
 
 // ==========================================
 // VIDEO RECORDER & EXPORT
@@ -64,6 +64,12 @@ export function startRecording(durationOverride, fileName) {
   enterExportResolution();
 
   const stream = canvas.captureStream(EXPORT_FPS);
+  // Pistas de audio de la escena (audio.js, vía bus para no ciclar imports):
+  // entran al mismo MediaRecorder — el WebM sale con video + audio en una
+  // sola pasada. Sin pistas, el video sale mudo como siempre.
+  try {
+    audioBus.getExportTracks().forEach(t => stream.addTrack(t));
+  } catch (err) { /* audio no disponible: sigue solo video */ }
   const mime = pickMime();
   mediaRecorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
   mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };

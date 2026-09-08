@@ -16,6 +16,7 @@ import { subtitleTrack, setSubtitles } from './media/subtitles.js';
 import { quizTrack as quizLaneData } from './state.js';
 import { bumpQuizCounter, renderQuizLane, clearQuizSelection } from './cinema/quizTrack.js';
 import { setCharBlocks, clearCharBlockSelection } from './cinema/charTrack.js';
+import { audioTracks, serializeAudioTracks, setAudioTracks, loadAudioData, clearAudio, renderAudioList } from './media/audio.js';
 import { syncSpawned } from './catalog.js';
 import {
   clearDefaultCharacters, restoreDefaultCharacters, areDefaultCharactersHidden,
@@ -130,7 +131,7 @@ async function verifyPermission(fileHandle, readWrite = true) {
 
 async function writeProjectToHandle(handle) {
   const writable = await handle.createWritable();
-  await writable.write(JSON.stringify(serializeProject(), null, 2));
+  await writable.write(JSON.stringify(serializeProject({ includeAudioData: true }), null, 2));
   await writable.close();
 }
 
@@ -146,6 +147,7 @@ export function newProject(name) {
   setSubtitles([]);
   setCharBlocks([], {});
   clearCharBlockSelection();
+  clearAudio();
   // Proyecto nuevo en blanco: sin personajes por defecto ni personalizados
   clearDefaultCharacters();
   clearCustomCharacters();
@@ -161,7 +163,7 @@ export function newProject(name) {
   updateCinemaCharList();
 }
 
-export function serializeProject() {
+export function serializeProject(opts = {}) {
   captureCharacterInitialStates();
   // Persistir el encuadre actual de la toma seleccionada (si guarda encuadre)
   if (timelineBus.saveSelectedFrame) timelineBus.saveSelectedFrame();
@@ -253,6 +255,7 @@ export function serializeProject() {
 
   // Capa de construcción (Fase 1-2): pisos/paredes/puertas/ventanas del terreno
   const construction = serializeConstruction();
+  const audioSer = serializeAudioTracks(!!opts.includeAudioData);
 
   return {
     app: 'MiniStudio 3D',
@@ -283,6 +286,11 @@ export function serializeProject() {
         mood: charFullRange[id].mood || undefined
       }])
     ) : undefined,
+    // Pistas de audio (música + efectos): la metadata siempre (es chica y va
+    // también a los snapshots del undo); los dataURLs embebidos SOLO al
+    // guardar el archivo (pesan MB y no deben duplicarse en el historial).
+    audio: audioSer.tracks,
+    ...(audioSer.data ? { audioData: audioSer.data } : {}),
     subtitles: subtitleTrack.map(c => ({ start: round2(c.start), end: round2(c.end), text: c.text })),
     // Carteles de pregunta (pista 📋 QUIZ): varios, intercalados con los
     // subtítulos. Cada uno guarda su tramo [start, end] y la configuración.
@@ -421,7 +429,7 @@ function fallbackSaveAs() {
     name = asked.trim();
   }
   store.projectName = name;
-  downloadJSON(serializeProject(), store.projectName);
+  downloadJSON(serializeProject({ includeAudioData: true }), store.projectName);
   sessionDirty.value = false;
   flashSaveButton();
   updateMenuState();
@@ -478,7 +486,7 @@ export async function saveProject() {
 
   // 4) Fallback para navegadores sin File System Access API (ej. Firefox / Safari):
   if (store.projectName) {
-    downloadJSON(serializeProject(), store.projectName);
+    downloadJSON(serializeProject({ includeAudioData: true }), store.projectName);
     sessionDirty.value = false;
     flashSaveButton();
     updateMenuState();
@@ -604,6 +612,16 @@ export function applyProject(data) {
     setCharBlocks(data.charBlocks, data.charFullRange || {});
   } else {
     setCharBlocks(migrateEventsToCharBlocks(data.paths || {}), {});
+  }
+
+  // Pistas de audio (música + efectos): metadata siempre; si el JSON trae el
+  // audio embebido se decodifica en segundo plano. Sin clave `audio` (ej.
+  // snapshot del undo) no se toca nada.
+  if (Array.isArray(data.audio)) {
+    setAudioTracks(data.audio);
+    if (data.audioData) loadAudioData(data.audioData);
+  } else {
+    renderAudioList();
   }
 
   if (data.timeline) {

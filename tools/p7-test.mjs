@@ -379,6 +379,19 @@ assert(playScene() === true, 'reproduce con solo bloques de personajes');
 stopScene();
 setCharBlocks([], {});
 
+// --- audio por escena: metadata chica en snapshots, data solo al guardar ---
+const { audioTracks, serializeAudioTracks, setAudioTracks, clearAudio } = await import(pathToFileURL('./js/media/audio.js'));
+const { audioBus } = await import(pathToFileURL('./js/state.js'));
+setAudioTracks([{ id: 'audio1', name: 'tema', kind: 'music', volume: 70, start: 2, loop: true }]);
+assert(audioTracks.length === 1 && audioTracks[0].loop === true, 'audio: pista registrada');
+const snapAudio = serializeProject();
+assert(Array.isArray(snapAudio.audio) && snapAudio.audio[0].name === 'tema', 'audio: metadata en el snapshot');
+assert(snapAudio.audioData === undefined, 'audio: sin dataURLs en el snapshot del undo');
+assert(JSON.stringify(serializeAudioTracks(false)).includes('dataURL') === false, 'audio: serialize sin datos no expone nada binario');
+assert(Array.isArray(audioBus.getExportTracks()) && audioBus.getExportTracks().length === 0, 'audio: sin destino hasta que suene algo (Node)');
+clearAudio();
+assert(audioTracks.length === 0, 'audio: limpiar deja cero pistas');
+
 // --- convención de orientación (blindaje anti "dados vuelta") ---
 const { rotYToLookAt } = await import(pathToFileURL('./js/characters/characters.js'));
 const approx = (a, b, tol = 0.02) => Math.abs(a - b) <= tol;

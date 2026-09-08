@@ -90,13 +90,12 @@ a veces queda un poco abierta entre "sílabas". La boca escala su alto de 1× a
 ~4.4× y baja apenas al abrirse; se aplica tras el ánimo (el habla se impone a
 la boca neutral). Fuera de `talk` vuelve a la forma normal.
 
-### 3. Audio por escena (ALTO impacto / esfuerzo medio)
-Campo opcional `audio` en el proyecto JSON: música de fondo + efectos
-(alarma, pasos) con volumen y momento. Mezclar al exportar.
-- Opciones: mezclar post-graba con WebCodecs/ffmpeg.wasm, o reproducir vía
-  WebAudio y capturar con `MediaStreamAudioDestinationNode` combinado con el
-  stream del canvas (recomendada: sale sincronizado en un solo paso).
-- Dónde: nuevo módulo `js/audio.js`; `recorder.js` combina pistas.
+### 3. ~~Audio por escena~~ ✅ (2026-09-08)
+HECHO: pistas de música + efectos (`js/media/audio.js`, sección 🔊 Audio):
+suena por WebAudio al reproducir (con volumen, inicio y loop por pista) y al
+exportar entra por `MediaStreamAudioDestinationNode` al mismo MediaRecorder —
+el WebM sale con audio sincronizado en una sola pasada. El audio va embebido
+(dataURL) en el JSON (`audio`/`audioData`); el undo guarda solo la metadata.
 
 ### 4. ~~Sentarse real en sillas~~ ✅ (2026-08-28)
 HECHO (mejorado sobre la propuesta original): acción `sit_at` en eventos de

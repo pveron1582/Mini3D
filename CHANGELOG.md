@@ -2,6 +2,13 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-08] — Audio por escena: música + efectos (backlog #3)
+
+- Sección 🔊 Audio: pistas con tipo, volumen, inicio y loop; suenan al
+  reproducir (WebAudio) y salen en el WebM exportado en una sola pasada
+  (`MediaStreamAudioDestinationNode` al stream del canvas).
+- El audio va embebido en el JSON (`audio` + `audioData`, máx. 20 MB/pista);
+  el undo guarda solo la metadata. Nuevo `js/media/audio.js`.
 ## [2026-09-08] — Fix aguja más allá del 0 + reproducción siempre funciona
 
 - La aguja quedaba a la izquierda de la marca 0s (offset del padding de la

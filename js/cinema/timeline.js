@@ -8,6 +8,7 @@ import { quizPlayTick, renderQuizLane, clearQuizSelection, quizSelection } from 
 import { renderCharBlocks, charBlockSelection } from './charTrack.js';
 import { collectTimelineSnapTimes, snapTimeToRefs, TL_SNAP_PX } from './tlSnap.js';
 import { subtitleTrack, refreshSubtitles } from '../media/subtitles.js';
+import { audioPlay, audioStop } from '../media/audio.js';
 import { stopAllPlaybacks, cutCameraToShot, setCamView, cinemaStorePath, updateCameraViewVisibility, evaluateAllPathsAt, cinemaDeactivate, cinemaClearVisuals, cinemaClearAllVisuals, cinemaSetMode, refreshCharLanes } from './cinematics.js';
 import { startRecording, mediaRecorder, setStatus } from '../media/recorder.js';
 import { pushHistory } from '../undo.js';
@@ -175,6 +176,7 @@ export function playScene() {
   timeline.activeShotId = null;
   setAlarm(computeAlarmAt(0));   // la alarma arranca apagada
   timeline.playing = true;
+  audioPlay(0);   // música + efectos desde el inicio (también al exportar)
   const first = currentShot(0);
   if (first) {
     timeline.activeShotId = first.id;
@@ -209,6 +211,7 @@ export function stopScene() {
   timeline.activeShotId = null;
   setAlarm(false);              // la alarma se apaga al detener
   stopAllPlaybacks();
+  audioStop();
   // La aguja manda: los personajes quedan como en t=0 (bloques + recorridos),
   // igual que si se moviera la aguja al inicio — no hay "segunda posición".
   evaluateAllPathsAt(0);
@@ -224,6 +227,7 @@ function finishScene() {
   timeline.paused = false;
   timeline.time = 0;            // al terminar, la cabeza vuelve al comienzo
   timeline.activeShotId = null;
+  audioStop();
   updatePlayheadUI();
   stopAllPlaybacks();
   if (timeline.recording) {
@@ -519,6 +523,7 @@ function startScrub(e) {
   if (timeline.playing) {
     timeline.playing = false;
     timeline.paused = false;
+    audioStop();
     stopAllPlaybacks();
     updateTransportUI();
   }
@@ -613,12 +618,14 @@ function togglePlayPause() {
     // Pausa: congela la simulación sin reiniciar ni perder la posición
     timeline.playing = false;
     timeline.paused = true;
+    audioStop();
     updateTransportUI();
     setStatus('Escena en pausa.');
   } else if (timeline.paused) {
     // Reanudar desde donde estaba
     timeline.paused = false;
     timeline.playing = true;
+    audioPlay(timeline.time);
     updateTransportUI();
     setStatus('Escena reanudada.');
   } else {
