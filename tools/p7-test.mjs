@@ -367,6 +367,18 @@ evaluateAllPathsAt(99);
 assert(Math.abs(poseEntry.group.position.x - 7) < 1e-6, 'reproducción: al final conserva el último lugar');
 setCharBlocks([], {});
 
+// --- reproducción con solo bloques (sin tomas): siempre funciona ---
+// La duración cubre los bloques y el play no se niega aunque no haya tomas.
+const { playScene, stopScene, sceneDuration } = await import(pathToFileURL('./js/cinema/timeline.js'));
+setCharBlocks([
+  { id: 'cbS1', start: 0, duration: 3, actions: { poseTestChar: { action: 'talk', pos: [1, 0, 2], rotY: 0 } } },
+  { id: 'cbS2', start: 5, duration: 4, actions: { poseTestChar: { action: 'idle', pos: [7, 0, 8], rotY: 1.5 } } }
+], {});
+assert(sceneDuration() >= 9, 'duración cubre los bloques aunque no haya tomas');
+assert(playScene() === true, 'reproduce con solo bloques de personajes');
+stopScene();
+setCharBlocks([], {});
+
 // --- convención de orientación (blindaje anti "dados vuelta") ---
 const { rotYToLookAt } = await import(pathToFileURL('./js/characters/characters.js'));
 const approx = (a, b, tol = 0.02) => Math.abs(a - b) <= tol;

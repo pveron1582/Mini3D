@@ -1,4 +1,4 @@
-import { timeline, cinema, cinemaPaths, interactiveRegistry, recorderState, playback, view, store, blockEdit } from '../state.js';
+import { timeline, cinema, cinemaPaths, interactiveRegistry, recorderState, playback, view, store, blockEdit, charBlocks, charFullRange, quizTrack } from '../state.js';
 import { byId, qs, qsa } from '../dom.js';
 import { camera, controls } from '../core.js';
 import { stepLadder, STEP_LADDER_ORIGIN, openAllRackDoors } from '../office/group.js';
@@ -8,7 +8,7 @@ import { quizPlayTick, renderQuizLane, clearQuizSelection, quizSelection } from 
 import { renderCharBlocks, charBlockSelection } from './charTrack.js';
 import { collectTimelineSnapTimes, snapTimeToRefs, TL_SNAP_PX } from './tlSnap.js';
 import { subtitleTrack, refreshSubtitles } from '../media/subtitles.js';
-import { stopAllPlaybacks, cutCameraToShot, setCamView, cinemaStorePath, updateCameraViewVisibility, evaluateAllPathsAt, cinemaDeactivate, cinemaClearVisuals, cinemaClearAllVisuals, cinemaSetMode } from './cinematics.js';
+import { stopAllPlaybacks, cutCameraToShot, setCamView, cinemaStorePath, updateCameraViewVisibility, evaluateAllPathsAt, cinemaDeactivate, cinemaClearVisuals, cinemaClearAllVisuals, cinemaSetMode, refreshCharLanes } from './cinematics.js';
 import { startRecording, mediaRecorder, setStatus } from '../media/recorder.js';
 import { pushHistory } from '../undo.js';
 import { setActiveTarget } from '../ui/selection.js';
@@ -37,12 +37,23 @@ function subjectName(id) {
   return e ? e.name : '';
 }
 
+// Duración de la escena: el fin del contenido más largo — tomas, bloques de
+// personajes, recorridos, subtítulos o carteles. La reproducción siempre
+// cubre todo lo que hay en la línea (no solo las tomas).
 export function sceneDuration() {
-  return timeline.shots.reduce((m, s) => Math.max(m, s.start + s.duration), 0);
+  let m = timeline.shots.reduce((mm, s) => Math.max(mm, s.start + s.duration), 0);
+  charBlocks.forEach(b => { m = Math.max(m, b.start + b.duration); });
+  cinemaPaths.forEach(stored => { m = Math.max(m, stored._duration || 0); });
+  subtitleTrack.forEach(c => { m = Math.max(m, c.end); });
+  quizTrack.forEach(q => { m = Math.max(m, q.end); });
+  return m;
 }
 
 function refreshDuration() {
+  refreshCharLanes();   // duraciones de recorridos al día (_duration)
   timeline.duration = sceneDuration();
+  // Solo acción base sin nada temporizado: igual se puede reproducir
+  if (!(timeline.duration > 0) && Object.keys(charFullRange).length) timeline.duration = 5;
 }
 
 // ---------- Motor (llamado desde render.js cada frame) ----------
@@ -126,15 +137,15 @@ export function playScene() {
   cinemaPaths.forEach((stored, id) => {
     if (stored.waypoints && stored.waypoints.length >= 2) playable.push(id);
   });
-  if (playable.length === 0 && timeline.shots.length === 0) {
-    setStatus('No hay tomas ni recorridos configurados: marca al menos un camino o toma.');
+  // La reproducción funciona con CUALQUIER contenido (no solo tomas):
+  // recorridos, bloques/acción base de personajes, subtítulos o carteles.
+  const hasChar = charBlocks.length > 0 || Object.keys(charFullRange).length > 0;
+  const hasText = subtitleTrack.length > 0 || quizTrack.length > 0;
+  if (playable.length === 0 && timeline.shots.length === 0 && !hasChar && !hasText) {
+    setStatus('La escena está vacía: agregá un personaje, un camino, una toma o un texto.');
     return false;
   }
   refreshDuration();
-  if (timeline.shots.length === 0) {
-    setStatus('No hay tomas en la línea de tiempo: generá una escena con el asistente 🪅.');
-    return false;
-  }
 
   stopAllPlaybacks();
   // La escena se reproduce con la previsión determinista `evaluateAllPathsAt`
@@ -170,7 +181,11 @@ export function playScene() {
     cutCameraToShot(first.camMode, first.subjectId, first);
   }
   updatePlayheadUI();
-  setStatus(`Reproduciendo escena (${timeline.duration.toFixed(1)}s, ${playable.length} recorridos)...`);
+  const parts = [];
+  if (playable.length) parts.push(`${playable.length} recorridos`);
+  if (timeline.shots.length) parts.push(`${timeline.shots.length} tomas`);
+  if (charBlocks.length) parts.push(`${charBlocks.length} bloques`);
+  setStatus(`Reproduciendo escena (${timeline.duration.toFixed(1)}s${parts.length ? ', ' + parts.join(' + ') : ''})...`);
   updateTransportUI();
   return true;
 }
@@ -443,10 +458,28 @@ function updatePlayheadUI() {
   const ph = byId('tlPlayhead');
   if (ph) {
     ph.style.display = (timeline.playing || timeline.time > 0) ? 'block' : 'none';
-    ph.style.left = (LANE_LABEL_W + timeline.time * pxPerSec()) + 'px';
+    ph.style.left = (playheadBaseX() + Math.max(0, timeline.time) * pxPerSec()) + 'px';
   }
   if (clockEl) clockEl.textContent = fmt(timeline.time) + ' / ' + fmt(timeline.duration);
 }
+
+// La aguja vive en #scene-timeline (fuera del cuerpo con scroll) pero sus
+// coordenadas son de la pista (#timelineTrack): compensar el desplazamiento
+// entre ambas (el padding de la sección), si no la aguja queda a la
+// izquierda de la marca 0s y parece que se puede mover "más allá del 0".
+// Se cachea (el padding no cambia) y se invalida al redimensionar.
+let playheadDx = null;
+function playheadBaseX() {
+  if (playheadDx === null && track && track.clientWidth > 0) {
+    playheadDx = LANE_LABEL_W;
+    const sec = byId('scene-timeline');
+    if (sec) {
+      playheadDx = (track.getBoundingClientRect().left - sec.getBoundingClientRect().left) + LANE_LABEL_W;
+    }
+  }
+  return playheadDx === null ? LANE_LABEL_W : playheadDx;
+}
+window.addEventListener('resize', () => { playheadDx = null; });
 
 // Click en la regla o la pista (o arrastre del cabezal rojo) → mover la
 // cabeza de reproducción. Mientras se arrastra, sigue al mouse a cualquier

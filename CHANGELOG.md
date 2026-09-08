@@ -2,6 +2,13 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-08] — Fix aguja más allá del 0 + reproducción siempre funciona
+
+- La aguja quedaba a la izquierda de la marca 0s (offset del padding de la
+  sección): ahora compensa la posición de la pista y el 0 es el tope real.
+- `playScene` ya no exige tomas: reproduce con cualquier contenido
+  (recorridos, bloques/acción base, subtítulos o carteles); la duración
+  cubre todo (antes solo las tomas, con 0 bloques no arrancaba).
 ## [2026-09-08] — Bloques de personajes guardan lugar + acción + ánimo
 
 - El 💾 del cuadro captura también DÓNDE está el personaje (posición +
