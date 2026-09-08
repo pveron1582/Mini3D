@@ -315,6 +315,9 @@ export function serializeProject(opts = {}) {
         // Toma fija (plano clavado / zoom): cámara y objetivo propios
         camPos: Array.isArray(s.camPos) ? s.camPos : undefined,
         target: Array.isArray(s.target) ? s.target : undefined,
+        // Dolly dentro de la toma: encuadre de FIN (inicio→fin en el plano)
+        camPosEnd: Array.isArray(s.camPosEnd) ? s.camPosEnd : undefined,
+        targetEnd: Array.isArray(s.targetEnd) ? s.targetEnd : undefined,
         // Apertura de puertas de mini rack en la toma
         openDoor: s.openDoor ? true : undefined,
         // (Los carteles de pregunta viven en `quizzes[]`, la pista 📋 QUIZ;
@@ -635,6 +638,8 @@ export function applyProject(data) {
       subjectId: s.subjectId || null,
       camPos: Array.isArray(s.camPos) ? s.camPos : undefined,
       target: Array.isArray(s.target) ? s.target : undefined,
+      camPosEnd: Array.isArray(s.camPosEnd) ? s.camPosEnd : undefined,
+      targetEnd: Array.isArray(s.targetEnd) ? s.targetEnd : undefined,
       // Apertura de puertas de mini rack en la toma
       openDoor: s.openDoor ? true : undefined,
       // Migración del quiz legacy: si la toma traía quiz y no hay pista

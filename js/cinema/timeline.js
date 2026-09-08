@@ -9,7 +9,7 @@ import { renderCharBlocks, charBlockSelection } from './charTrack.js';
 import { collectTimelineSnapTimes, snapTimeToRefs, TL_SNAP_PX } from './tlSnap.js';
 import { subtitleTrack, refreshSubtitles } from '../media/subtitles.js';
 import { audioPlay, audioStop } from '../media/audio.js';
-import { stopAllPlaybacks, cutCameraToShot, setCamView, cinemaStorePath, updateCameraViewVisibility, evaluateAllPathsAt, cinemaDeactivate, cinemaClearVisuals, cinemaClearAllVisuals, cinemaSetMode, refreshCharLanes } from './cinematics.js';
+import { stopAllPlaybacks, cutCameraToShot, setCamView, cinemaStorePath, updateCameraViewVisibility, evaluateAllPathsAt, cinemaDeactivate, cinemaClearVisuals, cinemaClearAllVisuals, cinemaSetMode, refreshCharLanes, applyShotDolly } from './cinematics.js';
 import { startRecording, mediaRecorder, setStatus } from '../media/recorder.js';
 import { pushHistory } from '../undo.js';
 import { setActiveTarget } from '../ui/selection.js';
@@ -118,6 +118,9 @@ export function updateTimeline(dt) {
     timeline.activeShotId = shot.id;
     cutCameraToShot(shot.camMode, shot.subjectId, shot);
   }
+  // Dolly dentro de la toma: la cámara viaja inicio→fin mientras dura el plano
+  // (toma el control: el usuario no orbita durante ese tramo).
+  if (shot && applyShotDolly(shot, timeline.time)) controls.enabled = false;
 
   updatePlayheadUI();
 
@@ -596,6 +599,8 @@ function scrubTo(t) {
   const shot = currentShot(timeline.time);
   if (shot) cutCameraToShot(shot.camMode, shot.subjectId, shot);
   else setCamView('orbit');
+  // Previsualizar el dolly en la aguja (encuadre del instante, sin tomar control)
+  if (shot) applyShotDolly(shot, timeline.time);
   // Al previsualizar con la cabeza (sin reproducir), la cámara queda en el
   // encuadre de la toma pero en Vista Libre para poder orbitar desde ahí.
   view.mode = 'orbit';

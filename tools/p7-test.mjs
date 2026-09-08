@@ -380,6 +380,27 @@ assert(playScene() === true, 'reproduce con solo bloques de personajes');
 stopScene();
 setCharBlocks([], {});
 
+// --- dolly dentro de la toma: interpola inicio→fin en el plano ---
+const { shotDollyAt, applyShotDolly } = await import(pathToFileURL('./js/cinema/cinematics.js'));
+const { timeline } = await import(pathToFileURL('./js/state.js'));
+const { camera, controls } = await import(pathToFileURL('./js/core.js'));
+const dollyShot = { id: 'shotD', start: 2, duration: 4, camMode: 'free', camPos: [0, 2, 8], target: [0, 1, 0], camPosEnd: [0, 1, 3], targetEnd: [0, 1, 0] };
+assert(shotDollyAt(dollyShot, 2).pos[2] === 8, 'dolly: arranca en el encuadre inicial');
+assert(Math.abs(shotDollyAt(dollyShot, 4).pos[2] - 5.5) < 1e-9, 'dolly: a mitad viaja a mitad');
+assert(shotDollyAt(dollyShot, 6).pos[2] === 3, 'dolly: termina en el encuadre final');
+assert(shotDollyAt(dollyShot, 99).pos[2] === 3, 'dolly: pasado el fin se queda');
+assert(shotDollyAt({ ...dollyShot, camPosEnd: undefined }, 4) === null, 'sin fin no hay movimiento');
+const savedCamD = camera.position.clone();
+const savedTgtD = controls.target.clone();
+applyShotDolly(dollyShot, 4);
+assert(Math.abs(camera.position.z - 5.5) < 1e-6, 'applyShotDolly mueve la cámara');
+camera.position.copy(savedCamD);
+controls.target.copy(savedTgtD);
+timeline.shots.push({ id: 'shotDollySer', start: 0, duration: 2, camMode: 'free', subjectId: null, camPos: [0, 0, 0], target: [0, 0, 0], camPosEnd: [1, 1, 1], targetEnd: [0, 0, 0], label: '', color: '#111' });
+const serD = serializeProject().timeline.shots.find(s => Array.isArray(s.camPosEnd));
+assert(!!serD && serD.camPosEnd[0] === 1, 'dolly persiste en el JSON');
+timeline.shots.splice(timeline.shots.findIndex(s => s.id === 'shotDollySer'), 1);
+
 // --- audio por escena: metadata chica en snapshots, data solo al guardar ---
 const { audioTracks, serializeAudioTracks, setAudioTracks, clearAudio } = await import(pathToFileURL('./js/media/audio.js'));
 const { audioBus } = await import(pathToFileURL('./js/state.js'));
@@ -394,7 +415,7 @@ clearAudio();
 assert(audioTracks.length === 0, 'audio: limpiar deja cero pistas');
 
 // --- spawn en el centro de la vista (donde mira la cámara) ---
-const { viewCenterGround, camera, controls } = await import(pathToFileURL('./js/core.js'));
+const { viewCenterGround } = await import(pathToFileURL('./js/core.js'));
 const vc = viewCenterGround();
 assert(Number.isFinite(vc.x) && Number.isFinite(vc.z), 'centro de vista: punto finito sobre el piso');
 const savedPos = camera.position.clone();

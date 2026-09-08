@@ -2,6 +2,11 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-08] — Dolly/zoom dentro de la toma (backlog #6)
+
+- La toma guarda encuadre de FIN ("📍 Marcar fin aquí" en 🎥 Cámara):
+  durante el plano viaja inicio→fin (libre/fija, con smoothstep); se ve en
+  la aguja, persiste en el JSON y el ✕ lo descarta. Botón ✕ Quitar.
 ## [2026-09-08] — Transiciones suaves entre acciones (backlog #5)
 
 - Al cambiar de acción cada articulación interpola 0.3 s (smoothstep +

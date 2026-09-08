@@ -596,6 +596,27 @@ function syncShotCamUI() {
     const mapped = Object.keys(SHOT_CAM_MAP).find(k => SHOT_CAM_MAP[k] === shot.camMode);
     viewSel.value = mapped || 'free';
   }
+  syncShotDollyUI();
+}
+
+// Estado del movimiento en el panel: qué toma lo tiene y con qué modo.
+function syncShotDollyUI() {
+  const status = byId('shotDollyStatus');
+  const endBtn = byId('btnShotDollyEnd');
+  const clearBtn = byId('btnShotDollyClear');
+  if (!status) return;
+  const shot = timelineBus.getSelectedShot();
+  const ok = !!(shot && DOLLY_MODES.includes(shot.camMode));
+  const has = !!(shot && Array.isArray(shot.camPosEnd));
+  status.textContent = !shot
+    ? 'Sin toma seleccionada.'
+    : !ok
+      ? 'Solo en cámara libre o fija.'
+      : has
+        ? '🎬 Con movimiento: viaja inicio→fin durante la toma.'
+        : 'Sin movimiento: plano fijo.';
+  if (endBtn) endBtn.disabled = !ok;
+  if (clearBtn) clearBtn.disabled = !ok || !has;
 }
 
 // Aplica la combinación (quién + vista) elegida en el control. Si hay una toma
@@ -666,6 +687,25 @@ function label(mode) {
   if (viewSel) {
     viewSel.addEventListener('change', () => applyShotCamControl());
   }
+  // Movimiento en la toma: marcar el encuadre actual como fin, o quitarlo.
+  byId('btnShotDollyEnd')?.addEventListener('click', () => {
+    if (markShotDollyEnd()) {
+      if (timelineBus.renderShots) timelineBus.renderShots();
+      syncShotDollyUI();
+      pushHistory();
+      setStatus('🎬 Fin del movimiento marcado: en la toma la cámara viaja hasta acá. 💾 guarda.');
+    } else {
+      setStatus('Elegí una toma en cámara libre o fija para marcarle movimiento.');
+    }
+  });
+  byId('btnShotDollyClear')?.addEventListener('click', () => {
+    if (clearShotDolly()) {
+      if (timelineBus.renderShots) timelineBus.renderShots();
+      syncShotDollyUI();
+      pushHistory();
+      setStatus('Movimiento de la toma quitado: vuelve a plano fijo.');
+    }
+  });
   // Mantener el dropdown de personajes y la vista sincronizados con la toma
   // seleccionada: refrescamos al seleccionar/descartar tomas.
   timelineBus.syncShotCamUI = syncShotCamUI;
@@ -762,6 +802,12 @@ export function setCamView(mode) {
 
 // Corte de cámara de la timeline: aplica una toma (modo + sujeto) al instante
 export function cutCameraToShot(mode, subjectId, shot = null) {
+  // Dolly: si la toma tiene fin de movimiento pero nunca se guardó el inicio,
+  // el encuadre actual pasa a ser el inicio (el 💾 lo confirma después).
+  if (shot && shot.camPosEnd && !shot.camPos && (mode === 'free' || mode === 'orbit' || mode === 'fixed')) {
+    shot.camPos = [camera.position.x, camera.position.y, camera.position.z];
+    shot.target = [controls.target.x, controls.target.y, controls.target.z];
+  }
   if (mode === 'free') {
     // Vista Libre: si la toma guarda un encuadre (el usuario lo dejó con 💾),
     // se restaura; si no, la cámara queda donde está — PERO si venimos de un
@@ -809,6 +855,57 @@ export function cutCameraToShot(mode, subjectId, shot = null) {
 
 const _camTmp = new THREE.Vector3();
 const _aerialCenter = new THREE.Vector3();
+// ==========================================
+// DOLLY / ZOOM DENTRO DE LA TOMA (backlog #6)
+// ==========================================
+// La toma guarda un encuadre de FIN (camPosEnd/targetEnd, como el de inicio):
+// durante la toma la cámara interpola inicio→fin (ej. acercarse al rack EN el
+// plano, no con dos cortes). Vale para free/orbit/fixed (encuadre guardado).
+const DOLLY_MODES = ['free', 'orbit', 'fixed'];
+
+// Encuadre interpolado en el instante t (puro, testeable): null sin movimiento.
+export function shotDollyAt(shot, t) {
+  if (!shot || !Array.isArray(shot.camPosEnd) || !Array.isArray(shot.targetEnd)) return null;
+  if (!Array.isArray(shot.camPos) || !Array.isArray(shot.target)) return null;
+  if (!(shot.duration > 0)) return null;
+  const k = Math.max(0, Math.min(1, (t - shot.start) / shot.duration));
+  const e = k * k * (3 - 2 * k); // smoothstep: arranca y frena suave
+  const mix3 = (a, b) => [a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e, a[2] + (b[2] - a[2]) * e];
+  return { pos: mix3(shot.camPos, shot.camPosEnd), target: mix3(shot.target, shot.targetEnd) };
+}
+
+// Aplica el dolly a la cámara (reproducción y scrub): true si se aplicó.
+export function applyShotDolly(shot, t) {
+  if (!shot || !DOLLY_MODES.includes(shot.camMode)) return false;
+  const f = shotDollyAt(shot, t);
+  if (!f) return false;
+  camera.position.set(f.pos[0], f.pos[1], f.pos[2]);
+  controls.target.set(f.target[0], f.target[1], f.target[2]);
+  camera.lookAt(controls.target);
+  return true;
+}
+
+// Marcar el encuadre actual como FIN del movimiento de la toma seleccionada.
+export function markShotDollyEnd() {
+  const shot = timelineBus.getSelectedShot();
+  if (!shot || !DOLLY_MODES.includes(shot.camMode)) return false;
+  if (!Array.isArray(shot.camPos) || !Array.isArray(shot.target)) {
+    shot.camPos = [camera.position.x, camera.position.y, camera.position.z];
+    shot.target = [controls.target.x, controls.target.y, controls.target.z];
+  }
+  shot.camPosEnd = [camera.position.x, camera.position.y, camera.position.z];
+  shot.targetEnd = [controls.target.x, controls.target.y, controls.target.z];
+  return true;
+}
+
+export function clearShotDolly() {
+  const shot = timelineBus.getSelectedShot();
+  if (!shot) return false;
+  const had = Array.isArray(shot.camPosEnd);
+  delete shot.camPosEnd;
+  delete shot.targetEnd;
+  return had;
+}
 function getAerialCenter() {
   // Centro aproximado de la escena: promedio de personajes visibles
   let n = 0;

@@ -113,11 +113,11 @@ desde la pose anterior durante 0.3 s (smoothstep + slerp, genérico para
 humanos, perro y gato; la raíz queda afuera — la maneja la escena). Repetir la
 misma acción no re-dispara la mezcla. Tests en la suite.
 
-### 6. Cámara con movimiento dentro de la toma (MEDIO impacto / esfuerzo medio)
-Tomas fijas con dolly/zoom gradual: campos opcionales `camPosEnd` /
-`targetEnd` y la cámara interpola durante la toma (acercarse al rack EN el
-plano, no con dos cortes).
-- Dónde: `js/timeline.js` (motor de tomas) + `js/cinematics.js`.
+### 6. ~~Cámara con movimiento dentro de la toma~~ ✅ (2026-09-08)
+HECHO: la toma guarda encuadre de FIN (`camPosEnd`/`targetEnd`, botón
+"📍 Marcar fin aquí" en 🎥 Cámara); en la toma viaja inicio→fin con
+smoothstep (vale en libre/fija, persiste en el JSON, se previsualiza en la
+aguja y el ✕ lo descarta vía snapshot).
 
 ### 7. Render determinista + exportación 1080p fijo (MEDIO alto / esfuerzo medio)
 Reloj de simulación por frame fijo (1/30 s simulados por frame renderizado)
