@@ -697,6 +697,25 @@ function beginCharBlockDrag(e, b, el) {
   window.addEventListener('pointerup', onUp);
 }
 
+// ---------- Bloque inicial al agregar un personaje ----------
+// Dura INITIAL_CHAR_BLOCK_DURATION (3 s): la acción mínima con la que el
+// personaje arranca en la cinemática. Desde ahí se estira (toda la escena o
+// lo que dure la secuencia) o se agregan más bloques para que haga varias
+// cosas en la línea.
+export const INITIAL_CHAR_BLOCK_DURATION = 3;
+
+export function createInitialCharBlock(charId, action = 'idle', duration = INITIAL_CHAR_BLOCK_DURATION) {
+  const b = {
+    id: 'cb' + (++blockCounter),
+    start: 0,
+    duration: Math.max(0.5, duration),
+    actions: { [charId]: { action } }
+  };
+  charBlocks.push(b);
+  renderCharBlocks();
+  return b;
+}
+
 // ---------- Botón ＋ de la pista ----------
 // Crea un bloque NUEVO de ACCIÓN para un personaje, al final de sus bloques
 // (un bloque = un personaje), seleccionado para editar directo.

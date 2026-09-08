@@ -2,6 +2,11 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-08] — Personaje nuevo: bloque inicial de 3 s (no toda la escena)
+
+- Al ➕ Añadir Personaje se crea un bloque "De pie" de 3 s al inicio
+  (`createInitialCharBlock` en `js/cinema/charTrack.js`): desde ahí se estira
+  o se agregan más bloques; para toda la escena sigue el botón dedicado.
 ## [2026-09-08] — Modo 🐢 Suave aún más lento (~1/5 de la velocidad normal)
 ## [2026-09-08] — Botón 🐢 Suave: movimiento de cámara preciso
 

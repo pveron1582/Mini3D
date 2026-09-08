@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { byId, qs, qsa } from '../dom.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { controls } from '../core.js';
-import { interactiveRegistry, charFullRange, charLaneBus } from '../state.js';
+import { interactiveRegistry } from '../state.js';
+import { createInitialCharBlock } from '../cinema/charTrack.js';
 import { createHumanPreview, addHumanCharacter } from './characters.js';
 import { setActiveTarget } from '../ui/selection.js';
 import { populateOutliner } from '../ui/ui.js';
@@ -282,14 +283,14 @@ byId('ccAccept')?.addEventListener('click', () => {
   const x = Math.round(t.x * 2) / 2;
   const z = Math.round(t.z * 2) / 2;
   addHumanCharacter(id, name, x, z, 0, colors);
-  // Aparece su PISTA en la línea de tiempo, con su acción base "De pie" de
-  // TODA la escena — lista para marcarle acciones/caminos.
-  charFullRange[id] = { action: 'idle' };
-  if (charLaneBus.refresh) charLaneBus.refresh();
+  // Aparece su PISTA en la línea de tiempo con un bloque inicial "De pie" de
+  // 3 s: desde ahí se estira (toda la escena o lo que dure la secuencia) o se
+  // agregan más bloques para que haga varias cosas.
+  createInitialCharBlock(id, 'idle');
   populateOutliner();
   setActiveTarget(id);
   pushHistory();
-  setStatus(`Personaje "${name}" agregado.`);
+  setStatus(`Personaje "${name}" agregado (bloque inicial de 3 s: estiralo o agregá más).`);
   // Crear ? reiniciar el formulario a los valores por defecto (queda listo
   // para el pr�ximo personaje, sin arrastrar la config reci�n usada).
   resetCreator();
