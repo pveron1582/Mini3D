@@ -804,6 +804,7 @@ byId('mnuOpen')?.addEventListener('click', () => {
 byId('mnuSaveAs')?.addEventListener('click', () => { closeAllBarMenus(); saveProjectAs(); });
 byId('mnuSave')?.addEventListener('click', () => { closeAllBarMenus(); saveProject(); });
 byId('mnuNew')?.addEventListener('click', () => { closeAllBarMenus(); });  // el resto lo maneja startup.js
+byId('mnuClose')?.addEventListener('click', () => { closeAllBarMenus(); });  // ídem: startup.js cierra el proyecto
 byId('projectFileInput')?.addEventListener('change', (e) => {
   const file = e.target.files && e.target.files[0];
   if (file) openProject(file);

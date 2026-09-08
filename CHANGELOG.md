@@ -2,6 +2,13 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-08] — Cerrar proyecto + atajos Ctrl+N / Ctrl+Q
+
+- **✖ Cerrar** en Archivo y botón junto al 💾 (`btnCloseProject`, `mnuClose`):
+  pregunta si hay cambios sin guardar y vuelve al menú inicial.
+- **Ctrl+N** nuevo (no existía): pregunta si guardar y va directo al
+  formulario de proyecto nuevo (para abrir uno está Abrir…).
+- **Ctrl+Q** cerrar. Nota: algunos navegadores reservan Ctrl+N/Ctrl+Q.
 ## [2026-09-08] — Directorio `archivo/` para notas de diagnóstico
 
 - Nuevo `archivo/` con `fixed_cinematica_gemini.md` y `mejoras_gemini.md`

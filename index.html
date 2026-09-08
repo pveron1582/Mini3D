@@ -28,10 +28,11 @@
           <div class="menu-item has-dropdown" id="menuArchivo">
             Archivo ▾
             <div class="menu-dropdown" id="menuArchivoDropdown">
-              <div class="menu-option" id="mnuNew">📄 Nuevo…</div>
+              <div class="menu-option" id="mnuNew" title="Proyecto nuevo (Ctrl+N)">📄 Nuevo…</div>
               <div class="menu-option" id="mnuOpen">📂 Abrir…</div>
               <div class="menu-option" id="mnuSaveAs">💾 Guardar como…</div>
               <div class="menu-option disabled" id="mnuSave">💾 Guardar</div>
+              <div class="menu-option" id="mnuClose" title="Cerrar proyecto (Ctrl+Q)">✖ Cerrar</div>
             </div>
           </div>
           <div class="menu-item has-dropdown" id="menuEditar">
@@ -52,7 +53,8 @@
       <!-- Bloque central de proyecto: guardar · nuevo · deshacer · rehacer -->
       <div class="top-bar-center">
         <button class="viewport-toggle-btn" id="btnSaveQuick" title="Guardar cambios (Ctrl+S)">💾</button>
-        <button class="viewport-toggle-btn" id="btnNewBlank" title="Proyecto nuevo">📄</button>
+        <button class="viewport-toggle-btn" id="btnCloseProject" title="Cerrar proyecto (Ctrl+Q)">✖</button>
+        <button class="viewport-toggle-btn" id="btnNewBlank" title="Proyecto nuevo (Ctrl+N)">📄</button>
         <span class="tb-sep"></span>
         <button class="viewport-toggle-btn" id="undoBtn" title="Deshacer (Ctrl+Z)" disabled>↩</button>
         <button class="viewport-toggle-btn" id="redoBtn" title="Rehacer (Ctrl+Y)" disabled>↪</button>

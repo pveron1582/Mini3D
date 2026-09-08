@@ -10,8 +10,9 @@ import { getProjectName, saveProject } from './projectFiles.js';
 // (que va dentro de main.js) mantiene los accesos rápidos de la barra
 // superior, el menú Archivo ▸ Nuevo… y la reapertura del modal.
 //
-// Barra superior: 💾 guardar cambios · 📄 proyecto nuevo (pregunta si hay sin
-// guardar) · ↩ deshacer · ↪ rehacer (estos dos ya existían en undo.js).
+// Barra superior: 💾 guardar cambios · ✖ cerrar proyecto · 📄 proyecto nuevo
+// (pregunta si hay sin guardar) · ↩ deshacer · ↪ rehacer (estos dos ya
+// existían en undo.js). Atajos: Ctrl+S guardar, Ctrl+N nuevo, Ctrl+Q cerrar.
 
 const modal = byId('startupModal');
 const suHome = byId('suHome');
@@ -49,25 +50,54 @@ byId('btnSaveQuick')?.addEventListener('click', () => {
   saveProject();
 });
 
-// 📄 Proyecto nuevo (barra) y Archivo ▸ Nuevo…: preguntan si guardar los
-// cambios y vuelven a la pantalla principal de arranque (boot.js atiende el
-// modal desde ahí: crear uno nuevo o cargar otro proyecto).
-byId('btnNewBlank')?.addEventListener('click', async () => {
+// 📄 Proyecto nuevo (barra, menú o Ctrl+N): si hay cambios sin guardar
+// pregunta si guardarlos; después va DIRECTO al formulario de proyecto nuevo
+// (nombre + escenario). Para abrir uno existente está Abrir… (mnuOpen).
+async function requestNewProject() {
+  await confirmSaveBeforeContinue();
+  showStartup('new');
+}
+
+// ✖ Cerrar proyecto (barra, menú o Ctrl+Q): si hay cambios sin guardar
+// pregunta si guardarlos; después vuelve al menú inicial (nuevo o cargar).
+async function closeProject() {
   await confirmSaveBeforeContinue();
   showStartup('home');
+}
+
+byId('btnNewBlank')?.addEventListener('click', () => {
+  requestNewProject();
 });
 
-byId('mnuNew')?.addEventListener('click', async () => {
+byId('mnuNew')?.addEventListener('click', () => {
   // (Sin stopPropagation: el click debe burbujear para que el menú Archivo se
   // cierre solo — el cierre global vive en ui.js.)
-  await confirmSaveBeforeContinue();
-  showStartup('home');
+  requestNewProject();
 });
 
-// Atajo Ctrl+S para guardar rápido
+byId('btnCloseProject')?.addEventListener('click', () => {
+  closeProject();
+});
+
+byId('mnuClose')?.addEventListener('click', () => {
+  // (Igual que mnuNew: el cierre del menú lo maneja el bubbling / projectFiles.js.)
+  closeProject();
+});
+
+// Atajos de proyecto: Ctrl+S guardar, Ctrl+N nuevo, Ctrl+Q cerrar.
+// (Nota: algunos navegadores reservan Ctrl+N / Ctrl+Q y no los entregan a la
+// página; en ese caso usar el menú o los botones de la barra.)
 document.addEventListener('keydown', (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+  if (!(e.ctrlKey || e.metaKey)) return;
+  const k = e.key.toLowerCase();
+  if (k === 's') {
     e.preventDefault();
     saveProject();
+  } else if (k === 'n') {
+    e.preventDefault();
+    requestNewProject();
+  } else if (k === 'q') {
+    e.preventDefault();
+    closeProject();
   }
 });
