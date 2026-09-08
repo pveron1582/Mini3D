@@ -5,56 +5,49 @@
   "description": "Reunión de urgencias en el despacho del jefe (45s). Carlos (jefe) sentado de frente a su escritorio en la silla de gerencia (respaldo atrás), y Alex y Elena de pie junto al frente del escritorio, mirando hacia él. Alex cuenta el AP WiFi saturado de la sala de juntas y Elena agrega el backup del disco al 91% fallido; El jefe fija el plan del día y ambos confirman los tiempos. Cierre con humor: el jefe dice que al menos el perro está tranquilo… y se lo ve sentado frente a la heladera de la cocina, vigilándola. Tomas cercas con lip-sync visible en cada parlamento.",
   "objects": {
     "human1": { "pos": [-8.3, 0, 7.2], "rotY": -0.28, "action": "idle" },
-    "human2": { "pos": [-9.0, 0.06, 9.6], "rotY": 3.14159, "action": "sit" },
+    "human2": { "pos": [-9.0, 0.17, 9.6], "rotY": 3.14159, "action": "sit" },
     "human3": { "pos": [-9.7, 0, 7.2], "rotY": 0.28, "action": "idle" },
     "dog": { "pos": [5.85, 0, 7.1], "rotY": -1.57, "action": "sit" }
   },
-  "paths": {
-    "human1": {
-      "waypoints": [[-8.3, 0, 7.2], [-8.34, 0, 7.2], [-8.3, 0, 7.22], [-8.26, 0, 7.2], [-8.3, 0, 7.18], [-8.3, 0, 7.2]],
-      "planeY": 0,
-      "speed": 1,
-      "events": {
-        "0": { "action": "idle", "wait": 9.5 },
-        "1": { "action": "talk", "wait": 6.3 },
-        "2": { "action": "idle", "wait": 12.8 },
-        "3": { "action": "talk", "wait": 3.8 },
-        "4": { "action": "idle", "wait": 12.4 }
-      }
-    },
-    "human2": {
-      "waypoints": [[-9.0, 0, 9.6], [-9.04, 0, 9.6], [-9.0, 0, 9.62], [-8.96, 0, 9.6], [-9.0, 0, 9.58], [-9.04, 0, 9.6], [-9.0, 0, 9.6]],
-      "planeY": 0,
-      "speed": 1,
-      "events": {
-        "1": { "action": "sit", "wait": 4.6 },
-        "2": { "action": "talk", "wait": 4.4 },
-        "3": { "action": "sit", "wait": 13.8 },
-        "4": { "action": "talk", "wait": 5.4 },
-        "5": { "action": "sit", "wait": 8.4 },
-        "6": { "action": "talk", "wait": 3.0 },
-        "7": { "action": "sit", "wait": 5.2 }
-      }
-    },
-    "human3": {
-      "waypoints": [[-9.7, 0, 7.2], [-9.74, 0, 7.2], [-9.7, 0, 7.22], [-9.66, 0, 7.2], [-9.7, 0, 7.18], [-9.7, 0, 7.2]],
-      "planeY": 0,
-      "speed": 1,
-      "events": {
-        "1": { "action": "idle", "wait": 16.2 },
-        "2": { "action": "talk", "wait": 6.2 },
-        "3": { "action": "idle", "wait": 10.3 },
-        "4": { "action": "talk", "wait": 3.5 },
-        "5": { "action": "idle", "wait": 8.6 }
-      }
-    },
-    "dog": {
-      "waypoints": [[5.85, 0, 7.1], [5.85, 0, 7.1]],
-      "planeY": 0,
-      "speed": 0,
-      "events": {}
-    }
+  "charFullRange": {
+    "dog": { "action": "sit" }
   },
+  "charBlocks": [
+    { "id": "cb_boss_1", "start": 0.0, "duration": 4.6, "actions": {
+      "human2": { "action": "sit" } } },
+    { "id": "cb_boss_2", "start": 4.6, "duration": 4.8, "actions": {
+      "human2": { "action": "sit_talk" } } },
+    { "id": "cb_boss_3", "start": 9.4, "duration": 13.4, "actions": {
+      "human2": { "action": "sit" } } },
+    { "id": "cb_boss_4", "start": 22.8, "duration": 5.4, "actions": {
+      "human2": { "action": "sit_talk" } } },
+    { "id": "cb_boss_5", "start": 28.2, "duration": 8.4, "actions": {
+      "human2": { "action": "sit" } } },
+    { "id": "cb_boss_6", "start": 36.6, "duration": 3.0, "actions": {
+      "human2": { "action": "sit_talk" } } },
+    { "id": "cb_boss_7", "start": 39.6, "duration": 5.6, "actions": {
+      "human2": { "action": "sit" } } },
+    { "id": "cb_alex_1", "start": 0.0, "duration": 9.4, "actions": {
+      "human1": { "action": "idle" } } },
+    { "id": "cb_alex_2", "start": 9.4, "duration": 6.4, "actions": {
+      "human1": { "action": "talk" } } },
+    { "id": "cb_alex_3", "start": 15.8, "duration": 12.8, "actions": {
+      "human1": { "action": "idle" } } },
+    { "id": "cb_alex_4", "start": 28.6, "duration": 3.8, "actions": {
+      "human1": { "action": "talk" } } },
+    { "id": "cb_alex_5", "start": 32.4, "duration": 12.8, "actions": {
+      "human1": { "action": "idle" } } },
+    { "id": "cb_elena_1", "start": 0.0, "duration": 16.2, "actions": {
+      "human3": { "action": "idle" } } },
+    { "id": "cb_elena_2", "start": 16.2, "duration": 6.2, "actions": {
+      "human3": { "action": "talk" } } },
+    { "id": "cb_elena_3", "start": 22.4, "duration": 10.3, "actions": {
+      "human3": { "action": "idle" } } },
+    { "id": "cb_elena_4", "start": 32.7, "duration": 3.5, "actions": {
+      "human3": { "action": "talk" } } },
+    { "id": "cb_elena_5", "start": 36.2, "duration": 9.0, "actions": {
+      "human3": { "action": "idle" } } }
+  ],
   "subtitles": [
     { "start": 0.4, "end": 4.2, "text": "Oficina del jefe — reunión de prioridades de la semana" },
     { "start": 4.6, "end": 9.0, "text": "Carlos (jefe): Necesito el ranking de urgencias. ¿Qué nos están quemando hoy?" },
@@ -69,23 +62,16 @@
   "timeline": {
     "time": 0,
     "shots": [
-      { "start": 0.0, "duration": 4.4, "camMode": "fixed",
+      { "start": 0.0, "duration": 4.6, "camMode": "free",
         "camPos": [-6.3, 1.7, 8.3], "target": [-9.2, 1.35, 9.3] },
-      { "start": 4.4, "duration": 5.0, "camMode": "fixed",
-        "camPos": [-8.7, 1.5, 7.6], "target": [-9.0, 1.4, 9.5] },
-      { "start": 9.4, "duration": 6.6, "camMode": "fixed",
-        "camPos": [-8.65, 1.5, 9.35], "target": [-7.8, 1.42, 8.5] },
-      { "start": 16.0, "duration": 6.6, "camMode": "fixed",
-        "camPos": [-9.35, 1.5, 9.35], "target": [-10.2, 1.42, 8.5] },
-      { "start": 22.6, "duration": 5.4, "camMode": "fixed",
-        "camPos": [-8.7, 1.55, 7.9], "target": [-9.0, 1.45, 9.5] },
-      { "start": 28.0, "duration": 4.4, "camMode": "fixed",
-        "camPos": [-8.65, 1.5, 9.3], "target": [-7.8, 1.42, 8.5] },
-      { "start": 32.4, "duration": 3.9, "camMode": "fixed",
-        "camPos": [-9.35, 1.5, 9.3], "target": [-10.2, 1.42, 8.5] },
-      { "start": 36.3, "duration": 3.3, "camMode": "fixed",
-        "camPos": [-8.75, 1.55, 8.1], "target": [-9.0, 1.45, 9.5] },
-      { "start": 39.6, "duration": 5.6, "camMode": "fixed",
+      { "start": 4.6, "duration": 4.8, "camMode": "front", "subjectId": "human2" },
+      { "start": 9.4, "duration": 6.8, "camMode": "front", "subjectId": "human1" },
+      { "start": 16.2, "duration": 6.6, "camMode": "front", "subjectId": "human3" },
+      { "start": 22.8, "duration": 5.8, "camMode": "front", "subjectId": "human2" },
+      { "start": 28.6, "duration": 4.1, "camMode": "front", "subjectId": "human1" },
+      { "start": 32.7, "duration": 3.9, "camMode": "front", "subjectId": "human3" },
+      { "start": 36.6, "duration": 3.0, "camMode": "front", "subjectId": "human2" },
+      { "start": 39.6, "duration": 5.6, "camMode": "free",
         "camPos": [6.95, 0.85, 6.35], "target": [5.7, 0.45, 7.05] }
     ]
   }

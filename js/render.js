@@ -120,8 +120,15 @@ function animate(timestamp) {
           finished.push(id);
           return;
         }
-        obj.position.set(pos.x, inst.planeY, pos.z);
-        obj.rotation.y = Math.atan2(tan.x, tan.z);
+        if (inst.isStationary) {
+          obj.position.set(inst.initialPosX, inst.initialPosY, inst.initialPosZ);
+          obj.rotation.y = inst.initialRotY;
+        } else {
+          obj.position.set(pos.x, inst.planeY, pos.z);
+          if (tan && (tan.x || tan.z)) {
+            obj.rotation.y = Math.atan2(tan.x, tan.z);
+          }
+        }
         if (id === store.activeTarget) {
           updateSelectionRing();
           updateGizmoPosition();

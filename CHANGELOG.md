@@ -2,6 +2,51 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-08] — Pista PERSONAJES + reproducción determinista + guardado directo
+
+- **Nueva pista 🧍 PERSONAJES** (`js/cinema/charTrack.js`, nuevo): una lane por
+  personaje con bloque base de toda la escena (`charFullRange`), bloques de
+  acción por tramo y bloque 🧍 CAMINO para el recorrido; click abre el editor
+  de waypoints clásico sobre el piso. Persistencia en el JSON (`charBlocks`,
+  `charFullRange` en `js/state.js` + `js/projectFiles.js`).
+- **Imán entre pistas** (`js/cinema/tlSnap.js`, nuevo): al arrastrar/estirar,
+  los bordes se alinean a ~8 px de otras pistas (tomas, personajes,
+  subtítulos, quiz). Paso 0,1 s.
+- **Reproducción determinista**: `updateTimeline` + `playScene/stopScene/scrub`
+  usan `evaluateAllPathsAt(t)` (`js/cinema/timeline.js`); la aguja es la fuente
+  de verdad, sin `startPlayback` ni `resetCharactersToInitialState`. La aguja
+  queda limitada al tramo del bloque en edición.
+- **Cámaras**: modos `front`/`Perfil` en tomas; sección "Cámara (Tomas)" con
+  sujeto+vitsa por toma; `saveSelectedFrame` persiste el encuadre.
+- **Guardado directo**: handle de archivo persistido en IndexedDB
+  (`js/projectFiles.js`); "Guardar" reescribe sin diálogo tras recargar.
+  Botón 💾 siempre habilitado; proyecto nuevo sugiere `proyecto_nuevo`.
+- **Construcción**: borrar ventana cierra su hueco (`clearWallHoleFor`,
+  `js/catalog.js`); mejoras en `js/construction.js`, `js/office/walls.js`,
+  `js/collision.js` (ley del piso) y `js/office/furniture.js`/`lounge.js`.
+- **UI**: paneles redimensionables (`js/ui/panelResize.js`, nuevo, con
+  memoria en localStorage); botón `sit_talk`; editor de bloque de personajes.
+- **Limpieza**: eliminada `scenes/alarma_en_la_red (1).json` (duplicado con
+  sufijo de Windows); `node tools/fix-encoding.mjs` sin mojibake.
+- Tests `tools/p7-test.mjs` ampliados (diálogo jefe, imán, tomas frontales).
+
+## [2026-08-30/31] — Consolidado (commits ya en git, no registrados antes)
+
+- Reorganización Fase 2 (`js/` en `characters/`, `cinema/`, `ui/`, `media/`) y
+  Fase 3 (grafo acíclico, `check-scc` en verde); scripts `verify`/`check`/`test`
+  y `pnpm` documentado; `README` con estructura por capas.
+- Lip-sync mínimo (#2), sentarse real `sit_at` con animación + menú
+  contextual + giro 180° + sillones de 2 lugares; canaletas con pasamuros;
+  alarma visible con pulso; fix de eventos sin espera.
+- Editor por secciones, creador de personajes v2, quiz multi-carteles,
+  miniaturas de escenario, branding, hints; panel de acciones + modal
+  avanzadas; menús unificados y exclusivos.
+- Convención de orientación (`rotYToLookAt`), `standInFrontOf`/`standFacing`,
+  `seatY` real, `fixCameraVisibility`; cinemática "Reunión de Prioridades del
+  Jefe" (45 s) + resector de posiciones; tomas corregidas.
+- Timeline: edición pegajosa con ✕, botón ＋ por pista con 💾/✕, ＋ al final
+  con drag/clamp anti-solape, FPV→Libre reencuadra, Fase A cámara por
+  personaje (1P/3P con `subjectId`).
 ## [2026-08-28] — Pistas: botón ＋ para crear bloques + 💾 guarda / ✕ descarta
 
 - **Botón ＋ junto al rótulo de cada pista** (🎬 CINEMÁTICA, 💬 SUBTÍTULOS,

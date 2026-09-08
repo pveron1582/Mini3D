@@ -679,6 +679,34 @@ function createHumanoidModel(id, name, posX, posZ, colors, opts = {}) {
       parts.h_elbowL.rotation.set(-0.75, 0, 0);
       parts.h_armR.rotation.set(-0.35, 0, -0.08);
       parts.h_elbowR.rotation.set(-0.75, 0, 0);
+    } else if (rig.currentAction === 'sit_talk') {
+      // HABLANDO SENTADO: piernas apoyadas como `sit`, pero las MANOS
+      // gesticulan al ritmo del discurso y la cabeza acompaña — el personaje
+      // no se para de la silla para hablar (el lip-sync corre igual, más
+      // abajo, con las acciones de habla).
+      const seatH = 0.48;
+      parts.h_legL.position.set(-0.16, seatH, 0);
+      parts.h_legR.position.set(0.16, seatH, 0);
+      parts.h_legL.rotation.x = -Math.PI / 2;
+      parts.h_legR.rotation.x = -Math.PI / 2;
+      parts.h_kneeL.rotation.x = Math.PI / 2;
+      parts.h_kneeR.rotation.x = Math.PI / 2;
+
+      parts.h_torso.position.y = seatH + 0.38 + Math.sin(t * 1.8) * 0.01;
+      parts.h_torso.rotation.x = 0.04 + Math.sin(t * 2.0) * 0.02;
+      parts.h_torso.rotation.y = Math.sin(t * 1.5) * 0.05;
+      parts.h_head.position.y = seatH + 1.04 + Math.sin(t * 1.8) * 0.01;
+      parts.h_head.rotation.x = Math.sin(t * 3.5) * 0.1 + 0.03;
+      parts.h_head.rotation.y = Math.sin(t * 1.6) * 0.15;
+
+      parts.h_armL.position.set(-0.38, seatH + 0.68, 0);
+      parts.h_armR.position.set(0.38, seatH + 0.68, 0);
+      // Gesticular al ritmo del habla: antebrazos que suben/bajan y las
+      // manos se abren/cierran acompañando el acento de las frases
+      parts.h_armL.rotation.set(-0.4 + Math.sin(t * 3.0) * 0.18, 0, 0.14 + Math.sin(t * 2.2) * 0.06);
+      parts.h_elbowL.rotation.set(-0.85 + Math.cos(t * 3.0) * 0.22, 0, 0);
+      parts.h_armR.rotation.set(-0.4 + Math.cos(t * 2.6) * 0.16, 0, -0.14 - Math.sin(t * 2.0) * 0.06);
+      parts.h_elbowR.rotation.set(-0.85 + Math.sin(t * 2.6) * 0.22, 0, 0);
     } else if (rig.currentAction === 'sit_typing') {
       const seatH = 0.48;
       parts.h_legL.position.set(-0.16, seatH, 0);
@@ -880,10 +908,10 @@ function createHumanoidModel(id, name, posX, posZ, colors, opts = {}) {
       parts.h_armR.rotation.set(-2.4, 0, -0.1); parts.h_elbowR.rotation.x = -0.2;
     }
     applyMood();
-    // LIP-SYNC (backlog #2): mientras habla (`talk`), la boca se abre y
-    // cierra al ritmo del habla. Se aplica DESPUÉS de applyMood (que fija la
-    // forma base de la boca) para que el habla se imponga al estar neutral.
-    if (rig.currentAction === 'talk' && parts.h_mouth) {
+    // LIP-SYNC (backlog #2): mientras habla (`talk` o `sit_talk`), la boca
+    // se abre y cierra al ritmo del habla. Se aplica DESPUÉS de applyMood
+    // (que fija la forma base de la boca) para que el habla se imponga.
+    if ((rig.currentAction === 'talk' || rig.currentAction === 'sit_talk') && parts.h_mouth) {
       // Dos senos desfasados: el batido no queda metronómico (varía el "acento"
       // y a veces la boca queda un poco abierta entre sílabas).
       const flap = Math.abs(Math.sin(t * 9) * 0.75 + Math.sin(t * 23) * 0.25);

@@ -5,9 +5,10 @@ import { cinema, view, interactiveRegistry, store } from '../state.js';
 import { getActiveObject, getActiveEntry, setActiveTarget, updateSelectionRing, selectionRing, clearActiveTarget, onTargetSelected } from './selection.js';
 import { syncSlidersFromTarget, refreshWallPanel } from './ui.js';
 import { pushHistory } from '../undo.js';
-import { getWallColliders } from '../office/walls.js';
+import { getWallColliders, getWallGroups, wallSnap } from '../office/walls.js';
+import { setWallWindowHole } from '../construction.js';
 import { officeGroup } from '../office/group.js';
-import { entryRadius, resolveDropAfterDrag } from '../collision.js';
+import { entryRadius, resolveDropAfterDrag, getMinGroundY } from '../collision.js';
 import { multi, toggleInMulti, hasMulti, isInMulti, multiCount, clearMulti, beginGroupDrag, updateGroupDrag, endGroupDrag, beginMarquee, updateMarquee, endMarquee } from './multiselect.js';
 
 // ==========================================
@@ -382,6 +383,24 @@ function updateAirDrag(e) {
     newPos.y = obj.position.y;
   }
 
+  // IMÁN de ventana a pared: si es una ventana y hay pared cerca, la prende.
+  const snapped = wallSnap(obj, newPos);
+  if (snapped) {
+    newPos.copy(snapped.pos);
+    if (snapped.rotY !== undefined) obj.rotation.y = snapped.rotY;
+    // Gestionar la abertura en la pared de construcción: al pegar/soltar.
+    const newWall = snapped.attached ? snapped.wall : null;
+    if (obj.userData._attachedWall !== newWall) {
+      if (obj.userData._attachedWall && obj.userData._attachedWall.userData.conType === 'wall') {
+        setWallWindowHole(obj.userData._attachedWall, null);
+      }
+      if (newWall && newWall.userData.conType === 'wall') {
+        setWallWindowHole(newWall, obj);
+      }
+      obj.userData._attachedWall = newWall;
+    }
+  }
+
   applySnapXZ(newPos, obj);
   obj.position.copy(newPos);
   updateSelectionRing();
@@ -447,12 +466,10 @@ function updateScaleDrag(e) {
 }
 
 
-// Piso mínimo del objeto activo (los personajes tienen su propio nivel)
+// Piso mínimo del objeto activo (ley de suelo sólido centralizada en
+// collision.js: personajes con pies apoyados, muebles en su base).
 function groundMinY() {
-  const entry = getActiveEntry();
-  const act = entry && entry.rig ? (entry.rig.currentAction || '') : '';
-  const seated = act.startsWith('sit') || act === 'lay';
-  return entry && entry.rig && entry.rig.groundY && !seated ? entry.rig.groundY : 0;
+  return getMinGroundY(getActiveEntry());
 }
 
 // Proyectar punto del mouse a un plano
@@ -866,6 +883,10 @@ function endWallEdgeDrag() {
 
 // Eventos del mouse
 canvas.addEventListener('pointerdown', (e) => {
+  // Solo el botón IZQUIERDO selecciona y arrastra. El derecho queda para
+  // la cámara (pan de OrbitControls) y el menú contextual — nunca selecciona
+  // ni deselecciona nada.
+  if (e.button !== 0) return;
   if (cinema.active && cinema.mode !== 'play') return;
   if (store.trayDrawing) return;   // dibujando canaleta: no seleccionar/deseleccionar
   const now = performance.now();
@@ -1031,6 +1052,9 @@ canvas.addEventListener('pointermove', (e) => {
 });
 
 canvas.addEventListener('pointerup', (e) => {
+  // Solo el botón izquierdo completa selecciones/arrastres (el derecho es
+  // de cámara/menú): ignorar su soltado para no deseleccionar por accidente.
+  if (e.button !== 0) return;
   if (cinema.active && cinema.mode !== 'play') return;
   if (store.trayDrawing) return;   // dibujando canaleta: el click lo maneja trayDraw
   // Terminar el movimiento del bloque (multiselección)

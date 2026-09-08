@@ -1,4 +1,4 @@
-﻿/* MiniStudio 3D - Blender Dark Theme */
+/* MiniStudio 3D - Blender Dark Theme */
 :root {
   --bg-darker: #15171c;
   --bg-dark: #1e2129;
@@ -86,6 +86,15 @@ body, html {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Feedback visual de guardado exitoso */
+.viewport-toggle-btn.save-success {
+  background: rgba(46, 204, 113, 0.35) !important;
+  border-color: #2ecc71 !important;
+  box-shadow: 0 0 8px rgba(46, 204, 113, 0.6);
+  transform: scale(1.08);
+  transition: all 0.15s ease-in-out;
 }
 
 .brand {
@@ -181,11 +190,30 @@ body, html {
 /* Left Sidebar */
 #left-panel {
   width: 290px;
+  min-width: 220px;
+  max-width: 50vw;
   background-color: var(--bg-dark);
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  position: relative;
+}
+
+/* Handle del panel izquierdo: borde derecho agarrable (ancho). */
+#leftResizeHandle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: ew-resize;
+  z-index: 30;
+  background: transparent;
+}
+#leftResizeHandle:hover,
+#leftResizeHandle:active {
+  background: rgba(86, 133, 207, 0.4);
 }
 
 .panel-section {
@@ -235,7 +263,10 @@ body, html {
 
 .target-selector-box {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  /* Responsive: columnas que caben según el ancho del panel (mín. ~88px
+     por botón). El panel izquierdo es redimensionable: la grilla se
+     reacomoda sola. */
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
   gap: 4px;
 }
 
@@ -264,10 +295,10 @@ body, html {
   font-weight: 700;
 }
 
-/* Action Button Grid */
+/* Action Button Grid (responsive: 2 columnas, 3 si el panel es bien ancho) */
 .action-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
   gap: 4px;
 }
 
@@ -646,6 +677,16 @@ body, html {
   gap: 3px;
 }
 
+/* Fila de reproducción: un solo botón a todo el ancho */
+.cinema-play-row {
+  display: flex;
+  gap: 3px;
+}
+
+.cinema-play-row button {
+  flex: 1;
+}
+
 .cinema-char-name {
   font-size: 11px;
   font-weight: 600;
@@ -712,18 +753,21 @@ body, html {
   font-weight: 600;
 }
 
-/* Viewport Area */
+/* Viewport Area: el canvas SIEMPRE respeta la proporción del video (16:9).
+   Se centra en el contenedor con el tamaño máximo que entra; el sobrante
+   queda como franja vacía (letterbox). El tamaño/posición lo calcula
+   onResize (viewport.js). */
 #viewport-container {
   flex: 1;
   position: relative;
-  background-color: #101216;
+  background-color: #0b0d11;
   overflow: hidden;
 }
 
 #view {
-  width: 100%;
-  height: 100%;
+  position: absolute;
   display: block;
+  outline: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .hud-top-left {
@@ -886,10 +930,36 @@ body, html {
   color: #fff;
 }
 
+/* Handle del panel de la línea de tiempo: borde superior agarrable (alto).
+   El panel puede agrandarse hasta ver todas las pistas, o achicarse y
+   recorrerlas con la barra de scroll de .tl-body. */
+#tlResizeHandle {
+  height: 6px;
+  cursor: ns-resize;
+  background: var(--border-color);
+  z-index: 20;
+}
+#tlResizeHandle:hover,
+#tlResizeHandle:active {
+  background: var(--accent-primary);
+}
+
 #scene-timeline {
   border-top: 1px solid var(--border-color);
   background: var(--bg-panel);
   padding: 6px 10px 8px;
+  min-height: 120px;
+  max-height: 72vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;   /* contiene la barra roja (playhead) sobre todo */
+}
+/* Cuerpo de pistas: ocupa el resto del panel y scrollea cuando las pistas
+   no entran (todas visibles = sin barra). */
+#scene-timeline .tl-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 60px;
 }
 
 .tl-toolbar {
@@ -1032,11 +1102,19 @@ body, html {
   background: var(--accent-primary);
 }
 
-/* Botones del bloque seleccionado: 💾 guarda (commit), ✕ descarta. */
+/* ＋ del rótulo de cada lane de personaje: junto al nombre, clickable. */
+.tl-char-add {
+  width: 16px;
+  height: 15px;
+  margin-left: 4px;
+}
+
+/* Botones del bloque seleccionado: 💾 guarda (commit), 🗑 elimina el
+   bloque, ✕ descarta. El tacho borra el bloque entero de la pista. */
 .tl-shot-save {
   position: absolute;
   top: 2px;
-  right: 24px;
+  right: 46px;
   width: 18px;
   height: 18px;
   border-radius: 4px;
@@ -1055,6 +1133,27 @@ body, html {
 .tl-quiz.selected .tl-shot-save { display: block; }
 .tl-shot-save:hover { background: #2e7d43; }
 
+/* Tacho: eliminar el bloque (solo en el seleccionado). Va entre 💾 y ✕. */
+.tl-shot-del {
+  position: absolute;
+  top: 2px;
+  right: 24px;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 10px;
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+  display: none;
+  z-index: 4;
+  user-select: none;
+}
+.tl-charblock.selected .tl-shot-del { display: block; }
+.tl-shot-del:hover { background: #b3455c; }
+
 .tl-shot.selected .tl-shot-close { display: block; }
 .tl-shot-close:hover { background: #b3455c; }
 
@@ -1064,6 +1163,9 @@ body, html {
 .tl-sub.selected .tl-shot-close,
 .tl-quiz.selected .tl-shot-close { display: block; }
 
+/* Barra roja de reproducción: POR ENCIMA de todas las pistas. Vive fuera del
+   cuerpo con scroll (#scene-timeline la contiene, absolute de alto completo)
+   para que nunca quede oculta ni cortada por una lane. */
 .tl-playhead {
   position: absolute;
   top: 0;
@@ -1071,7 +1173,7 @@ body, html {
   width: 3px;
   background: #ff5252;
   pointer-events: none;
-  z-index: 50;
+  z-index: 60;
   box-shadow: 0 0 8px rgba(255, 82, 82, 0.75);
 }
 
@@ -1200,6 +1302,19 @@ body, html {
   background: rgba(26, 29, 36, 0.55);
 }
 
+/* Elegido en el modal de proyecto nuevo: resaltado BIEN visible — borde y
+   fondo azules (la oficina arranca activa por defecto; el click mueve el
+   resaltado a la tarjeta elegida). */
+.startup-envs .env-btn.active {
+  border-color: var(--accent-primary);
+  background: rgba(86, 133, 207, 0.35);
+  box-shadow: 0 0 0 1px var(--accent-primary), 0 2px 10px rgba(86, 133, 207, 0.4);
+}
+.startup-envs .env-btn.active .env-name {
+  color: #ffffff;
+  font-weight: 700;
+}
+
 .env-thumb {
   display: block;
   width: 100%;
@@ -1266,6 +1381,57 @@ body, html {
    propio (violeta) para distinguir el cartel de pregunta del texto normal. */
 .tl-quiz {
   background: #7a4fd0;
+}
+
+/* Pista 🧍 PERSONAJES: una LANE por personaje (bloques de acción, camino 🚶
+   y acción de toda la escena). Solo se muestran los que tienen contenido. */
+.tl-charlanes {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 26px;
+  border-bottom: 1px solid var(--border-color);
+}
+.tl-charlanes > .tl-lane-name {
+  position: static;
+  transform: none;
+  display: block;
+  width: fit-content;
+  margin: 3px 0 3px 4px;
+  pointer-events: auto;
+}
+.tl-char-lane {
+  position: relative;
+  min-height: 24px;
+}
+.tl-char-lane .tl-lane-name {
+  top: 50%;
+}
+.tl-char-lane.collapsed {
+  min-height: 16px;
+}
+.tl-char-lane.collapsed .tl-lane-name {
+  opacity: 0.75;
+}
+.tl-char-inner {
+  position: absolute;
+  inset: 0;
+}
+.tl-charblock {
+  background: #7a8a3f;
+}
+/* Acción de TODA la escena: bloque base, mismo verde oliva que los demás
+   bloques de personaje — solo lo distingue el ícono ⏳. */
+.tl-charbase {
+  background: #7a8a3f;
+}
+/* Camino 🚶 (recorrido con waypoints): tono azul para distinguirlo */
+.tl-charpath {
+  background: linear-gradient(180deg, #3d6b8a, #2f5570);
+}
+.tl-charpath .tl-shot-save,
+.tl-charpath .tl-shot-close {
+  display: block;   /* siempre visibles sobre el bloque del camino */
 }
 
 /* Nombre de la pista, adelante de todo */

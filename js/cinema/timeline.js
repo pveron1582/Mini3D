@@ -1,12 +1,14 @@
-import { timeline, cinema, cinemaPaths, interactiveRegistry, recorderState, playback, view, store } from '../state.js';
+import { timeline, cinema, cinemaPaths, interactiveRegistry, recorderState, playback, view, store, blockEdit } from '../state.js';
 import { byId, qs, qsa } from '../dom.js';
 import { camera, controls } from '../core.js';
 import { stepLadder, STEP_LADDER_ORIGIN, openAllRackDoors } from '../office/group.js';
 import { setAlarm } from '../office/alarm.js';
 import { resetQuiz, quizTick } from '../media/quiz.js';
-import { quizPlayTick, renderQuizLane, clearQuizSelection } from './quizTrack.js';
+import { quizPlayTick, renderQuizLane, clearQuizSelection, quizSelection } from './quizTrack.js';
+import { renderCharBlocks, charBlockSelection } from './charTrack.js';
+import { collectTimelineSnapTimes, snapTimeToRefs, TL_SNAP_PX } from './tlSnap.js';
 import { subtitleTrack, refreshSubtitles } from '../media/subtitles.js';
-import { startPlayback, stopAllPlaybacks, cutCameraToShot, setCamView, cinemaStorePath, updateCameraViewVisibility, evaluateAllPathsAt, cinemaDeactivate, cinemaClearVisuals, cinemaClearAllVisuals, cinemaSetMode } from './cinematics.js';
+import { stopAllPlaybacks, cutCameraToShot, setCamView, cinemaStorePath, updateCameraViewVisibility, evaluateAllPathsAt, cinemaDeactivate, cinemaClearVisuals, cinemaClearAllVisuals, cinemaSetMode } from './cinematics.js';
 import { startRecording, mediaRecorder, setStatus } from '../media/recorder.js';
 import { pushHistory } from '../undo.js';
 import { setActiveTarget } from '../ui/selection.js';
@@ -23,7 +25,7 @@ import { getAnchor } from '../characters/anchors.js';
 const CAM_NAMES = {
   free: 'Vista Libre', fpv: '1ª Persona', third: '3ª Persona', top: 'Perseguir',
   cine1: 'Cine 1', cine2: 'Cine 2', cine3: 'Cine 3', orbit: 'Vista Libre',
-  fixed: 'Fija / Zoom', aerial: 'Aérea'
+  fixed: 'Fija / Zoom', aerial: 'Aérea', front: 'Frente', profile: 'Perfil'
 };
 const LANE_LABEL_W = 116;
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -87,6 +89,9 @@ function computeOpenDoorsAt(t) {
 export function updateTimeline(dt) {
   if (!timeline.playing) return;
   timeline.time += dt;
+  // Posición/acción de TODOS los personajes, determinística: como el scrub,
+  // la escena se reproduce con la misma previsión (respecta waits y lip-sync).
+  evaluateAllPathsAt(timeline.time);
   // Carteles de pregunta (pista 📋 QUIZ): se disparan por su tramo, no por la
   // toma. Mientras uno está en pantalla, los subtítulos no se dibujan.
   const quizActive = quizPlayTick(dt);
@@ -121,8 +126,8 @@ export function playScene() {
   cinemaPaths.forEach((stored, id) => {
     if (stored.waypoints && stored.waypoints.length >= 2) playable.push(id);
   });
-  if (playable.length === 0) {
-    setStatus('No hay recorridos configurados: marca al menos un camino para armar la escena.');
+  if (playable.length === 0 && timeline.shots.length === 0) {
+    setStatus('No hay tomas ni recorridos configurados: marca al menos un camino o toma.');
     return false;
   }
   refreshDuration();
@@ -132,10 +137,12 @@ export function playScene() {
   }
 
   stopAllPlaybacks();
-  resetCharactersToInitialState();
-  // En una escena grabada, el bucle solo aplica si el recorrido lo declara en
-  // el JSON; nunca hereda el `cinema.loop` global (que es para previsualizar).
-  playable.forEach(id => startPlayback(id, { loop: !!(cinemaPaths.get(id).loop) }));
+  // La escena se reproduce con la previsión determinista `evaluateAllPathsAt`
+  // (llamada cada frame desde updateTimeline): respeta los waits de cada
+  // waypoint y el lip-sync, igual que al mover la aguja (scrub). No se usan
+  // instancias por curva (startPlayback) para evitar que los eventos de
+  // recorridos estacionarios se disparen todos de golpe.
+  evaluateAllPathsAt(0);
 
   // Al (re)producir la escena, la escalera vuelve a su punto de origen y a su
   // posición visible por defecto (en la reproducción el personaje la deja en
@@ -187,22 +194,14 @@ export function stopScene() {
   timeline.activeShotId = null;
   setAlarm(false);              // la alarma se apaga al detener
   stopAllPlaybacks();
-  resetCharactersToInitialState();
+  // La aguja manda: los personajes quedan como en t=0 (bloques + recorridos),
+  // igual que si se moviera la aguja al inicio — no hay "segunda posición".
+  evaluateAllPathsAt(0);
   if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
   setCamView('orbit');
   updatePlayheadUI();
   updateTransportUI();
   setStatus('Escena detenida (vuelta al comienzo).');
-}
-
-function resetCharactersToInitialState() {
-  interactiveRegistry.forEach(entry => {
-    const st = entry.initialState;
-    if (!st || !(entry.type === 'human' || entry.type === 'pet')) return;
-    entry.group.position.set(st.pos[0], st.pos[1], st.pos[2]);
-    entry.group.rotation.y = st.rotY || 0;
-    if (entry.rig && st.action) entry.rig.setAction(st.action);
-  });
 }
 
 function finishScene() {
@@ -221,6 +220,9 @@ function finishScene() {
     setCamView('orbit');
     setStatus('Escena terminada.');
   }
+  // La aguja manda: los personajes quedan como en t=0 (bloques + recorridos),
+  // coherente con la aguja roja puesta al inicio.
+  evaluateAllPathsAt(0);
   updateTransportUI();
 }
 
@@ -449,12 +451,33 @@ function updatePlayheadUI() {
 // Click en la regla o la pista (o arrastre del cabezal rojo) → mover la
 // cabeza de reproducción. Mientras se arrastra, sigue al mouse a cualquier
 // velocidad y va aplicando el corte de cámara del instante.
+//
+// CON BLOQUE EN EDICIÓN: la aguja queda LIMITADA al tramo del bloque
+// seleccionado (toma / subtítulo / cartel / bloque de personajes). No tiene
+// sentido irse lejos mientras se edita: el cabezal es la herramienta de
+// trabajo de ese tramo. Sin selección, se mueve libre por toda la línea.
 function scrubFromEvent(e) {
   if (!track) return;
   const rect = track.getBoundingClientRect();
-  const maxT = timeline.duration > 0 ? timeline.duration : 3600;
-  const t = Math.max(0, Math.min(maxT, (e.clientX - rect.left - LANE_LABEL_W) / pxPerSec()));
+  let maxT = timeline.duration > 0 ? timeline.duration : 3600;
+  let minT = 0;
+  const blk = selectedBlockTimeRange();
+  if (blk) { minT = blk.start; maxT = blk.end; }
+  const t = Math.max(minT, Math.min(maxT, (e.clientX - rect.left - LANE_LABEL_W) / pxPerSec()));
   scrubTo(t);
+}
+
+// Tramo del bloque en edición (toma / subtítulo / cartel / personajes), si
+// hay alguno seleccionado. La aguja roja queda atrapada dentro de ese tramo.
+function selectedBlockTimeRange() {
+  const shot = selectedShot();
+  if (shot) return { start: shot.start, end: shot.start + shot.duration };
+  if (selectedCue) return { start: selectedCue.start, end: selectedCue.end };
+  const quiz = quizSelection();
+  if (quiz) return { start: quiz.start, end: quiz.end };
+  const cb = charBlockSelection();
+  if (cb) return { start: cb.start, end: cb.start + cb.duration };
+  return null;
 }
 
 let scrubDrag = false;
@@ -475,6 +498,10 @@ function startScrub(e) {
 window.addEventListener('pointermove', (e) => {
   if (scrubDrag) scrubFromEvent(e);
 });
+// La aguja es la FUENTE DE VERDAD de dónde están los personajes: al soltarla
+// se quedan donde ella marca (no se restauran a una "segunda posición"). La
+// captura de estado inicial no corre durante el scrub (timeline sigue
+// pausándose en startScrub), así que la pose visible es la real.
 window.addEventListener('pointerup', () => { scrubDrag = false; });
 window.addEventListener('pointercancel', () => { scrubDrag = false; });
 rulerEl?.addEventListener('pointerdown', startScrub);
@@ -525,7 +552,8 @@ function scrubTo(t) {
   if (timeline.paused) timeline.paused = false;
   if (cinema.active && cinema.targetId) cinemaStorePath(cinema.targetId);
   stopAllPlaybacks();
-  resetCharactersToInitialState();
+  // La aguja es la fuente de verdad: los personajes quedan EXACTAMENTE donde
+  // ella marca (bloques de personajes + recorridos), sin restaurar nada.
   evaluateAllPathsAt(timeline.time);
   const shot = currentShot(timeline.time);
   if (shot) cutCameraToShot(shot.camMode, shot.subjectId, shot);
@@ -594,6 +622,8 @@ export function clearSelection() {
   renderShots();
   syncCameraControlsVisibility(null);
   pushHistory();   // el 💾 confirma los cambios de esta toma
+  notifyShotCamSync();
+  blockEdit.set(null);
 }
 
 // Descartar (✕): restaura el bloque al estado que tenía al seleccionarse
@@ -625,6 +655,8 @@ export function discardSelection() {
   syncCameraControlsVisibility(null);
   refreshDuration();
   renderRuler();
+  notifyShotCamSync();
+  blockEdit.set(null);
 }
 
 // Snapshot de la toma al seleccionarla (para poder descartar con ✕)
@@ -687,6 +719,19 @@ export function getSelectedShot() {
 import { timelineBus } from '../state.js';
 timelineBus.getSelectedShot = getSelectedShot;
 timelineBus.renderShots = () => { renderShots(); renderRuler(); };
+// Guarda el encuadre actual de la cámara en la toma seleccionada (si es una
+// vista que guarda encuadre: free/orbit/fixed). Lo usa projectFiles.js al
+// serializar para que el diskete de la escena también persista la cámara.
+timelineBus.saveSelectedFrame = () => {
+  const shot = selectedShot();
+  if (shot && (shot.camMode === 'free' || shot.camMode === 'orbit' || shot.camMode === 'fixed')) {
+    saveFreeCameraToShot(shot);
+  }
+};
+// Irradiar el cambio de selección al control de cámara del panel de cinemática
+function notifyShotCamSync() {
+  if (timelineBus.syncShotCamUI) timelineBus.syncShotCamUI();
+}
 
 function selectShot(id) {
   // Exclusividad: elegir una toma libera el subtítulo y el cartel (quiz)
@@ -716,6 +761,10 @@ function selectShot(id) {
       cutCameraToShot(shot.camMode, shot.subjectId, shot);
     }
   }
+  notifyShotCamSync();
+  blockEdit.set('shot');
+  window.dispatchEvent(new CustomEvent('shot-selected'));
+  window.dispatchEvent(new CustomEvent('edit-mode-request', { detail: { mode: 'cinematica' } }));
 }
 
 // El bloque "🎥 Vista de Cámara" del menú izquierdo aparece también cuando
@@ -769,6 +818,9 @@ function beginShotDrag(e, shot, el) {
     : 'move';
   dragState = { shot, mode, startX: e.clientX, origStart: shot.start, origDur: shot.duration, moved: false };
   const pps = pxPerSec();
+  // IMÁN entre pistas: los bordes de la toma se alinean solos con los bordes
+  // de bloques de personajes/subtítulos/cartels si quedan a unos píxeles.
+  const snapTol = TL_SNAP_PX / pps;
   const onMove = (ev) => {
     if (!dragState) return;
     // Solo cuenta como arrastre si el mouse se movió de verdad (>3px):
@@ -779,21 +831,30 @@ function beginShotDrag(e, shot, el) {
       el.dataset.dragged = '1';
     }
     const dSec = (ev.clientX - dragState.startX) / pps;
-    const ds = Math.round(dSec * 10) / 10;
+    const refs = collectTimelineSnapTimes(shot);
     if (dragState.mode === 'move') {
-      shot.start = Math.max(0, dragState.origStart + ds);
+      // Imán: si el INICIO de la toma queda cerca de una referencia, alinear
+      // por el inicio (mantiene la duración); sino redondeo a 0.1s.
+      let ns = Math.max(0, dragState.origStart + dSec);
+      ns = snapTimeToRefs(ns, snapTol, refs);
+      shot.start = ns;
       // Anti-superposición: no puedo arrastrarme encima de un vecino
       const b = shotBounds(shot);
       shot.start = Math.max(b.minStart, Math.min(shot.start, Math.max(0, b.maxEnd - shot.duration)));
     } else if (dragState.mode === 'l') {
-      const ns = Math.min(dragState.origStart + ds, dragState.origStart + dragState.origDur - 0.5);
-      shot.start = Math.max(0, ns);
+      let ns = Math.min(dragState.origStart + dSec, dragState.origStart + dragState.origDur - 0.5);
+      ns = Math.max(0, ns);
+      ns = snapTimeToRefs(ns, snapTol, refs);
       // Anti-superposición: el borde izquierdo no invade al vecino anterior
       const b = shotBounds(shot);
-      shot.start = Math.max(b.minStart, shot.start);
+      shot.start = Math.max(b.minStart, ns);
       shot.duration = Math.round((dragState.origStart + dragState.origDur - shot.start) * 10) / 10;
     } else {
-      shot.duration = Math.max(0.5, Math.round((dragState.origDur + ds) * 10) / 10);
+      let nd = Math.max(0.5, dragState.origDur + dSec);
+      // Imán sobre el FIN de la toma: alinear el borde derecho con refs
+      const end = snapTimeToRefs(dragState.origStart + nd, snapTol, refs);
+      nd = Math.max(0.5, end - dragState.origStart);
+      shot.duration = Math.round(nd * 10) / 10;
       // Anti-superposición: el borde derecho no invade al vecino posterior
       const b = shotBounds(shot);
       if (shot.start + shot.duration > b.maxEnd) {
@@ -835,10 +896,18 @@ byId('exportBtn')?.addEventListener('click', () => {
     recordScene();
   }
 });
-byId('btnBack10')?.addEventListener('click', () => scrubTo(timeline.time - 10));
-byId('btnFwd10')?.addEventListener('click', () => scrubTo(timeline.time + 10));
-byId('btnStepBack')?.addEventListener('click', () => scrubTo(timeline.time - FRAME_STEP));
-byId('btnStepFwd')?.addEventListener('click', () => scrubTo(timeline.time + FRAME_STEP));
+// Saltos con botones: si hay un bloque en edición, la aguja queda limitada a
+// su tramo (misma regla que el arrastre de la aguja).
+function scrubStep(dt) {
+  let t = timeline.time + dt;
+  const blk = selectedBlockTimeRange();
+  if (blk) t = Math.max(blk.start, Math.min(blk.end, t));
+  scrubTo(t);
+}
+byId('btnBack10')?.addEventListener('click', () => scrubStep(-10));
+byId('btnFwd10')?.addEventListener('click', () => scrubStep(10));
+byId('btnStepBack')?.addEventListener('click', () => scrubStep(-FRAME_STEP));
+byId('btnStepFwd')?.addEventListener('click', () => scrubStep(FRAME_STEP));
 
 window.addEventListener('resize', () => renderShots());
 
@@ -912,6 +981,11 @@ window.addEventListener('cinema-waypoint-edit', (e) => {
 // de selección entre pistas; quizTrack avisa por este evento para evitar el
 // ciclo de imports quizTrack ↔ timeline).
 window.addEventListener('quiz-block-selected', () => {
+  if (selectedShotId) clearSelection();
+  if (selectedCue) clearSubSelection();
+});
+// Ídem para los bloques de la pista 🧍 PERSONAJES (charTrack).
+window.addEventListener('char-block-selected', () => {
   if (selectedShotId) clearSelection();
   if (selectedCue) clearSubSelection();
 });
@@ -1002,13 +1076,16 @@ function openSubEditor(cue) {
   if (subEnd) subEnd.value = cue.end.toFixed(1);
   setSubFieldsEnabled(true);
   renderSubtitles();
+  blockEdit.set('sub');
+  window.dispatchEvent(new CustomEvent('sub-selected'));
+  window.dispatchEvent(new CustomEvent('edit-mode-request', { detail: { mode: 'subtitulos' } }));
 }
 
 export function clearSubSelection() {
   const hadSelection = selectedCue !== null;
   selectedCue = null;
   setSubFieldsEnabled(false);
-  if (hadSelection) renderSubtitles();
+  if (hadSelection) { renderSubtitles(); blockEdit.set(null); }
 }
 
 function cueValid() {
@@ -1171,6 +1248,7 @@ export function refreshTimelineUI() {
   renderShots();
   clearSubSelection();
   updateTransportUI();
+  renderCharBlocks();
 }
 
 // Al cargar un proyecto, sincronizar el contador de tomas

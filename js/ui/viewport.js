@@ -1,9 +1,9 @@
-import { camera, controls, renderer } from '../core.js';
+import { camera, controls, renderer, canvas } from '../core.js';
 import { byId, qs, qsa } from '../dom.js';
 import { gridHelper, subGrid, axesGroup, cursor3D } from '../lights.js';
 import { setEnvironment } from '../environment.js';
 import { recorderState, interactiveRegistry } from '../state.js';
-import { updateCameraViewVisibility } from '../cinema/cinematics.js';
+import { updateCameraViewVisibility, setCamView } from '../cinema/cinematics.js';
 
 // ==========================================
 // DOM & VIEWPORT CONTROLS
@@ -31,7 +31,6 @@ export function flyToTarget(id) {
   const p = entry.group.position;
   const focusY = (entry.type === 'human' || entry.type === 'pet') ? p.y + 0.9 : p.y + 0.4;
   const focus = { x: p.x, y: focusY, z: p.z };
-  const dir = new THREE.Vector3(0, 0, 1); // dirección placeholder; se sobreescribe más abajo
   const fromCam = camera.position.clone();
   const fromTgt = controls.target.clone();
   flyAnim = {
@@ -97,18 +96,36 @@ resetCamBtn?.addEventListener('click', () => {
   controls.target.set(0, 0.5, 0);
 });
 
+// Proporción del video: la MISMA que la exportación (1920×1080). El canvas
+// de edición siempre respeta esta proporción — el área sobrante del
+// contenedor queda como franja vacía (letterbox), así lo que ves al editar
+// es exactamente el encuadre que saldrá en el video.
+import { EXPORT_ASPECT } from '../media/recorder.js';
+
 function onResize() {
   if (recorderState.isRecording) return;
   const container = byId('viewport-container');
   if (!container) return;
-  const w = container.clientWidth;
-  const h = container.clientHeight;
-  camera.aspect = w / h;
+  const cw = container.clientWidth;
+  const ch = container.clientHeight;
+  // Tamaño máximo que mantiene la proporción dentro del contenedor
+  let w = cw, h = cw / EXPORT_ASPECT;
+  if (h > ch) { h = ch; w = ch * EXPORT_ASPECT; }
+  const x = (cw - w) / 2;
+  const y = (ch - h) / 2;
+  const st = canvas.style;
+  st.left = x + 'px';
+  st.top = y + 'px';
+  st.width = w + 'px';
+  st.height = h + 'px';
+  camera.aspect = EXPORT_ASPECT;
   camera.updateProjectionMatrix();
   controls.update();
-  renderer.setSize(w, h);
+  renderer.setSize(w, h, false);
 }
 window.addEventListener('resize', onResize);
 setTimeout(onResize, 0);
 setTimeout(onResize, 100);
 setTimeout(onResize, 500);
+// Al terminar una exportación, recalcular (recorder restaura el tamaño)
+window.addEventListener('recorder-exited', onResize);

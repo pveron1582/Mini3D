@@ -26,7 +26,8 @@ export function showStartup(mode = 'home') {
   const card = modal.querySelector('.startup-card');
   if (card) card.classList.toggle('branding-bottom', mode === 'new');
   if (mode === 'new' && suName) {
-    suName.value = getProjectName() || '';
+    // Nombre del proyecto actual si existe; si no, el sugerido por defecto.
+    suName.value = getProjectName() || 'proyecto_nuevo';
     suName.focus();
     suName.select();
   }

@@ -65,6 +65,17 @@ export const view = {
 // así que timeline registra acá sus getters (se llena al evaluarse timeline).
 export const timelineBus = { getSelectedShot: () => null };
 
+// Selección de bloques de la línea de tiempo (toma / subtítulo / quiz): qué
+// tipo de bloque está en edición, o null si no hay ninguno seleccionado.
+// Lo usa ui.js para bloquear el cambio de modo de edición mientras se edita
+// un bloque (hasta guardar 💾 o descartar ✕) y para saber a qué modo saltó.
+export const blockEdit = {
+  kind: null, // 'shot' | 'sub' | 'quiz' | null
+  // Registrar/consultar el tipo activo (lo setean timeline.js y quizTrack.js)
+  set: (kind) => { blockEdit.kind = kind; },
+  get: () => blockEdit.kind
+};
+
 // Secuenciador de escenas: línea de tiempo de tomas de cámara
 export const timeline = {
   shots: [],     // { id, start, duration, camMode, subjectId, label, color }
@@ -85,6 +96,40 @@ export const timeline = {
 // Compatibilidad: los proyectos viejos traían shot.quiz (cartel anclado a
 // una toma); al abrirlos se migran a esta pista (ver projectFiles.js).
 export const quizTrack = [];
+
+// Pista 🧍 PERSONAJES: bloques que definen qué hace cada personaje y en qué
+// tramo (acción, ánimo). Cada bloque = { id, start, duration, actions }
+// donde actions = { [charId]: { action, mood? } }.
+// fullRange: { [charId]: { action, mood? } } — acción que dura TODA la
+// escena (ej. empleados en sus PCs): se dibuja como un bloque que cubre la
+// línea completa y aplica de 0s hasta el fin.
+// La posición/movimiento (caminatas con waypoints) vive en los recorridos
+// (cinemaPaths); esta pista es la fuente de verdad de ACCIONES.
+export const charBlocks = [];
+
+// Acción de TODA la escena por personaje: { [charId]: { action, mood? } }.
+// Se dibuja como el bloque base de su lane (cubre la línea completa) y
+// aplica de 0s hasta el fin — ej. empleados tecleando toda la cinemática.
+export const charFullRange = {};
+
+// Bus de recorridos para la pista de personajes: charTrack.js no puede
+// importar cinematics.js (ciclo), así que cinematics registra acá sus
+// consultas sobre los recorridos (waypoints) de cada personaje.
+export const charLaneBus = {
+  // Info del recorrido de un personaje: { duration, loop, speed } | null
+  pathInfo: (id) => null,
+  // ¿El recorrido del personaje está en edición? (para el botón 🎬)
+  isEditing: (id) => false,
+  // Activar/desactivar el editor de recorrido del personaje
+  toggleEditor: (id) => {},
+  // Borrar el recorrido del personaje
+  deletePath: (id) => {},
+  // Cerrar el editor de recorrido si está abierto (exclusividad de edición:
+  // un solo bloque a la vez — camino O bloque de acciones, nunca ambos)
+  closeEditor: () => {},
+  // Refrescar la UI de la pista (lo registra charTrack)
+  refresh: null
+};
 
 // Velocidad de reproducción de escenas (control de usuario en la toolbar
 // de la línea de tiempo): escala TODO el reloj de simulación (recorridos,

@@ -79,8 +79,25 @@
 > "actúan" con 6 gestos one-shot (señalar, saludar, encogerse de hombros, negar
 > con la cabeza, aplaudir, mirar el reloj) que se reproducen una vez y vuelven
 > solos a la acción base. Se activan desde la grilla "Gestos" del panel o con
-> eventos de waypoint `gesture:*` (`GESTURE_DEFS` en `js/characters.js`). Las
+> eventos de waypoint `gesture:*` (`GESTURE_DEFS` en `js/characters/characters.js`). Las
 > acciones sostenidas en bucle se mantienen intactas. Detalle en `CHANGELOG.md`.
+>
+> **Actualización 2026-08-30/31 (consolidado)**: reorganización Fase 2/3 ya
+> incluida arriba; lip-sync mínimo, `sit_at` real con menú contextual,
+> canaletas con pasamuros, alarma visible, editor por secciones + creador v2,
+> orientación unificada (`rotYToLookAt`), `standInFrontOf`/`seatY` real,
+> cinemática "Reunión de Prioridades del Jefe" (45 s) y timeline con edición
+> pegajosa + botón ＋ + Fase A cámara por personaje. Estaba en git pero sin
+> entrada de CHANGELOG hasta 2026-09-08.
+>
+> **Actualización 2026-09-08 (pista PERSONAJES + determinismo)**: nueva pista
+> 🧍 PERSONAJES (`js/cinema/charTrack.js`: lane por personaje, bloque base,
+> bloques por tramo, bloque camino), imán entre pistas (`js/cinema/tlSnap.js`),
+> paneles redimensionables (`js/ui/panelResize.js`), reproducción determinista
+> (`evaluateAllPathsAt`, la aguja manda), guardado directo con handle en
+> IndexedDB y cámara `front`/`profile` por toma. Eliminada
+> `scenes/alarma_en_la_red (1).json` (duplicado). `verify` en verde. Detalle
+> en `CHANGELOG.md`.
 
 ## Arquitectura general
 
@@ -91,66 +108,79 @@ Three.js r0.185 se carga vía import map desde `vendor/three.module.js` + `vendo
 
 Módulos activos (`index.html` carga `js/main.js`, que importa todo en orden):
 
-| Módulo | Líneas | Rol |
-|---|---|---|
-| `js/core.js` | 32 | Renderer WebGL, escena, cámara, OrbitControls, PMREM. Singleton. |
-| `js/state.js` | 54 | Estado mutable compartido (`store`, `cinema`, `cinemaPaths`, `playbackInstances`, `view`, `recorderState`, `interactiveRegistry`). |
-| `js/selection.js` | 144 | Registro de objetos seleccionables + anillo de selección + `setActiveTarget`. |
-| `js/gizmo.js` | 384 | Flechas de traslación, raycasting, arrastre libre por plano. |
-| `js/characters.js` | 755 | Rigs procedurales de 3 humanos, perro y gato con animaciones por código (sin AnimationMixer). |
-| `js/office/` (11 módulos) | ~3.450 | Oficina moderna con sala de servidores. Split P1: `group.js` (grupos/escalera/mini rack/LEDs), `walls.js` (tabiques, puertas, texturas), `materials.js`, `furniture.js` (fábricas de mobiliario), `serverRoom.js` (sala de sistemas), `lounge.js` (juntas, jefe, cocina), `network.js` (cableado, mini rack, APs), `city.js` (calle), `alarm.js`, `hackerHouse.js`, `index.js` (orquestador). |
-| `js/park.js` | 147 | Parque (día/atardecer/noche). |
-| `js/lights.js` | 78 | Iluminación. |
-| `js/environment.js` | 120 | Switcher de 5 ambientes (estudio, oficina, parque día/tarde/noche). |
-| `js/cinematics.js` | 574 | Recorridos por waypoints (curva CatmullRom) + vistas de cámara. |
-| `js/ui.js` | 286 | Outliner, sliders de transformación, bindings de botones. |
-| `js/viewport.js` | 75 | Toggles de grilla/ejes, vistas rápidas, resize. |
-| `js/recorder.js` | 66 | Grabación de video con MediaRecorder. |
-| `js/render.js` | 127 | Loop de animación central (anima rigs, cinemáticas, LEDs, timing de grabación, HUD). |
-| `js/timeline.js` | ~490 | Secuenciador de escenas: tomas de cámara arrastrables, eventos de waypoint, grabación de escena. |
-| `js/subtitles.js` | 120 | Subtítulos dibujados dentro del canvas WebGL (visibles en pantalla y en el video grabado). |
-| `js/demoScene.js` | 87 | Escena demo de 15s con un clic (botón "🎬 Escena Demo"): recorrido + tomas + subtítulos. |
-| `js/catalog.js` | ~180 | Catálogo de piezas (P7): spawn/duplicar/borrar objetos (+ persistencia de instanciados). |
-| `js/multiselect.js` | ~230 | Selección múltiple (Ctrl+clic, marquesina), mover en bloque y borrado de grupo. |
+| Módulo | Rol |
+|---|---|
+| `js/core.js` | Renderer WebGL, escena, cámara, OrbitControls, PMREM. Singleton. |
+| `js/state.js` | Estado mutable compartido (`store`, `cinema`, `cinemaPaths`, `timeline`, `charBlocks`/`charFullRange`, `quizTrack`, `view`, `recorderState`, `interactiveRegistry`, buses). |
+| `js/ui/selection.js` | Registro de objetos seleccionables + anillo de selección + `setActiveTarget`. |
+| `js/ui/gizmo.js` | Flechas de traslación, raycasting, arrastre libre por plano. |
+| `js/ui/viewport.js` | Toggles de grilla/ejes, vistas rápidas, resize. |
+| `js/ui/ui.js` | Outliner, sliders de transformación, bindings de botones. |
+| `js/ui/multiselect.js` | Selección múltiple (Ctrl+clic, marquesina), mover en bloque y borrado de grupo. |
+| `js/ui/panelResize.js` | Paneles redimensionables (timeline + panel izquierdo, con localStorage). |
+| `js/characters/characters.js` | Rigs procedurales de humanos, perro y gato con animaciones por código (sin AnimationMixer) + gestos one-shot + lip-sync + `standInFrontOf`/`sitAtAnchor`. |
+| `js/characters/characterCreator.js` | Modal de creación (género/vestimenta/accesorios) + persistencia en JSON. |
+| `js/characters/anchors.js` | Anclas de asiento (`seat_<id>` + `seatY`). |
+| `js/office/` (~12 módulos) | Oficina moderna con sala de servidores: `group.js`, `walls.js`, `materials.js`, `furniture.js`, `serverRoom.js`, `lounge.js`, `network.js` (mini rack multi-instancia, canaletas, APs), `city.js`, `alarm.js`, `hackerHouse.js`, `geoCache.js`, `index.js`. |
+| `js/park.js` / `js/lights.js` / `js/terrain.js` / `js/environment.js` | Escenarios y luces; switcher de 5 ambientes. |
+| `js/cinema/cinematics.js` | Recorridos por waypoints (CatmullRom) + vistas de cámara + `evaluateAllPathsAt` + `fixCameraVisibility`. |
+| `js/cinema/timeline.js` | Secuenciador: tomas arrastrables, reproducción determinista, scrub limitado al bloque, grabación de escena. |
+| `js/cinema/charTrack.js` | Pista 🧍 PERSONAJES: lanes por personaje, bloques base/por tramo/camino. |
+| `js/cinema/tlSnap.js` | Imán de alineación entre pistas (~8 px, paso 0,1 s). |
+| `js/cinema/quizTrack.js` | Pista de carteles de pregunta. |
+| `js/cinema/wizard.js` / `js/cinema/navigation.js` | Asistente de escenas + A* de recorridos. |
+| `js/media/recorder.js` | Grabación de video con MediaRecorder. |
+| `js/media/subtitles.js` | Subtítulos en canvas WebGL (visibles en pantalla y video). |
+| `js/media/quiz.js` | Cartel de pregunta con reloj. |
+| `js/render.js` / `js/tickers.js` | Loop central + registro de animaciones por frame. |
+| `js/catalog.js` | Catálogo de piezas (33): spawn/duplicar/borrar + persistencia. |
+| `js/trayDraw.js` | Dibujo de canaletas punto a punto (ortogonal + imán). |
+| `js/construction.js` | Capa de construcción (pisos/paredes/aberturas). |
+| `js/projectFiles.js` | Guardar/abrir JSON + handle persistido en IndexedDB. |
+| `js/undo.js` / `js/collision.js` / `js/dom.js` | Historial, ley del piso, lookups DOM. |
 
-**`app.js` (3.126 líneas, ~107KB) es código muerto**: es el monolito original del cual se
-extrajeron los módulos de `js/`. No lo referencia ningún HTML (solo figura como `"main"`
-en `package.json`, irrelevante para una app web). Duplica casi todo el código actual.
+> Nota histórica: `app.js` (monolito original, ~3.100 líneas) fue eliminado el
+> 2026-08-23; ningún HTML lo referencia. No usarlo como referencia.
 
 ## Funcionalidades existentes (hoy)
 
-- **Personajes**: 3 humanos (Alex, Carlos, Elena — estilo low-poly/blocky), perro y gato.
-  Animaciones en bucle por código: `idle, talk, sit, sit_typing, lay, walk, run` (humanos);
-  `idle, sit, lay, walk, run` (mascotas).
+- **Personajes**: 3 humanos (Alex, Carlos, Elena — estilo low-poly/blocky), perro y gato,
+  más personalizados del creador. Acciones: `idle, talk, sit, sit_typing, sit_talk,
+  type_standing, lay, walk, run, hold` + 6 gestos one-shot (`gesture:point/wave/
+  shrug/no/clap/watch`) + lip-sync en `talk`/`sit_talk`. `sit_at` con silla elegida,
+  `standInFrontOf`/`standFacing`, `rotYToLookAt` (0=SUR, π=NORTE).
 - **Equipos IT**: switch, router, torre PC, laptop — alineados con el tema de redes.
 - **5 ambientes**: oficina moderna (con sala de servidores y LEDs parpadeantes), estudio
   con grilla, parque día/atardecer/noche con farolas emisivas.
 - **Posicionamiento**: sliders XYZ + rotación, gizmo de flechas 3D, arrastre libre con
-  click, atajos "sentar en escritorio / sala servidores / reunión", "mirar cámara", reset.
+  click, menú contextual (animar / gesto / elegir asiento), "mirar cámara", reset.
 - **Cinemática de recorridos**: por personaje, waypoints clickeables/arrastrables sobre el
   suelo, curva CatmullRom, velocidad ajustable (0.5–6 m/s), invertir, loop, reproducción
-  simultánea de varios personajes, persistencia por objeto durante la sesión (`cinemaPaths`).
-- **Vistas de cámara**: órbita libre, 1ª persona, 3ª persona, persecución, y 3 ángulos
-  "cine" fijos relativos al personaje, con lerp suave. Vistas rápidas frontal/superior/lateral.
+  simultánea, eventos por waypoint (acción + espera + `sit_at`), persistencia (`cinemaPaths`).
+- **Timeline**: tomas arrastrables + pista 🧍 PERSONAJES (lanes, bloques base/por tramo/
+  camino) + subtítulos + quiz multi-carteles, con imán entre pistas (`tlSnap`),
+  edición pegajosa con 💾/✕ y reproducción determinista (`evaluateAllPathsAt`, la aguja manda).
+- **Vistas de cámara**: órbita libre, 1ª/3ª persona, persecución, 3 cines, fija/zoom,
+  aérea, frente/perfil, con `fixCameraVisibility`. Vistas rápidas frontal/superior/lateral.
 - **Grabación**: `canvas.captureStream(fps)` + MediaRecorder → descarga WebM (VP9/VP8),
   duración 1–60 s y FPS 1–60 configurables.
-- Outliner jerárquico, HUD (FPS, posición de cámara, selección).
+- **Proyectos**: guardar/abrir JSON + handle persistido en IndexedDB (guardado directo);
+  catálogo de 33 piezas; outliner jerárquico, HUD, paneles redimensionables.
 
 ## Estado de las funciones clave para el objetivo (videos educativos de YouTube)
 
-**Animación de personajes — funcional pero limitada.** Solo bucles procedurales no
-sincronizables entre sí; no hay timeline, no hay gestos puntuales (señalar, saludar),
-no hay lip-sync, no hay poses keyframeables, no hay transiciones entre acciones
-(el cambio es instantáneo). El detalle por acción es razonable para estilo blocky.
+**Animación de personajes — funcional, con actuación básica.** Timeline por personaje,
+gestos one-shot, lip-sync y `sit_at` reales; faltan transiciones suaves (~0,3 s),
+poses keyframeables e interacción con objetos. El cambio de acción sigue en seco.
 
-**Cámaras/ángulos — decente para tomas simples.** Órbita + 6 modos de seguimiento.
-Pero las cámaras cine son offsets fijos sin parámetros editables, no hay múltiples
-cámaras conmutables durante una toma ni keyframes de cámara.
+**Cámaras/ángulos — bueno para tomas con corte.** Tomas conmutables con sujeto/vista
+por toma y encuadre guardado; falta dolly/zoom dentro de la toma (`camPosEnd`) y
+cámaras colocables con FOV/distancia editables.
 
-**Grabación/exportación — funcional pero frágil.** Graba en tiempo real el canvas
-(una toma continua). Limitaciones para YouTube: solo WebM (habría que convertir a MP4),
-sin resolución configurable (depende del viewport), sin audio, sin secuenciador de
-escenas/tomas, y el timing depende de que no haya caídas de FPS.
+**Grabación/exportación — funcional pero con techo.** Escena completa con cortes,
+subtítulos embebidos y control de velocidad; pendiente: solo WebM (falta MP4),
+resolución del viewport (falta 1080p fijo offscreen), sin audio y reloj por
+wall-clock (no determinista total).
 
 ## Problemas técnicos
 
@@ -163,24 +193,33 @@ escenas/tomas, y el timing depende de que no haya caídas de FPS.
    `btnCinemaPlay` sin ID en `index.html`)~~ — **RESUELTO (2026-08-23)**:
    handlers muertos de `ui.js` y lookups muertos de `cinematics.js` eliminados.
    El play individual sigue disponible en la lista por personaje.
-4. **Menús no funcionales**: "Editar / Agregar / Vista" siguen decorativos.
-   (Archivo ya es funcional desde el 2026-08-21: Abrir/Guardar/Guardar como.)
-5. **Sin persistencia**: recargar la página pierde posiciones, recorridos y acciones.
-   No hay guardado/carga de proyectos (JSON).
-6. **~~Bug potencial en `js/render.js:94-99`~~ (mitigado 2026-08-23)**: la duración se mide con `dt` del clock; si la pestaña pierde foco el reloj se congela. Ahora `dt` está acotado a 1/20 s en el loop, por lo que los saltos ya no desincronizan la grabación (queda pendiente el reloj determinista total, ej. timestamp fijo).
-7. **Inicialización frágil**: `viewport.js:72-75` llama `onResize` con 3 timeouts como
+4. ~~**Menús no funcionales**~~ — **RESUELTO (2026-08-30/31)**: menús de la barra
+   exclusivos y unificados, editor por secciones; Archivo funcional (Abrir/Guardar/
+   Guardar como + guardado directo con IndexedDB).
+5. ~~**Sin persistencia**~~ — **RESUELTO**: guardar/abrir JSON (`js/projectFiles.js`)
+   con posiciones, acciones, recorridos, tomas, subtítulos, quiz, bloques de
+   personajes y spawns del catálogo.
+6. **~~Bug potencial en `js/render.js`~~ (mitigado 2026-08-23)**: `dt` acotado a 1/20 s;
+   la reproducción de escena ahora es determinista por aguja (`evaluateAllPathsAt`);
+   queda pendiente el reloj fijo total (frame 1/30 s + 1080p offscreen).
+7. **Inicialización frágil**: `js/ui/viewport.js` llama `onResize` con 3 timeouts como
    workaround de layout.
-8. **Toggle de vistas raro** (`js/ui.js:283-285`): clicar la vista activa vuelve a órbita,
+8. **Toggle de vistas raro** (`js/ui/ui.js`): clicar la vista activa vuelve a órbita,
    pero el botón "Libre (Órbita)" nunca aparece visualmente activo salvo por CSS inicial.
+9. ~~**Escena duplicada `scenes/alarma_en_la_red (1).json`**~~ — **RESUELTO
+   (2026-09-08)**: eliminada (sufijo de Windows); queda `scenes/alarma_en_la_red.json`.
 
 ## Qué falta para el objetivo (videos de redes/ciberseguridad para YouTube)
 
 1. ~~Secuenciador de tomas / timeline~~ **HECHO (2026-08-21)**: `js/timeline.js`
    con tomas de cámara arrastrables, eventos de waypoint (acción + espera) y
    grabación de la escena completa en un WebM.
-2. **Keyframes de acción y transiciones**: más gestos de un disparo (señalar,
-   saludar) y transiciones suaves entre acciones.
-3. **Audio/lip-sync mínimo**: narración o al menos boca animada al hablar.
+2. ~~**Gestos de un disparo**~~ **HECHO (2026-08-28)** + **sentarse real
+   `sit_at` (2026-08-30)**: 6 gestos + silla elegida con animación. Pendiente:
+   transiciones suaves (~0,3 s) y poses keyframeables.
+3. ~~**Lip-sync mínimo**~~ **HECHO (2026-08-30)**: boca en `talk`/`sit_talk`.
+   Pendiente: **audio por escena** (música + efectos, `js/audio.js`, WebAudio →
+   `MediaStreamAudioDestinationNode`).
 4. **Exportación MP4** (WebCodecs o ffmpeg.wasm) y resolución/framerate fijos (1080p)
    grabando offscreen para evitar drops.
 5. ~~Guardar/cargar escenas (JSON)~~ **HECHO (2026-08-21)**: menú Archivo con
@@ -195,19 +234,18 @@ escenas/tomas, y el timing depende de que no haya caídas de FPS.
 
 ## Fortalezas
 
-- Refactor modular reciente y bien hecho (`js/*`): responsabilidades claras, estado
-  centralizado, sin dependencias circulares visibles.
+- Refactor modular por capas (`js/characters|cinema|ui|media|office/`): grafo
+  acíclico verificado (`check-scc` en verde), estado centralizado.
 - El dominio ya apunta al objetivo: oficina con sala de servidores, props de redes,
   personajes tipo "equipo IT" con acciones de teclear/hablar.
-- Sistema de cinemática por waypoints bastante completo.
-- 7 vistas de cámara incluyendo 1ª/3ª persona y persecución.
-- Exportación de video básica ya funciona.
+- Cinemática por waypoints + pista PERSONAJES + imán + reproducción determinista.
+- 9+ vistas de cámara incluyendo 1ª/3ª persona, persecución, frente/perfil.
+- Exportación de video con cortes, subtítulos embebidos y guardado directo.
 - Setup cero-fricción: sin build, `serve.py` incluido, vendor local, UI en español
   estilo Blender.
 
 ## Recomendación de próximos pasos
 
-1. Guardar/cargar escenas (JSON) — barato y protege el trabajo.
-2. Secuenciador de tomas — lo que más acerca a producir un video real.
-3. ~~Limpieza de `app.js`, `node_modules` y bindings huérfanos (trivial).~~ Hecho
-   (2026-08-23).
+1. Audio por escena (`mini3d_mejoras.md` #3) — lo que más acerca a video publicable.
+2. Transiciones suaves entre acciones (~0,3 s) — pulido actoral barato.
+3. Cámara con dolly/zoom dentro de la toma (`camPosEnd`) + 1080p determinista.

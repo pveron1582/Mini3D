@@ -7,7 +7,7 @@
 // Compatibilidad: los proyectos viejos traían shot.quiz anclado a una toma;
 // al abrirlos, projectFiles.js lo migra a esta pista.
 
-import { quizTrack, timeline } from '../state.js';
+import { quizTrack, timeline, blockEdit } from '../state.js';
 import { byId } from '../dom.js';
 import { showQuiz, resetQuiz, quizIsActive } from '../media/quiz.js';
 import { pushHistory } from '../undo.js';
@@ -36,6 +36,7 @@ export function clearQuizSelection() {
     selectedQuiz = null;
     setQuizFieldsEnabled(false);
     renderQuizLane();
+    blockEdit.set(null);
   }
 }
 
@@ -70,7 +71,15 @@ function openQuizEditor(q) {
   set('quizEditEnd', (q.end ?? 2).toFixed(1));
   setQuizFieldsEnabled(true);
   renderQuizLane();
+  blockEdit.set('quiz');
+  window.dispatchEvent(new CustomEvent('edit-mode-request', { detail: { mode: 'subtitulos' } }));
 }
+
+// Exclusividad con la pista 🧍 PERSONAJES: elegir un bloque de personajes
+// libera el cartel en edición.
+window.addEventListener('char-block-selected', () => {
+  if (selectedQuiz) clearQuizSelection();
+});
 
 export function renderQuizLane() {
   const lane = byId('quizLane');

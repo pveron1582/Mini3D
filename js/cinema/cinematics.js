@@ -1,15 +1,17 @@
 import * as THREE from 'three';
 import { byId, qs, qsa } from '../dom.js';
 import { scene, camera, canvas, controls } from '../core.js';
-import { cinema, cinemaPaths, playbackInstances, view, interactiveRegistry, timelineBus } from '../state.js';
+import { cinema, cinemaPaths, playbackInstances, view, interactiveRegistry, timelineBus, charLaneBus, blockEdit } from '../state.js';
 import { getActiveObject, getActiveEntry, setActiveTarget } from '../ui/selection.js';
 import { raycaster, getPointerNDC, projectPointerToPlane } from '../ui/gizmo.js';
 import { setStatus } from '../media/recorder.js';
 import { solvePath } from './navigation.js';
+import { charActionsAt } from './charTrack.js';
 import { pushHistory } from '../undo.js';
 import { anchorSeats } from '../characters/anchors.js';
 import { getWallColliders, getDoorColliders } from '../office/walls.js';
 import { stepLadder, STEP_LADDER_ORIGIN } from '../office/group.js';
+import { getMinGroundY } from '../collision.js';
 
 // ==========================================
 // SISTEMA DE CINEMÁTICA (RECORRIDO ANIMADO)
@@ -101,6 +103,7 @@ function cinemaRebuildVisuals() {
   });
   cinemaDrawAllPaths();
   refreshCinemaUI();
+  refreshCharLanes();   // la pista 🧍 del personaje se redibuja (bloque 🚶)
 }
 
 function cinemaDrawAllPaths() {
@@ -282,6 +285,9 @@ function cinemaGetMarkerHit(e) {
 
 function onCinemaPointerDownCapture(e) {
   if (!cinema.active) return;
+  // Solo el botón IZQUIERDO edita el recorrido (agregar/arrastrar puntos);
+  // el derecho queda para la cámara (pan) y el menú contextual.
+  if (e.button !== 0) return;
   if (cinema.mode === 'play') return; // dejar orbit/select normal
   cinema.pressInfo = { x: e.clientX, y: e.clientY, t: performance.now() };
   if (cinema.mode === 'edit') {
@@ -317,6 +323,7 @@ function onCinemaPointerMoveCapture(e) {
 
 function onCinemaPointerUpCapture(e) {
   if (!cinema.active) return;
+  if (e.button !== 0) return;   // el derecho es de cámara/menú, no de edición
   if (cinema.dragging >= 0) {
     cinema.dragging = -1;
     controls.enabled = true;
@@ -397,32 +404,51 @@ export function startPlayback(id, opts = {}) {
   }
   const baseSpeed = opts.speed !== undefined ? opts.speed : (typeof storedSpeed === 'number' ? storedSpeed : cinema.speed);
   const delay = opts.delay !== undefined ? opts.delay : (typeof storedDelay === 'number' ? storedDelay : 0);
+
+  // Detectar si es un recorrido estacionario (waypoints en el mismo lugar para coordinar diálogos/acciones)
+  const p0 = waypoints[0];
+  const p0x = p0.x !== undefined ? p0.x : p0[0];
+  const p0z = p0.z !== undefined ? p0.z : p0[2];
+  let maxSpan = 0;
+  for (let i = 0; i < waypoints.length; i++) {
+    const p = waypoints[i];
+    const px = p.x !== undefined ? p.x : p[0];
+    const pz = p.z !== undefined ? p.z : p[2];
+    maxSpan = Math.max(maxSpan, Math.hypot(px - p0x, pz - p0z));
+  }
+  const isStationary = maxSpan < 0.25 || baseSpeed <= 0;
+
   // Camino con esquivado automático: si un tramo cruza paredes u objetos,
-  // se insertan puntos intermedios para rodearlos (el destino no cambia)
-  const solved = solvePath(waypoints, planeY);
+  // se insertan puntos intermedios para rodearlos (el destino no cambia).
+  // Si es estacionario, no se ejecuta A* para no alejar al personaje de su silla o escritorio.
+  const solved = isStationary ? waypoints : solvePath(waypoints, planeY);
   const curve = cinemaBuildCurveFrom(solved);
   if (!curve) return false;
   const entry = interactiveRegistry.get(id);
-  if (entry && solved.length > 0) {
-    const p0 = opts.reversed ? solved[solved.length - 1] : solved[0];
-    entry.group.position.set(p0.x, planeY, p0.z);
+  if (entry && solved.length > 0 && !isStationary) {
+    const p0Coord = opts.reversed ? solved[solved.length - 1] : solved[0];
+    entry.group.position.set(p0Coord.x, planeY, p0Coord.z);
   }
   let savedAction = 'idle';
   let moveAction = 'walk';
   let cadence = 1;
   if (entry && entry.rig) {
     savedAction = entry.rig.currentAction;
-    // Velocidad constante en m/s: la duración crece con el recorrido.
-    // La animación se adapta: por encima de ~3.5 m/s corre, y la cadencia
-    // de las zancadas se sincroniza con la velocidad real.
-    moveAction = baseSpeed >= 3.5 ? 'run' : 'walk';
-    const natural = moveAction === 'run' ? (entry.rig.naturalRun || 4.5) : (entry.rig.naturalWalk || 1.8);
-    cadence = THREE.MathUtils.clamp(baseSpeed / natural, 0.6, 2.0);
-    // Con delay el personaje arranca con la acción que ya tenía (ej. quieto
-    // trabajando); el walk/run se aplica al terminarse la espera (render.js).
-    if (!(delay > 0)) {
-      entry.rig.setAction(moveAction);
-      entry.rig.cadence = cadence;
+    if (isStationary) {
+      moveAction = savedAction;
+    } else {
+      // Velocidad constante en m/s: la duración crece con el recorrido.
+      // La animación se adapta: por encima de ~3.5 m/s corre, y la cadencia
+      // de las zancadas se sincroniza con la velocidad real.
+      moveAction = baseSpeed >= 3.5 ? 'run' : 'walk';
+      const natural = moveAction === 'run' ? (entry.rig.naturalRun || 4.5) : (entry.rig.naturalWalk || 1.8);
+      cadence = THREE.MathUtils.clamp(baseSpeed / natural, 0.6, 2.0);
+      // Con delay el personaje arranca con la acción que ya tenía (ej. quieto
+      // trabajando); el walk/run se aplica al terminarse la espera (render.js).
+      if (!(delay > 0)) {
+        entry.rig.setAction(moveAction);
+        entry.rig.cadence = cadence;
+      }
     }
   }
   // Eventos de waypoint: acción al llegar + espera, con su u en la curva
@@ -458,7 +484,12 @@ export function startPlayback(id, opts = {}) {
     waiting: delay > 0 ? delay : 0,
     // Arranca en el extremo de la curva (0 al avanzar, 1 al revés) para que un
     // evento situado justo en el primer punto (u=0) se dispare en el 1er frame.
-    lastU: opts.reversed ? 1 : 0
+    lastU: opts.reversed ? 1 : 0,
+    isStationary,
+    initialPosX: entry ? entry.group.position.x : p0x,
+    initialPosY: entry ? entry.group.position.y : planeY,
+    initialPosZ: entry ? entry.group.position.z : p0z,
+    initialRotY: entry ? entry.group.rotation.y : 0
   });
   return true;
 }
@@ -497,168 +528,149 @@ function stopAllPlaybacks() {
 }
 
 function refreshCinemaUI() {
-  const allBtn = byId('btnCinemaPlayAll');
-  const editCtrls = byId('cinemaEditControls');
-  if (allBtn) {
-    allBtn.textContent = playbackInstances.size > 0 ? '⏹ Detener Todas las Cinemáticas' : '▶ Reproducir Todas las Cinemáticas';
-  }
-  if (editCtrls) {
-    const hasPath = cinema.active && (cinema.waypoints.length >= 2 || cinemaPaths.has(cinema.targetId));
-    const show = cinema.mode === 'edit' || cinema.mode === 'play' || playbackInstances.has(cinema.targetId) || hasPath;
-    editCtrls.style.display = show ? 'flex' : 'none';
-  }
+  // Re-poblar el dropdown de cámara (por si aparecieron/desaparecieron
+  // personajes) y sincronizarlo con la toma seleccionada.
+  populateShotCamSubject();
+  syncShotCamUI();
   updateCinemaCharList();
 }
 
-// Lista por personaje: 2 filas de 3 botones.
-//   Fila 1: 🎬 editar camino · 💾 guardar · ✕ borrar recorrido
-//   Fila 2: ▶/⏸ reproducir · 1P · 3P (cámara exclusiva sobre ese personaje)
-// 1P/3P: si hay una TOMA seleccionada, configura esa toma (modo + subjectId)
-// y la escena la usa en ese tramo; si no, es vista en vivo exclusiva.
+// La lista de recorridos por personaje dejó de existir (vive en las pistas
+// 🧍 de la línea de tiempo, una lane por personaje). Mantenemos la función
+// como un refresh de esas pistas: recorre los recorridos para calcular su
+// duración y pide el redibujado de las lanes.
 function updateCinemaCharList() {
-  const list = byId('cinemaCharList');
-  if (!list) return;
-  const activeId = getActiveEntry() ? getActiveEntry().id : '';
+  refreshCharLanes();
+}
+
+// (La selección de cámara por personaje/vista ahora la maneja el control
+//  "🎥 Cámara de la toma" del panel, vía applyShotCamControl más abajo.)
+
+// ==========================================
+// CONTROL DE CÁMARA DE LA TOMA (dropdown personaje + vista + botón Ver)
+// ==========================================
+// Mapeo del valor del dropdown de vista al modo interno de cámara.
+const SHOT_CAM_MAP = {
+  '1p': 'fpv',
+  '3p': 'third',
+  'front': 'front',
+  'profile': 'profile',
+  'free': 'free'
+};
+
+// Llena el dropdown de "Quién" con todos los personajes de la escena + la
+// opción "Cámara libre" (sin protagonista). Mantiene la selección actual.
+function populateShotCamSubject() {
+  const sel = byId('shotCamSubject');
+  if (!sel) return;
+  const current = sel.value || '';
+  sel.innerHTML = '';
+  const free = document.createElement('option');
+  free.value = '';
+  free.textContent = '🎥 Cámara libre';
+  sel.appendChild(free);
   const entries = [];
   interactiveRegistry.forEach(entry => {
-    if (entry.deleted) return;               // personajes ocultos: fuera de la lista
+    if (entry.deleted) return;
     if (entry.type === 'human' || entry.type === 'pet') entries.push(entry);
   });
   entries.sort((a, b) => a.name.localeCompare(b.name));
-  list.innerHTML = '';
   entries.forEach(entry => {
-    const stored = cinemaPaths.get(entry.id);
-    const hasPath = !!(stored && stored.waypoints && stored.waypoints.length >= 2);
-    const playing = playbackInstances.has(entry.id);
-    const isCinemaTarget = cinema.active && cinema.targetId === entry.id;
-    const shot = timelineBus.getSelectedShot();
-
-    const row = document.createElement('div');
-    row.className = 'cinema-char-row' + (entry.id === activeId ? ' selected' : '');
-    row.setAttribute('data-id', entry.id);
-
-    // --- Encabezado: nombre ---
-    const icon = entry.type === 'human' ? '🧍' : '🐾';
-    const name = document.createElement('div');
-    name.className = 'cinema-char-name';
-    name.textContent = icon + ' ' + entry.name;
-    row.appendChild(name);
-
-    // --- Fila 1: editar camino · guardar · borrar ---
-    const row1 = document.createElement('div');
-    row1.className = 'cinema-btn-row';
-
-    const actBtn = document.createElement('button');
-    actBtn.className = 'blender-btn cinema-char-icon-btn' + (isCinemaTarget ? ' primary' : '');
-    actBtn.textContent = isCinemaTarget ? '🎥' : '🎬';
-    actBtn.title = isCinemaTarget
-      ? 'Terminar edición del recorrido de ' + entry.name
-      : 'Editar recorrido de ' + entry.name;
-    actBtn.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      setActiveTarget(entry.id);
-      if (cinema.active && cinema.targetId === entry.id) cinemaDeactivate();
-      else cinemaActivate();
-    });
-    row1.appendChild(actBtn);
-
-    const saveBtn = document.createElement('button');
-    saveBtn.className = 'blender-btn cinema-char-icon-btn';
-    saveBtn.textContent = '💾';
-    saveBtn.title = 'Guardar cambios del recorrido y del personaje';
-    saveBtn.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      // Guardar el recorrido en edición (si es de este personaje) y todo al historial
-      if (cinema.active && cinema.targetId === entry.id) cinemaStorePath(entry.id);
-      pushHistory();
-      setStatus('Cambios de ' + entry.name + ' guardados.');
-    });
-    row1.appendChild(saveBtn);
-
-    const delBtn = document.createElement('button');
-    delBtn.className = 'blender-btn cinema-char-icon-btn cinema-char-del';
-    delBtn.textContent = '✕';
-    delBtn.disabled = !hasPath;
-    delBtn.title = hasPath ? 'Borrar recorrido de ' + entry.name : 'Sin recorrido para borrar';
-    delBtn.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      cinemaDeletePathFor(entry.id);
-    });
-    row1.appendChild(delBtn);
-    row.appendChild(row1);
-
-    // --- Fila 2: reproducir/pausar · 1P · 3P ---
-    const row2 = document.createElement('div');
-    row2.className = 'cinema-btn-row';
-
-    const playBtn = document.createElement('button');
-    playBtn.className = 'blender-btn cinema-char-icon-btn' + (playing ? ' primary' : '');
-    playBtn.textContent = playing ? '⏸' : '▶';
-    playBtn.disabled = !hasPath;
-    playBtn.title = hasPath ? 'Reproducir recorrido' : 'Sin recorrido configurado';
-    playBtn.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      if (entry.id !== activeId) setActiveTarget(entry.id);
-      togglePlayback(entry.id);
-    });
-    row2.appendChild(playBtn);
-
-    const isFpvHere = (view.mode === 'fpv' && view.subjectId === entry.id) ||
-      (shot && shot.camMode === 'fpv' && shot.subjectId === entry.id);
-    const fpvBtn = document.createElement('button');
-    fpvBtn.className = 'blender-btn cinema-char-icon-btn' + (isFpvHere ? ' primary' : '');
-    fpvBtn.textContent = '1P';
-    fpvBtn.title = 'Cámara en 1ª persona sobre ' + entry.name;
-    fpvBtn.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      setFollowView(entry.id, 'fpv');
-    });
-    row2.appendChild(fpvBtn);
-
-    const isThirdHere = (view.mode === 'third' && view.subjectId === entry.id) ||
-      (shot && shot.camMode === 'third' && shot.subjectId === entry.id);
-    const thirdBtn = document.createElement('button');
-    thirdBtn.className = 'blender-btn cinema-char-icon-btn' + (isThirdHere ? ' primary' : '');
-    thirdBtn.textContent = '3P';
-    thirdBtn.title = 'Cámara en 3ª persona sobre ' + entry.name;
-    thirdBtn.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      setFollowView(entry.id, 'third');
-    });
-    row2.appendChild(thirdBtn);
-    row.appendChild(row2);
-
-    row.addEventListener('click', () => {
-      if (entry.id !== activeId) setActiveTarget(entry.id);
-    });
-    list.appendChild(row);
+    const o = document.createElement('option');
+    o.value = entry.id;
+    o.textContent = (entry.type === 'human' ? '🧍 ' : '🐾 ') + entry.name;
+    sel.appendChild(o);
   });
+  if (current) sel.value = current;
 }
 
-// 1P/3P sobre un personaje: la cámara lo sigue A ÉL (exclusivo — si otro la
-// tenía, o estaba en Libre, pierde). Si hay una TOMA seleccionada, configura
-// ESA toma (camMode + subjectId) y corta a ella; si no, es vista en vivo.
-function setFollowView(personId, mode) {
-  const entry = interactiveRegistry.get(personId);
-  if (!entry) return;
+// Refleja la toma seleccionada en los dropdowns (quién + vista). Si no hay
+// toma seleccionada, deja los valores actuales (vista en vivo).
+function syncShotCamUI() {
   const shot = timelineBus.getSelectedShot();
+  const subjectSel = byId('shotCamSubject');
+  const viewSel = byId('shotCamView');
+  if (!subjectSel || !viewSel) return;
   if (shot) {
-    // Configurar el corte seleccionado: este personaje protagoniza la toma
+    subjectSel.value = shot.subjectId || '';
+    const mapped = Object.keys(SHOT_CAM_MAP).find(k => SHOT_CAM_MAP[k] === shot.camMode);
+    viewSel.value = mapped || 'free';
+  }
+}
+
+// Aplica la combinación (quién + vista) elegida en el control. Si hay una toma
+// seleccionada, configura ESA toma (camMode + subjectId) y, en cámara libre,
+// guarda el encuadre actual; si no, es una vista en vivo.
+function applyShotCamControl() {
+  const subjectSel = byId('shotCamSubject');
+  const viewSel = byId('shotCamView');
+  if (!subjectSel || !viewSel) return;
+  const personId = subjectSel.value || null;
+  const mode = SHOT_CAM_MAP[viewSel.value] || 'free';
+  const entry = personId ? interactiveRegistry.get(personId) : null;
+
+  const shot = timelineBus.getSelectedShot();
+  if (mode === 'free') {
+    // Cámara libre: sin protagonista. Si hay toma seleccionada, queda como una
+    // toma en Vista Libre; el encuadre lo pone el usuario y se guarda con 💾.
+    if (shot) {
+      shot.camMode = 'free';
+      shot.subjectId = null;
+      timelineBus.renderShots();
+    }
+    view.mode = 'orbit';
+    view.subjectId = null;
+    controls.enabled = true;
+    setStatus('Cámara libre' + (shot ? ' (toma seleccionada): movela y guardá con 💾.' : ' activada.'));
+  } else if (shot) {
     shot.camMode = mode;
     shot.subjectId = personId;
     timelineBus.renderShots();
     cutCameraToShot(mode, personId, shot);
-    setStatus(`${mode === 'fpv' ? '1ª' : '3ª'} persona sobre ${entry.name} (toma seleccionada).`);
+    setStatus(`${label(mode)} sobre ${entry ? entry.name : 'objeto'} (toma seleccionada).`);
   } else {
-    // Vista en vivo: exclusiva sobre este personaje
     view.mode = mode;
     view.subjectId = personId;
     controls.enabled = false;
     updateCinematicCamera(true);
-    setStatus(`${mode === 'fpv' ? '1ª' : '3ª'} persona sobre ${entry.name}.`);
+    setStatus(`${label(mode)} sobre ${entry ? entry.name : 'objeto'}.`);
   }
-  refreshCinemaUI();
 }
+
+function label(mode) {
+  return { fpv: '1ª persona', third: '3ª persona', front: 'Frente', profile: 'Perfil' }[mode] || mode;
+}
+
+// Cableado de la UI: dropdowns y botón "Ver". Se llama una sola vez al evaluar
+// el módulo (los elementos existen en index.html).
+(function initShotCamControl() {
+  const subjectSel = byId('shotCamSubject');
+  const viewSel = byId('shotCamView');
+  const viewBtn = byId('btnShotCamView');
+  populateShotCamSubject();
+  if (viewBtn) {
+    viewBtn.addEventListener('click', () => applyShotCamControl());
+  }
+  // Al cambiar "Quién" a un personaje, saltamos a esa vista automáticamente
+  // (la vista actual se reconfigura al personaje elegido). Si se elige
+  // "Cámara libre", la vista pasa sola a "Cámara libre".
+  if (subjectSel) {
+    subjectSel.addEventListener('change', () => {
+      if (!subjectSel.value) {
+        const viewSel = byId('shotCamView');
+        if (viewSel) viewSel.value = 'free';
+      }
+      applyShotCamControl();
+    });
+  }
+  if (viewSel) {
+    viewSel.addEventListener('change', () => applyShotCamControl());
+  }
+  // Mantener el dropdown de personajes y la vista sincronizados con la toma
+  // seleccionada: refrescamos al seleccionar/descartar tomas.
+  timelineBus.syncShotCamUI = syncShotCamUI;
+  timelineBus.populateShotCamSubject = populateShotCamSubject;
+})();
 
 function cinemaDeletePathFor(id) {
   stopPlayback(id);
@@ -690,6 +702,41 @@ function cinemaClearPath() {
   if (!cinema.active) return;
   cinemaSetMode('pickStart');
   setStatus('Recorrido limpiado. Elige el punto de inicio.');
+}
+
+// Registro en el bus de los recorridos (lo usa la pista 🧍 PERSONAJES de
+// charTrack.js, que no puede importarnos por el ciclo charTrack→cinematics):
+charLaneBus.pathInfo = (id) => {
+  const stored = cinemaPaths.get(id);
+  if (!stored || !stored.waypoints || stored.waypoints.length < 2) return null;
+  // Si el recorrido tiene duración ~0 (estacionario: waypoints coincidentes o
+  // velocidad 0), no es un CAMINO — se omite para no pintar un bloque 🚶 vacío
+  // junto al personaje.
+  const dur = stored._duration || 0;
+  if (!(dur > 0.3)) return null;
+  return { duration: dur, loop: !!stored.loop, speed: typeof stored.speed === 'number' ? stored.speed : cinema.speed };
+};
+charLaneBus.isEditing = (id) => cinema.active && cinema.targetId === id;
+charLaneBus.closeEditor = () => { if (cinema.active) cinemaDeactivate(); };
+charLaneBus.toggleEditor = (id) => {
+  // Exclusividad total: abrir el editor de recorrido suelta el bloque de
+  // acciones en edición (un solo bloque a la vez, de cualquier pista).
+  if (blockEdit.get()) window.dispatchEvent(new CustomEvent('char-block-selected'));
+  setActiveTarget(id);
+  if (cinema.active && cinema.targetId === id) cinemaDeactivate();
+  else cinemaActivate();
+};
+charLaneBus.deletePath = (id) => cinemaDeletePathFor(id);
+
+// Duración del recorrido (para el bloque 🚶 de la pista): se recalcula con
+// la misma previsión determinista del playback. Se expone como helper para
+// refrescar la pista cuando cambia un recorrido.
+export function refreshCharLanes() {
+  cinemaPaths.forEach((stored, id) => {
+    const pv = getPreviewPath(stored);
+    stored._duration = pv ? pv.totalEnd : 0;
+  });
+  if (charLaneBus.refresh) charLaneBus.refresh();
 }
 
 // ==========================================
@@ -798,6 +845,8 @@ export function updateCinematicCamera(snap = false) {
   const p = obj.position;
   const ry = obj.rotation.y;
   const fwd = _camTmp.set(Math.sin(ry), 0, Math.cos(ry));
+  // Perpendicular a la mirada en el plano XZ (para la vista de perfil)
+  const right = new THREE.Vector3(Math.cos(ry), 0, -Math.sin(ry));
   const camPos = new THREE.Vector3();
   const look = new THREE.Vector3(p.x, p.y + 1.0, p.z);
   if (view.mode === 'fpv') {
@@ -807,6 +856,18 @@ export function updateCinematicCamera(snap = false) {
     look.set(p.x, p.y + (eyeH - 0.05), p.z).add(fwd);
   } else if (view.mode === 'third') {
     camPos.copy(p).addScaledVector(fwd, -3.0); camPos.y = p.y + 2.0;
+  } else if (view.mode === 'front') {
+    // Cámara de frente a la cara, cerca: se aleja un metro en la dirección de
+    // la mirada y enfoca la cara (a la altura de la cabeza).
+    const faceH = entry.type === 'pet' ? 0.65 : 1.6;
+    camPos.copy(p).addScaledVector(fwd, 1.0); camPos.y = p.y + faceH;
+    look.copy(p).addScaledVector(fwd, 0.35); look.y = p.y + faceH;
+  } else if (view.mode === 'profile') {
+    // Cámara de costado, cerca de la cara: perpendicular a la mirada y a la
+    // misma altura; la cara queda de perfil en el encuadre.
+    const faceH = entry.type === 'pet' ? 0.55 : 1.55;
+    camPos.copy(p).addScaledVector(right, 1.0); camPos.y = p.y + faceH;
+    look.copy(p).addScaledVector(right, 0.1); look.y = p.y + faceH;
   } else if (view.mode === 'top') {
     camPos.copy(p).addScaledVector(fwd, -4.0); camPos.y = p.y + 6.0;
     look.set(p.x, p.y + 0.5, p.z);
@@ -856,7 +917,19 @@ function getPreviewPath(stored) {
   let pv = previewCache.get(stored);
   if (pv && pv.speedUsed === speed) return pv;
 
-  const solved = solvePath(stored.waypoints, stored.planeY);
+  const p0 = stored.waypoints[0];
+  const p0x = p0.x !== undefined ? p0.x : p0[0];
+  const p0z = p0.z !== undefined ? p0.z : p0[2];
+  let maxSpan = 0;
+  for (let i = 0; i < stored.waypoints.length; i++) {
+    const p = stored.waypoints[i];
+    const px = p.x !== undefined ? p.x : p[0];
+    const pz = p.z !== undefined ? p.z : p[2];
+    maxSpan = Math.max(maxSpan, Math.hypot(px - p0x, pz - p0z));
+  }
+  const isStationary = maxSpan < 0.25 || speed <= 0;
+
+  const solved = isStationary ? stored.waypoints : solvePath(stored.waypoints, stored.planeY);
   const curve = cinemaBuildCurveFrom(solved);
   if (!curve) return null;
   let length = 0;
@@ -878,7 +951,7 @@ function getPreviewPath(stored) {
   const segments = [];
   let cursor = delay;
   let prevU = 0;
-  let moveAction = speed >= 3.5 ? 'run' : 'walk';
+  let moveAction = isStationary ? ((events[0] && events[0].action) || 'idle') : (speed >= 3.5 ? 'run' : 'walk');
   let ladderDrop = null;
 
   events.forEach(ev => {
@@ -914,7 +987,8 @@ function getPreviewPath(stored) {
     curve, length, speedUsed: speed, delay, moveDur, segments,
     endAction: (last && last.u > 0.9 && last.action) ? last.action : null,
     totalEnd: cursor, loop: !!stored.loop, ladderDrop,
-    planeY: stored.planeY || 0
+    planeY: stored.planeY || 0,
+    isStationary
   };
   previewCache.set(stored, pv);
   return pv;
@@ -950,11 +1024,43 @@ function samplePreviewPath(pv, t, entry) {
   return { u: 1, action: pv.endAction || initialAction };
 }
 
+// Ley del suelo sólido para la evaluación determinista: el origen del rig
+// nunca queda por debajo de su suelo (getMinGroundY de collision.js). Los
+// sentados/acostados pueden bajar (su "piso" es el asiento/cama, fijado por
+// el ancla de su silla con la fórmula seatY - 0.48).
+function applyFloorLaw(entry, y) {
+  return Math.max(y, getMinGroundY(entry));
+}
+
 export function evaluateAllPathsAt(t) {
   if (stepLadder) {
     stepLadder.position.set(STEP_LADDER_ORIGIN[0], STEP_LADDER_ORIGIN[1], STEP_LADDER_ORIGIN[2]);
     stepLadder.visible = true;
   }
+  // Pista 🧍 PERSONAJES: acciones definidas por bloques (la fuente de verdad
+  // de QUÉ hace cada personaje; los recorridos solo mueven). Si un personaje
+  // tiene acción de bloque, esa manda; si no, aplica la de su recorrido.
+  const blockActions = charActionsAt(t);
+  interactiveRegistry.forEach((entry, id) => {
+    if (!(entry.type === 'human' || entry.type === 'pet')) return;
+    const ba = blockActions.get(id);
+    if (!ba) return;
+    if (entry.rig && entry.rig.currentAction !== ba.action) {
+      entry.rig.setAction(ba.action);
+    }
+    if (entry.rig && ba.mood && entry.rig.setMood) {
+      entry.rig.setMood(ba.mood);
+    }
+    // Sin recorrido: el personaje queda en su pose de bloque, en su lugar
+    const stored = cinemaPaths.get(id);
+    if (!stored || !stored.waypoints || stored.waypoints.length < 2) {
+      const st = entry.initialState;
+      if (st && st.pos) {
+        entry.group.position.set(st.pos[0], applyFloorLaw(entry, st.pos[1]), st.pos[2]);
+        if (st.rotY !== undefined) entry.group.rotation.y = st.rotY;
+      }
+    }
+  });
   cinemaPaths.forEach((stored, id) => {
     const entry = interactiveRegistry.get(id);
     if (!entry || !stored.waypoints || stored.waypoints.length < 2) return;
@@ -965,31 +1071,43 @@ export function evaluateAllPathsAt(t) {
       if (entry.rig) entry.rig.setAction(s.action);
       return;
     }
-    let pos, tan;
-    if (s.seatPose) {
-      // Sentado en su asiento (evento sit_at en escena): pose del ancla,
-      // mirando al frente de la silla (rotY + 180°, como sitAtAnchor).
-      pos = { x: s.seatPose.x, z: s.seatPose.z };
-      tan = null;
+    if (pv.isStationary) {
+      const st = entry.initialState;
+      if (st && st.pos) {
+        entry.group.position.set(st.pos[0], applyFloorLaw(entry, st.pos[1]), st.pos[2]);
+        entry.group.rotation.y = st.rotY !== undefined ? st.rotY : 0;
+      }
     } else {
-      try {
-        const cu = THREE.MathUtils.clamp(s.u, 0, 1);
-        pos = pv.curve.getPointAt(cu);
-        tan = pv.curve.getTangentAt(cu);
-      } catch (err) {
-        pos = stored.waypoints[0];
-        tan = { x: 0, z: 1 };
+      let pos, tan;
+      if (s.seatPose) {
+        // Sentado en su asiento (evento sit_at en escena): pose del ancla,
+        // mirando al frente de la silla (rotY + 180°, como sitAtAnchor).
+        pos = { x: s.seatPose.x, z: s.seatPose.z };
+        tan = null;
+      } else {
+        try {
+          const cu = THREE.MathUtils.clamp(s.u, 0, 1);
+          pos = pv.curve.getPointAt(cu);
+          tan = pv.curve.getTangentAt(cu);
+        } catch (err) {
+          pos = stored.waypoints[0];
+          tan = { x: 0, z: 1 };
+        }
+      }
+      entry.group.position.set(pos.x, applyFloorLaw(entry, s.seatPose ? 0 : pv.planeY), pos.z);
+      if (s.seatPose) {
+        entry.group.rotation.y = s.seatPose.rotY + Math.PI;
+      } else if (tan && (tan.x || tan.z)) {
+        entry.group.rotation.y = Math.atan2(tan.x, tan.z);
       }
     }
-    entry.group.position.set(pos.x, s.seatPose ? 0 : pv.planeY, pos.z);
-    if (s.seatPose) {
-      entry.group.rotation.y = s.seatPose.rotY + Math.PI;
-    } else if (tan && (tan.x || tan.z)) {
-      entry.group.rotation.y = Math.atan2(tan.x, tan.z);
-    }
     if (entry.rig) {
-      entry.rig.setAction(s.action || 'idle');
-      const natural = s.action === 'run' ? (entry.rig.naturalRun || 4.5) : (entry.rig.naturalWalk || 1.8);
+      // La acción de un bloque de 🧍 PERSONAJES pisa la del recorrido: la
+      // pista de bloques es la fuente de verdad de las acciones.
+      const ba = blockActions.get(id);
+      const act = (ba && ba.action) ? ba.action : (s.action || 'idle');
+      entry.rig.setAction(act);
+      const natural = act === 'run' ? (entry.rig.naturalRun || 4.5) : (entry.rig.naturalWalk || 1.8);
       entry.rig.cadence = THREE.MathUtils.clamp(pv.speedUsed / natural, 0.6, 2.0);
     }
     if (pv.ladderDrop && id === 'human1' && t >= pv.ladderDrop.time) {

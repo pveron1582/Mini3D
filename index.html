@@ -41,7 +41,7 @@
               <div class="menu-option" id="mnuEditObjetos">📦 Objetos</div>
               <div class="menu-option" id="mnuEditPersonajes">🧍 Personajes</div>
               <div class="menu-option" id="mnuEditSubtitulos">📝 Textos (subtítulos y carteles)</div>
-              <div class="menu-option" id="mnuEditCinematica">🎬 Cinemática</div>
+              <div class="menu-option" id="mnuEditCinematica">🎥 Cámara</div>
             </div>
           </div>
           <div class="menu-item">Agregar</div>
@@ -51,7 +51,7 @@
 
       <!-- Bloque central de proyecto: guardar · nuevo · deshacer · rehacer -->
       <div class="top-bar-center">
-        <button class="viewport-toggle-btn" id="btnSaveQuick" title="Guardar cambios (Ctrl+S)" disabled>💾</button>
+        <button class="viewport-toggle-btn" id="btnSaveQuick" title="Guardar cambios (Ctrl+S)">💾</button>
         <button class="viewport-toggle-btn" id="btnNewBlank" title="Proyecto nuevo">📄</button>
         <span class="tb-sep"></span>
         <button class="viewport-toggle-btn" id="undoBtn" title="Deshacer (Ctrl+Z)" disabled>↩</button>
@@ -399,6 +399,8 @@
     <div id="main-workspace">
       <!-- Left Panel (Sidebar) -->
       <aside id="left-panel">
+        <!-- Handle para redimensionar el ancho del panel (borde derecho) -->
+        <div id="leftResizeHandle" title="Arrastrá para cambiar el ancho del panel"></div>
 
         <!-- Selector Editar: texto + caja de modo + flechas < > -->
         <div class="panel-section" id="editModeSelector">
@@ -579,7 +581,7 @@
           </div>
           <div class="section-content">
             <div class="target-category-label">🧍 PERSONAJES</div>
-            <div class="target-selector-box" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="target-selector-box">
               <button class="target-btn active" id="targetHuman1Btn" data-target="human1">🧍 Alex</button>
               <button class="target-btn" id="targetHuman2Btn" data-target="human2">👔 Carlos</button>
               <button class="target-btn" id="targetHuman3Btn" data-target="human3">👩 Elena</button>
@@ -592,8 +594,61 @@
               <button class="target-btn" id="targetDogBtn" data-target="dog">🐕 Perro</button>
               <button class="target-btn" id="targetCatBtn" data-target="cat">🐱 Gato</button>
             </div>
-            <div class="target-selector-box" id="customCharBox" style="grid-template-columns: repeat(3, 1fr); margin-top:4px; display:none;"></div>
+            <div class="target-selector-box" id="customCharBox" style="margin-top:4px; display:none;"></div>
             <button class="blender-btn primary" id="btnAddCharacter" style="width:100%; margin-top:8px;">➕ Añadir Personaje</button>
+
+            <p class="cinema-hint" style="margin-top:8px;">Las acciones y caminos de cada personaje viven en su pista 🧍 de la línea de tiempo (abajo del viewport): una fila por personaje con sus bloques de acción, su camino 🚶 (🎬 edita los waypoints sobre el piso) y su acción de toda la escena.</p>
+            <button class="blender-btn" id="charFullActionBtn" style="width:100%; margin-top:6px;" title="El personaje seleccionado hace esto durante TODA la cinemática (ej. empleado en su PC)">⏳ Acción de toda la escena</button>
+
+            <!-- Editor de bloque de PERSONAJES: qué hace cada uno en el tramo -->
+            <div id="charBlockEditPanel" class="camera-view-block" style="display:none; margin-top:10px;">
+              <div class="camera-view-label">🧍 Acciones del bloque <span id="charBlockTitle"></span></div>
+              <div id="charBlockList" style="display:flex; flex-direction:column; gap:6px; margin-top:6px;"></div>
+              <div class="btn-grid" style="margin-top:6px;">
+                <button class="blender-btn" id="charBlockAddChar">➕ Añadir personaje al bloque</button>
+              </div>
+              <p class="cinema-hint" style="margin-top:4px;">💾 en el bloque guarda; ✕ descarta los cambios.</p>
+            </div>
+
+            <!-- Evento de waypoint (se abre con doble click en un punto del
+                 recorrido editado desde la pista 🧍 de cada personaje) -->
+            <div id="waypointEventPanel" class="waypoint-event-panel" style="display:none;">
+              <div class="camera-view-label">📌 Evento del punto <span id="waypointEventTitle"></span></div>
+              <label class="inline-label">Acción al llegar
+                <select id="waypointEventAction" class="tl-input">
+                  <option value="">— sin cambio —</option>
+                  <option value="idle">Idle</option>
+                  <option value="talk">Hablar</option>
+                  <option value="sit">Sentarse (en el lugar)</option>
+                  <option value="sit_at">🪑 Sentarse en una silla…</option>
+                  <option value="sit_typing">S. Tecleando (sentado)</option>
+                  <option value="type_standing">Tecleando de pie</option>
+                  <option value="lay">Acostarse</option>
+                  <option value="walk">Caminar</option>
+                  <option value="run">Correr</option>
+                  <option value="wave">Saludar</option>
+                  <option value="clap">Aplaudir</option>
+                  <option value="point">Señalar</option>
+                  <option value="hold">Llevar objeto</option>
+                  <option value="gesture:point">👉 Gesto: Señalar (1 vez)</option>
+                  <option value="gesture:wave">👋 Gesto: Saludar (1 vez)</option>
+                  <option value="gesture:shrug">🤷 Gesto: Encogerse (1 vez)</option>
+                  <option value="gesture:no">🙅 Gesto: Negar (1 vez)</option>
+                  <option value="gesture:clap">👏 Gesto: Aplaudir (1 vez)</option>
+                  <option value="gesture:watch">⌚ Gesto: Mirar reloj (1 vez)</option>
+                </select>
+              </label>
+              <label class="inline-label" id="waypointEventSeatRow" style="display:none;">Asiento
+                <select id="waypointEventSeat" class="tl-input" style="flex:1;"></select>
+              </label>
+              <label class="inline-label">Espera <input type="number" id="waypointEventWait" class="tl-input" min="0" step="0.5" value="0" style="width:52px;" /> s</label>
+              <div class="btn-grid" style="margin-top:4px;">
+                <button class="blender-btn primary" id="waypointEventApply">✔ Aplicar</button>
+                <button class="blender-btn danger" id="waypointEventRemove">Quitar evento</button>
+                <button class="blender-btn" id="waypointEventClose">Cerrar</button>
+              </div>
+            </div>
+
 
             <div id="catalogPanel" style="display:none;">
               <div class="target-category-label" style="margin-top:8px;">➕ AGREGAR OBJETO</div>
@@ -688,6 +743,7 @@
               <button class="action-btn" data-action="talk">🗣️ Hablando</button>
               <button class="action-btn" data-action="sit_typing">💻 S. Tecleando</button>
               <button class="action-btn" data-action="sit">🪑 Sentado</button>
+              <button class="action-btn" data-action="sit_talk">🗣️🪑 Hablando sentado</button>
               <button class="action-btn" data-action="hold">📦 Llevar objeto</button>
               <button class="action-btn active" data-action="idle">🧍 De pie</button>
               <button class="action-btn" data-action="type_standing">⌨️ Tecleando de pie</button>
@@ -776,62 +832,33 @@
           </div>
         </div>
 
-        <!-- Section: Cinemática (Recorrido Animado) -->
+        <!-- Section: Cámara (ex Cinemática: tomas de la escena) -->
         <div class="panel-section" id="section-cinematic">
           <div class="section-header">
-            <span>Cinemática (Recorrido)</span>
+            <span>🎥 Cámara (Tomas)</span>
             <span class="arrow">▼</span>
           </div>
           <div class="section-content">
-            <p class="cinema-hint" id="cinemaHint">Activá la cinemática de un personaje para grabar su recorrido; con una toma seleccionada, 1P/3P definen quién protagoniza ese corte.</p>
+            <p class="cinema-hint" id="cinemaHint">Elegí personaje y vista de cámara; la cámara queda fija para esa toma al guardar con el 💾 del bloque.</p>
 
-            <div class="cinema-chars-label">Recorridos y cámara por personaje</div>
-            <div class="cinema-chars" id="cinemaCharList"></div>
-
-            <div id="cinemaEditControls" style="display:none; flex-direction:column; gap:6px; margin-top:6px;">
-              <div class="btn-grid">
-                <button class="blender-btn primary" id="btnCinemaReverse">⟲ Invertir</button>
-              </div>
-              <label class="inline-label">Velocidad <input type="range" id="cinemaSpeed" min="0.5" max="6" step="0.1" value="2" style="flex:1; accent-color: var(--accent-primary);" /> <span id="cinemaSpeedVal">2.0</span> m/s</label>
-              <label class="inline-label"><input type="checkbox" id="cinemaLoop" checked /> Repetir en bucle</label>
-              <p class="cinema-hint" style="margin-top:2px;">Doble click en un punto del recorrido para editar su evento (acción + espera).</p>
-            </div>
-
-            <div id="waypointEventPanel" class="waypoint-event-panel" style="display:none;">
-              <div class="camera-view-label">📌 Evento del punto <span id="waypointEventTitle"></span></div>
-              <label class="inline-label">Acción al llegar
-                <select id="waypointEventAction" class="tl-input">
-                  <option value="">— sin cambio —</option>
-                  <option value="idle">Idle</option>
-                  <option value="talk">Hablar</option>
-                  <option value="sit">Sentarse (en el lugar)</option>
-                  <option value="sit_at">🪑 Sentarse en una silla…</option>
-                  <option value="sit_typing">S. Tecleando (sentado)</option>
-                  <option value="type_standing">Tecleando de pie</option>
-                  <option value="lay">Acostarse</option>
-                  <option value="walk">Caminar</option>
-                  <option value="run">Correr</option>
-                  <option value="wave">Saludar</option>
-                  <option value="clap">Aplaudir</option>
-                  <option value="point">Señalar</option>
-                  <option value="hold">Llevar objeto</option>
-                  <option value="gesture:point">👉 Gesto: Señalar (1 vez)</option>
-                  <option value="gesture:wave">👋 Gesto: Saludar (1 vez)</option>
-                  <option value="gesture:shrug">🤷 Gesto: Encogerse (1 vez)</option>
-                  <option value="gesture:no">🙅 Gesto: Negar (1 vez)</option>
-                  <option value="gesture:clap">👏 Gesto: Aplaudir (1 vez)</option>
-                  <option value="gesture:watch">⌚ Gesto: Mirar reloj (1 vez)</option>
+            <div class="camera-view-block">
+              <div class="camera-view-label">🎥 Cámara de la toma</div>
+              <label class="inline-label">Quién
+                <select id="shotCamSubject" class="tl-input" style="flex:1;"></select>
+              </label>
+              <label class="inline-label">Vista
+                <select id="shotCamView" class="tl-input" style="flex:1;">
+                  <option value="free" selected>Cámara libre</option>
+                  <option value="1p">1P</option>
+                  <option value="3p">3P</option>
+                  <option value="front">Frente</option>
+                  <option value="profile">Perfil</option>
                 </select>
               </label>
-              <label class="inline-label" id="waypointEventSeatRow" style="display:none;">Asiento
-                <select id="waypointEventSeat" class="tl-input" style="flex:1;"></select>
-              </label>
-              <label class="inline-label">Espera <input type="number" id="waypointEventWait" class="tl-input" min="0" step="0.5" value="0" style="width:52px;" /> s</label>
               <div class="btn-grid" style="margin-top:4px;">
-                <button class="blender-btn primary" id="waypointEventApply">✔ Aplicar</button>
-                <button class="blender-btn danger" id="waypointEventRemove">Quitar evento</button>
-                <button class="blender-btn" id="waypointEventClose">Cerrar</button>
+                <button class="blender-btn" id="btnShotCamView">👁 Ver</button>
               </div>
+              <p class="cinema-hint" style="margin-top:4px;">Elegí el personaje y la vista, luego “Ver” para saltar a ese encuadre. La cámara libre se queda donde la dejes y se guarda con el 💾 del bloque.</p>
             </div>
           </div>
         </div>
@@ -917,6 +944,8 @@
     </div>
 
     <!-- 2b. Secuenciador de escenas: línea de tiempo de tomas -->
+    <!-- Handle para redimensionar el alto del panel (borde superior) -->
+    <div id="tlResizeHandle" title="Arrastrá para cambiar el alto del panel de la línea de tiempo"></div>
     <section id="scene-timeline">
       <div class="tl-toolbar">
         <button class="blender-btn" id="btnBack10" title="Retroceder 10 segundos">⏪</button>
@@ -935,8 +964,14 @@
       </div>
       <div class="tl-body">
         <div id="timelineRuler" class="tl-ruler"></div>
+        <div id="charLanes" class="tl-charlanes" title="Pistas por personaje: acciones, caminos y su acción de toda la escena">
+          <div class="tl-lane-name" style="pointer-events:auto;">
+            🧍 PERSONAJES
+            <button class="tl-lane-add" id="btnAddCharBlock" title="Nuevo bloque de acciones en el cabezal">＋</button>
+          </div>
+        </div>
         <div id="timelineTrack" class="tl-track">
-          <div class="tl-lane-name">🎬 CINEMÁTICA <button class="tl-lane-add" id="btnAddShot" title="Nueva toma en el cabezal (Vista Libre)">＋</button></div>
+          <div class="tl-lane-name">🎥 CÁMARA <button class="tl-lane-add" id="btnAddShot" title="Nueva toma en el cabezal (Vista Libre)">＋</button></div>
         </div>
         <div id="subtitleLane" class="tl-sub-lane" title="Subtítulos de la escena — click en un bloque para editarlo">
           <div class="tl-lane-name">💬 SUBTÍTULOS <button class="tl-lane-add" id="btnAddSub" title="Nuevo subtítulo en el cabezal">＋</button></div>
@@ -944,8 +979,10 @@
         <div id="quizLane" class="tl-sub-lane tl-quiz-lane" title="Carteles de pregunta (quiz) — click en un bloque para editarlo">
           <div class="tl-lane-name">📋 QUIZ <button class="tl-lane-add" id="btnAddQuiz" title="Nuevo cartel de pregunta en el cabezal">＋</button></div>
         </div>
-        <div id="tlPlayhead" class="tl-playhead" style="display:none;"><div class="tl-playhead-knob" title="Arrastrá para mover la cabeza de reproducción"></div></div>
       </div>
+      <!-- Barra roja de reproducción: POR ENCIMA de todas las pistas (fuera
+           del cuerpo con scroll, para que nunca quede oculta por una lane). -->
+      <div id="tlPlayhead" class="tl-playhead" style="display:none;"><div class="tl-playhead-knob" title="Arrastrá para mover la cabeza de reproducción"></div></div>
     </section>
 
     <!-- 3. Bottom Animation Timeline Bar (Video Recorder) -->

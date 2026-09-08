@@ -8,6 +8,7 @@ import { registerSelectable } from '../ui/selection.js';
 
 // Colisionadores AABB de las paredes (derivados de los grupos de pared)
 export const wallGroups = [];
+export function getWallGroups() { return wallGroups; }
 export function getWallColliders() {
   const out = [];
   wallGroups.forEach(g => {
@@ -356,16 +357,18 @@ export function createWindow(id, name, x, y, z, rotY, w, h, parent = officeGroup
     jamb.position.set(s * (w / 2 - t / 2), 0, 0);
     g.add(jamb);
   });
-  // Vidrio tintado oscuro: transparente pero con cuerpo, refleja el entorno
+  // Vidrio TINTADO pero bien transparente: se ve nítido lo de afuera, con un
+  // leve tinte azulado que le da cuerpo a la superficie (no es un agujero
+  // vacío, se percibe que hay vidrio).
   const glass = new THREE.Mesh(
     geo.plane(w - 2 * t, h - 2 * t),
     new THREE.MeshPhysicalMaterial({
-      color: 0x18242c,
+      color: 0x9fc6d6,
       transparent: true,
-      opacity: 0.55,
-      roughness: 0.06,
-      metalness: 0.35,
-      envMapIntensity: 1.4,
+      opacity: 0.16,
+      roughness: 0.04,
+      metalness: 0.0,
+      envMapIntensity: 0.6,
       depthWrite: false,
       side: THREE.DoubleSide
     })
@@ -457,5 +460,66 @@ export function addDoor(id, name, x, z, rotY = 0, width = 1.4, parent = officeGr
   doorGroups.push(g);
   pivot.rotation.y = DOOR_STATE_ANGLES['cerrado'];
   return g;
+}
+
+// ---------- IMÁN DE VENTANA A PARED ----------
+// Al arrastrar una ventana, si su centro queda a menos de WALL_SNAP_DIST de la
+// cara de una pared, la "prende" ahí: la centra en la pared (a lo largo), la
+// pega a la cara (sobresaliendo el marco a ambos lados) y alinea su rotación
+// a la perpendicular de la pared. Mientras NO esté pegada, actúa libre; si
+// estaba pegada y se aleja más de WALL_SNAP_RELEASE, se libera (histéresis).
+export const WALL_SNAP_DIST = 0.35;     // radio de captura (metros)
+export const WALL_SNAP_RELEASE = 0.6;   // radio de liberación (histéresis)
+
+export function wallSnap(windowObj, newPos) {
+  if (!windowObj || !windowObj.userData.windowData) return null;
+  // ¿Estaba pegada? Entonces usar el radio de liberación, sino el de captura.
+  const wasAttached = !!windowObj.userData._attachedWall;
+  const radius = wasAttached ? WALL_SNAP_RELEASE : WALL_SNAP_DIST;
+
+  let best = null;
+  wallGroups.forEach(w => {
+    if (!w.visible) return;
+    const wd = w.userData.wallData;
+    if (!wd) return;
+    // La ventana solo se pega a paredes del edificio/oficina (no a paneles de
+    // construcción en otra capa). Se ancla contra la cara más cercana.
+    const pos = w.position;
+    const swap = Math.abs(Math.sin(w.rotation.y)) > 0.5;
+    const len = swap ? wd.d : wd.w;      // largo de la pared (eje principal)
+    const thick = swap ? wd.w : wd.d;    // espesor
+    // Pared "a lo largo de X" si no swap (len en x), "a lo largo de Z" si swap
+    const alongAxis = swap ? 'z' : 'x';
+    const crossAxis = swap ? 'x' : 'z';
+    // Distancia del centro de la ventana al plano de la pared (centro de la
+    // línea), y a lo largo dentro del largo
+    const cross = crossAxis === 'x' ? newPos.x - pos.x : newPos.z - pos.z;
+    const along = alongAxis === 'x' ? newPos.x : newPos.z;
+    const wallAlong = alongAxis === 'x' ? pos.x : pos.z;
+    // Fuera del tramo de la pared → no pegar
+    if (Math.abs(along - wallAlong) > len / 2) return;
+    // Distancia a la cara (mitad del espesor + posición)
+    const dist = Math.abs(cross) - thick / 2;
+    if (dist <= radius && (best === null || dist < best.dist)) {
+      best = { w, wd, swap, alongAxis, crossAxis, thick, dist, wallAlong, sign: Math.sign(cross) || 1 };
+    }
+  });
+  if (!best) return { attached: false, pos: newPos };
+
+  const wall = best.w;
+  // Rotación: la ventana mira hacia fuera, perpendicular a la cara.
+  // Pared a lo largo de X → la cara mira ±z → ventana rot z; a lo largo de Z → cara ±x → rot x.
+  const faceRot = best.alongAxis === 'x'
+    ? (best.sign > 0 ? Math.PI / 2 : -Math.PI / 2)   // cara +z o -z
+    : (best.sign > 0 ? 0 : Math.PI);                   // cara +x o -x
+
+  const out = newPos.clone ? newPos.clone() : { x: newPos.x, y: newPos.y, z: newPos.z };
+  // Centrar a lo largo de la pared (la ventana queda donde la soltó el ratón
+  // en ese eje, pero se asegura dentro) y PEGAR a la cara.
+  const crossAxis = best.crossAxis;
+  const faceCoord = (crossAxis === 'x' ? wall.position.x : wall.position.z) + best.sign * (best.thick / 2);
+  out[crossAxis] = faceCoord + best.sign * 0.02;  // sobresale un poco del espesor
+  // Altura: mantener la que trae (el usuario la baja/sube con el eje Y)
+  return { attached: true, pos: out, rotY: faceRot, wall };
 }
 

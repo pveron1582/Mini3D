@@ -5,6 +5,7 @@
 // pero destina todo a constructionGroup. Lo que se edifica se guarda en el
 // JSON del proyecto (campo construction[]) y se recrea al abrir.
 import * as THREE from 'three';
+import * as geo from './office/geoCache.js';
 import { scene } from './core.js';
 import { store } from './state.js';
 import { registerSelectable, unregisterSelectable } from './ui/selection.js';
@@ -181,4 +182,83 @@ export function clearConstruction() {
     if (g.parent) g.parent.remove(g);
   });
   constructionItems.length = 0;
+}
+
+// ---------- ABERTURA DE VENTANA EN PARED SÓLIDA ----------
+// Al pegar una ventana contra una pared de construcción SÓLIDA (kind='solid'),
+// se abre un hueco real dividiendo el panel en cajas alrededor de la ventana.
+// Al pasar null (ventana retirada) se restaura la pared sólida.
+// Paredes axis-aligned (rotY ≈ 0 o ±π/2); las demás se omiten.
+export function setWallWindowHole(wallGroup, windowGroup) {
+  if (!wallGroup || !wallGroup.userData.wallData) return;
+  const wd = wallGroup.userData.wallData;
+  if (wd.kind !== 'solid') return;
+
+  clearWallHole(wallGroup);       // restaurar estado previo
+  if (!windowGroup) return;       // solo cerrar
+
+  const wn = windowGroup.userData.windowData;
+  const swap = Math.abs(Math.sin(wallGroup.rotation.y)) > 0.5;
+  // Largo de la pared (eje principal) y espesor (eje transversal)
+  const wL = swap ? wd.d : wd.w;
+  const wT = swap ? wd.w : wd.d;
+  const hH = wd.h / 2;
+
+  // Centro del hueco en LOCAL de la pared (grupo centrado, y = h/2 en mundo):
+  const along = swap
+    ? (windowGroup.position.z - wallGroup.position.z)
+    : (windowGroup.position.x - wallGroup.position.x);
+  const holeY = windowGroup.position.y - wallGroup.position.y;
+  const hw = wn.w / 2;   // medio ancho del hueco
+  const hh = wn.h / 2;   // medio alto del hueco
+
+  // La caja original se oculta; se añaden segmentos con el mismo material.
+  const mesh = wallGroup.userData.wallMesh;
+  mesh.visible = false;
+
+  const specs = [];
+  const halfLen = wL / 2;
+  // Franja superior/inferior (a todo el largo)
+  const topH = hH - (holeY + hh);
+  if (topH > 0.01) specs.push({ c: 0, y: (holeY + hh) + topH / 2, s: wL, sh: topH });
+  const botH = (holeY - hh) - (-hH);
+  if (botH > 0.01) specs.push({ c: 0, y: -hH + botH / 2, s: wL, sh: botH });
+  // Laterales (a la altura del hueco), a ambos lados del hueco
+  const sideS = halfLen - (Math.abs(along) + hw);   // ancho de cada lateral
+  if (sideS > 0.01) {
+    const gap = halfLen - sideS;                     // distancia del borde al inicio del hueco
+    const leftC = -halfLen + sideS / 2;              // tramo desde el extremo -L
+    const rightC = halfLen - sideS / 2;              // tramo desde el extremo +L
+    specs.push({ c: leftC, y: holeY, s: sideS, sh: hh * 2 });
+    specs.push({ c: rightC, y: holeY, s: sideS, sh: hh * 2 });
+  }
+
+  const made = [];
+  specs.forEach(sg => {
+    const seg = new THREE.Mesh(geo.box(swap ? wT : sg.s, sg.sh, swap ? sg.s : wT), mesh.material);
+    seg.castShadow = true;
+    seg.receiveShadow = true;
+    if (swap) seg.position.set(0, sg.y, sg.c);
+    else seg.position.set(sg.c, sg.y, 0);
+    wallGroup.add(seg);
+    made.push(seg);
+  });
+
+  wallGroup.userData._wallHoleSegments = made;
+  wallGroup.userData._wallMeshOrig = mesh;
+}
+
+// Quita los segmentos generados y restaura el box original de la pared.
+export function clearWallHoleFor(wallGroup) {
+  if (!wallGroup) return;
+  const segs = wallGroup.userData._wallHoleSegments;
+  if (segs) {
+    segs.forEach(s => {
+      if (s.parent) s.parent.remove(s);
+      if (s.geometry) s.geometry.dispose();
+    });
+  }
+  wallGroup.userData._wallHoleSegments = null;
+  const mesh = wallGroup.userData._wallMeshOrig || wallGroup.userData.wallMesh;
+  if (mesh) mesh.visible = true;
 }

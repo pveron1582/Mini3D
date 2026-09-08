@@ -28,8 +28,12 @@ export function showBoot(mode = 'home') {
   const card = modal.querySelector('.startup-card');
   if (card) card.classList.toggle('branding-bottom', mode === 'new');
   if (mode === 'new' && suName) {
-    suName.value = '';
+    // Nombre SUGERIDO escrito (no placeholder): "proyecto_nuevo" queda como
+    // texto real, SELECCIONADO — si querés otro nombre, escribí directo y lo
+    // reemplaza (o borrás con Backspace).
+    suName.value = 'proyecto_nuevo';
     suName.focus();
+    suName.select();
   }
   modal.style.display = 'flex';
 }

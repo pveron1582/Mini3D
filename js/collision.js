@@ -44,25 +44,44 @@ function isDynamic(entry) {
   return !(act.startsWith('sit') || act.startsWith('lay'));
 }
 
+// ==========================================
+// LEY DE SUELO SÓLIDO UNIVERSAL (mejoras_gemini.md, Paso 1)
+// ==========================================
+// Piso mínimo garantizado para cualquier entidad: su origen nunca queda por
+// debajo de su suelo (los pies apoyan, no se entierran).
+//   - Humano de pie: 0.17 (el rig pivotea en los tobillos; los pies llegan
+//     a -0.17 del origen local).
+//   - Perro: 0.05 · Gato: 0.02 (patas más cortas).
+//   - Sentado/acostado: puede bajar (su "piso" es el asiento/la cama, no el
+//     suelo). Se devuelve 0 — quien lo sienta usa la fórmula seatY - 0.48
+//     con el ancla de su silla.
+//   - Muebles/objetos: 0 (su base modela en su pivote).
+//   - Paredes: la mitad de su altura (apoyan de pie).
+export function getMinGroundY(entry) {
+  if (!entry || !entry.group) return 0;
+  const wd = entry.group.userData.wallData;
+  if (wd) return (wd.h * entry.group.scale.y) / 2;
+  if (entry.type === 'human' || entry.type === 'pet') {
+    const act = entry.rig ? (entry.rig.currentAction || '') : '';
+    const seated = act.startsWith('sit') || act.startsWith('lay');
+    if (seated) return 0;
+    return (entry.rig && entry.rig.groundY) || 0;
+  }
+  return 0;
+}
+
 export function resolveCollisions() {
   const entries = Array.from(interactiveRegistry.values());
 
   // Ley de física del piso: y = 0 es el límite absoluto para TODO objeto,
   // sin importar cómo se haya movido (gizmo, sliders, arrastre, reproducción).
-  // Los personajes tienen su propio mínimo (rig.groundY): su origen queda por
-  // encima de los pies, y bajarlos de ese mínimo los enterraría en el piso.
+  // Los personajes tienen su propio mínimo (getMinGroundY): su origen queda
+  // por encima de los pies, y bajarlos de ese mínimo los enterraría en el piso.
   // Las paredes apoyan en el piso: su mínimo es la mitad de su altura.
   for (let i = 0; i < entries.length; i++) {
     const e = entries[i];
     if (!e.group) continue;
-    const wd = e.group.userData.wallData;
-    // Sentados/acostados pueden bajar (su "piso" es el asiento/cama), para no
-    // flotar sobre la silla (el asiento está a y≈0.48).
-    const act = e.rig ? (e.rig.currentAction || '') : '';
-    const seated = act.startsWith('sit') || act === 'lay';
-    const minY = e.rig && e.rig.groundY && !seated ? e.rig.groundY
-      : wd ? (wd.h * e.group.scale.y) / 2
-      : 0;
+    const minY = getMinGroundY(e);
     if (e.group.position.y < minY) e.group.position.y = minY;
   }
 

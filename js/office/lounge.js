@@ -317,18 +317,23 @@ export function createExecChair(id, name, x, z, rotY = 0) {
     const a = (i / 5) * Math.PI * 2;
     const px = Math.cos(a) * 0.3, pz = Math.sin(a) * 0.3;
     const leg = new THREE.Mesh(geo.box(0.04, 0.03, 0.34), goldMat);
-    leg.position.set(px * 0.5, 0.035, pz * 0.5);
+    // Pata a la altura del CENTRO de la rueda: la rueda (radio 0.055) apoya
+    // en el piso con su borde inferior justo en y=0 (antes se hundía).
+    leg.position.set(px * 0.5, 0.055, pz * 0.5);
     leg.rotation.y = -a;
     g.add(leg);
     const wheel = new THREE.Mesh(geo.torus(0.04, 0.015, 6, 12), new THREE.MeshStandardMaterial({ color: 0x0e1013, roughness: 0.8 }));
     wheel.rotation.y = Math.PI / 2;
-    wheel.position.set(px, 0.035, pz);
+    wheel.position.set(px, 0.055, pz);
     g.add(wheel);
   }
   officeGroup.add(g);
   registerSelectable(id, name, g, 'furniture');
   registerAnchor('seat_' + id, g);
-  g.userData.seatY = 0.54;  // asiento de la silla de gerencia (ecSeat en 0.54)
+  // Asiento REAL: tope del almohadón de cuero (ecSeat en 0.54 + cojín de 0.06
+  // centrado en 0.62 → superficie superior en 0.65). El personaje se posa con
+  // Y = seatY - 0.48 = 0.17, muslos exactamente sobre el almohadón.
+  g.userData.seatY = 0.65;
   return g;
 }
 
@@ -352,7 +357,8 @@ export function createGuestChair(id, name, x, z, rotY = 0) {
   officeGroup.add(g);
   registerSelectable(id, name, g, 'furniture');
   registerAnchor('seat_' + id, g);
-  g.userData.seatY = 0.5;  // asiento de la silla de invitado (gcSeat en 0.5)
+  // Asiento REAL: tope de la paleta (gcSeat centro 0.5, alto 0.08 → 0.54).
+  g.userData.seatY = 0.54;
   return g;
 }
 
@@ -390,10 +396,11 @@ export function createChesterfield(id, name, x, z, rotY = 0) {
   });
   officeGroup.add(g);
   registerSelectable(id, name, g, 'furniture');
-  // Chesterfield de 2 m: 2 lugares, asiento a la altura del cojín (0.47).
+  // Chesterfield de 2 m: 2 lugares, asiento REAL = tope del cojín
+  // (centro 0.47 + alto 0.12/2 → 0.53).
   registerAnchor('seat_' + id, g);
   setSeatSpots(g, [{ dx: -0.5, dz: 0 }, { dx: 0.5, dz: 0 }]);
-  g.userData.seatY = 0.47;
+  g.userData.seatY = 0.53;
   return g;
 }
 
@@ -587,17 +594,17 @@ createVendingMachine('vendingMachine', '🍫 Máquina de Golosinas', 14.4, 5.8, 
 createFridge('fridge', '🧊 Heladera', 4.85, 7.1, 0);
 createWaterDispenser('dispenser', 'Dispenser de Agua', 4.85, 5.8, 0);
 createKitchenCounter('kitchenCounter', '🍽️ Mesada de Cocina', 4.85, 9.3, 0);
-createLunchTable('lunchTable', '🍽️ Mesa de Comedores', 8.5, 7.5, 0);
+createLunchTable('lunchTable', '🍽️ Mesa de Comedores', 10.8, 8.5, 0);
 
-// 6 sillas del comedor alrededor de la mesa (8.5, 7.5). El respaldo queda en
-// local +z, así que la silla "mira" hacia -z. Las del norte (z=6.4) miran al
-// sur (hacia la mesa, +z) => rot 180°; las del sur (z=8.6) miran al norte (-z) => rot 0.
-createChair('lunchChair1', 'Silla Comedor 1', 7.5, 6.4, Math.PI);
-createChair('lunchChair2', 'Silla Comedor 2', 8.5, 6.4, Math.PI);
-createChair('lunchChair3', 'Silla Comedor 3', 9.5, 6.4, Math.PI);
-createChair('lunchChair4', 'Silla Comedor 4', 7.5, 8.6, 0);
-createChair('lunchChair5', 'Silla Comedor 5', 8.5, 8.6, 0);
-createChair('lunchChair6', 'Silla Comedor 6', 9.5, 8.6, 0);
+// 6 sillas del comedor alrededor de la mesa (10.8, 8.5). El respaldo queda en
+// local +z, así que la silla "mira" hacia -z. Las del norte (z=7.4) miran al
+// sur (hacia la mesa, +z) => rot 180°; las del sur (z=9.6) miran al norte (-z) => rot 0.
+createChair('lunchChair1', 'Silla Comedor 1', 9.8, 7.4, Math.PI);
+createChair('lunchChair2', 'Silla Comedor 2', 10.8, 7.4, Math.PI);
+createChair('lunchChair3', 'Silla Comedor 3', 11.8, 7.4, Math.PI);
+createChair('lunchChair4', 'Silla Comedor 4', 9.8, 9.6, 0);
+createChair('lunchChair5', 'Silla Comedor 5', 10.8, 9.6, 0);
+createChair('lunchChair6', 'Silla Comedor 6', 11.8, 9.6, 0);
 
 registerCatalogEntry({ id: 'kitchenCounter', label: '🍽️ Mesada de Cocina', cat: '🍽️ Cocina', spawn: (id, name, x, z, rotY) => createKitchenCounter(id, name, x, z, rotY) });
 registerCatalogEntry({ id: 'fridge', label: '🧊 Heladera', cat: '🍽️ Cocina', spawn: (id, name, x, z, rotY) => createFridge(id, name, x, z, rotY) });

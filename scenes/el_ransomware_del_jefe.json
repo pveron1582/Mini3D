@@ -5,7 +5,7 @@
   "description": "El Ransomware del Jefe (44s). Alex trabaja en la sala de sistemas; Elena está en la máquina de golosinas; Carlos (jefe) teclea en su oficina y llama a Alex, que va y ve un ransomware en el monitor. Perro y gato caminan en recorridos corregidos, mostrados con cámaras fijas. Cierra con el cartel de preguntas (quiz) igual que la primera cinemática.",
   "objects": {
     "human1": { "pos": [-11.0, 0, -6.0], "rotY": 1.57, "action": "idle" },
-    "human2": { "pos": [-9.0, 0, 9.2], "rotY": 3.14, "action": "sit_typing" },
+    "human2": { "pos": [-9.0, 0.17, 9.6], "rotY": 3.14, "action": "sit_typing" },
     "human3": { "pos": [-13.8, 0, 3.0], "rotY": -1.57, "action": "idle" },
     "dog": { "pos": [-3.2, 0, 5.4], "rotY": 1.57, "action": "idle" },
     "cat": { "pos": [7.5, 0, -5.5], "rotY": 3.14, "action": "idle" }

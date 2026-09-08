@@ -30,6 +30,7 @@ function makeCtx() {
 }
 function makeElement() {
   const el = makeCanvas();
+  el.dataset = {};
   el.innerHTML = ''; el.textContent = ''; el.value = ''; el.disabled = false;
   el.setAttribute = noop; el.getAttribute = () => null;
   el.appendChild = noop; el.removeChild = noop; el.click = noop; el.focus = noop;
@@ -275,6 +276,22 @@ gestoRig.setAction('idle');
 gestoRig.run(0.1);
 assert(Math.abs(gestoRig.parts.h_mouth.scale.y - 1) < 0.02, 'lip-sync: fuera de talk la boca vuelve a la forma normal');
 
+// --- sit_talk: hablando SENTADO (el jefe no se para de la silla) ---
+// La pose mantiene las piernas de sit y agrega gesticulación + lip-sync.
+gestoRig.setAction('sit_talk');
+gestoRig.run(0.1);
+const sitTalkOpen = gestoRig.parts.h_mouth.scale.y;
+gestoRig.run(0.7);
+const sitTalkClosed = gestoRig.parts.h_mouth.scale.y;
+assert(sitTalkOpen > 1.6, 'sit_talk: lip-sync activo (boca se abre sentado)');
+assert(Math.abs(sitTalkClosed - sitTalkOpen) > 1, 'sit_talk: la boca varía su apertura');
+// Las piernas quedan en pose de sentado (muslos horizontales), no de pie
+assert(Math.abs(gestoRig.parts.h_legL.rotation.x - (-Math.PI / 2)) < 0.01, 'sit_talk: piernas apoyadas como sit (muslos horizontales)');
+// El torso queda a altura de asiento, no de pie: no se "para" al hablar
+assert(gestoRig.parts.h_torso.position.y < 0.95, 'sit_talk: torso a altura de silla (no se para)');
+gestoRig.setAction('idle');
+gestoRig.run(0.1);
+
 // --- escena: evento SIN espera mantiene su acción (lip-sync en marcha) ---
 // El preview de la timeline (getPreviewPath) antes perdía acciones de eventos
 // con wait:0 (ej. "talk" al pasar): el segmento move siguiente las pisaba.
@@ -291,6 +308,31 @@ assert(gestoRig.currentAction === 'talk', 'escena: evento sin espera mantiene su
 evaluateAllPathsAt(0.5); // antes del evento: caminando
 assert(gestoRig.currentAction === 'walk' || gestoRig.currentAction === 'run', 'escena: antes del evento el personaje camina/corre');
 cinemaPaths.delete('gestoTestChar');
+
+// --- pista 🧍 por personaje: acción de TODA la escena (fullRange) ---
+// Un personaje con acción base la mantiene durante toda la línea, y un
+// bloque puntual la pisa solo durante su tramo (después vuelve a la base).
+// (setCharBlocks(blocks, full) es la API de applyProject: setea ambos juntos.)
+const { charActionsAt, setCharBlocks, setCharFullAction } = await import(pathToFileURL('./js/cinema/charTrack.js'));
+setCharBlocks([], {});
+setCharFullAction('gestoTestChar', 'sit_typing');
+let st = charActionsAt(0).get('gestoTestChar');
+assert(st && st.action === 'sit_typing', 'fullRange: aplica desde t=0');
+st = charActionsAt(999).get('gestoTestChar');
+assert(st && st.action === 'sit_typing', 'fullRange: aplica hasta el fin de la escena');
+// Un bloque de tramo pisa la base SOLO durante su tramo. Con HABLAR (talk):
+// expira al terminar el bloque y vuelve a la base.
+setCharBlocks([
+  { id: 'cbX', start: 5, duration: 2, actions: { gestoTestChar: { action: 'talk' } } }
+], { gestoTestChar: { action: 'sit_typing' } });
+st = charActionsAt(6).get('gestoTestChar');
+assert(st && st.action === 'talk', 'bloque pisa la acción base durante su tramo');
+st = charActionsAt(8).get('gestoTestChar');
+assert(st && st.action === 'sit_typing', 'tras el bloque de talk vuelve a la acción base (hablar expira)');
+st = charActionsAt(4).get('gestoTestChar');
+assert(st && st.action === 'sit_typing', 'antes del bloque: acción base');
+// Limpieza para no contaminar el resto de la suite
+setCharBlocks([], {});
 
 // --- convención de orientación (blindaje anti "dados vuelta") ---
 const { rotYToLookAt } = await import(pathToFileURL('./js/characters/characters.js'));
@@ -353,21 +395,24 @@ const withSit = serializeProject();
 const sitEv = withSit.paths['sitTestChar'].events['1'];
 assert(!!sitEv && sitEv.action === 'sit_at' && sitEv.sitAt === 'chair1', 'evento sit_at serializa la silla elegida');
 
-	// --- sentarse: altura del asiento por tipo de silla (no todo 0.48) ---
-	const chairSeat = anchorSeats('seat_chair1')[0];
-const execSeat = anchorSeats('seat_execChair')[0];
-const guestSeat = anchorSeats('seat_guestChair')[0];
-const sofaSeat = anchorSeats('seat_sofa1')[0];
-const chestSeat = anchorSeats('seat_bossSofa1')[0];
-assert(chairSeat && Math.abs(chairSeat.seatY - 0.48) < 0.02, 'seatY silla comedor ≈ 0.48');
-assert(execSeat && Math.abs(execSeat.seatY - 0.54) < 0.02, 'seatY silla gerencia ≈ 0.54');
-assert(guestSeat && Math.abs(guestSeat.seatY - 0.50) < 0.02, 'seatY invitado ≈ 0.50');
-assert(sofaSeat && Math.abs(sofaSeat.seatY - 0.44) < 0.02, 'seatY sillón verde ≈ 0.44');
-assert(chestSeat && Math.abs(chestSeat.seatY - 0.47) < 0.02, 'seatY chesterfield ≈ 0.47');
-// El descenso usa la altura real (0.54) y NO el 0.48 fijo
-const sitTest2 = addHumanCharacter('sitTest2', 'Sit Test 2', 0, 0, 0, {});
-sitAtAnchor(sitTest2, 'seat_execChair', { instant: true });
-assert(Math.abs(sitTest2.root.position.y - (0.54 - 0.48)) < 0.02, 'sentado en gerencia usa la altura correcta');
+ 	// --- sentarse: altura del asiento por tipo de silla (mejoras_gemini.md) ---
+ 	// seatY = superficie REAL de apoyo (tope del cojín/almohadón), no el plano
+ 	// del asiento: así los muslos (a +0.48 del origen) apoyan exacto arriba.
+ 	const chairSeat = anchorSeats('seat_chair1')[0];
+ const execSeat = anchorSeats('seat_execChair')[0];
+ const guestSeat = anchorSeats('seat_guestChair')[0];
+ const sofaSeat = anchorSeats('seat_sofa1')[0];
+ const chestSeat = anchorSeats('seat_bossSofa1')[0];
+ assert(chairSeat && Math.abs(chairSeat.seatY - 0.52) < 0.02, 'seatY silla comedor ≈ 0.52 (tope del asiento)');
+ assert(execSeat && Math.abs(execSeat.seatY - 0.65) < 0.02, 'seatY silla gerencia ≈ 0.65 (tope del almohadón)');
+ assert(guestSeat && Math.abs(guestSeat.seatY - 0.54) < 0.02, 'seatY invitado ≈ 0.54');
+ assert(sofaSeat && Math.abs(sofaSeat.seatY - 0.49) < 0.02, 'seatY sillón verde ≈ 0.49 (tope del cojín)');
+ assert(chestSeat && Math.abs(chestSeat.seatY - 0.53) < 0.02, 'seatY chesterfield ≈ 0.53 (tope del cojín)');
+ // El descenso usa la fórmula física seatY - 0.48: en gerencia, 0.65 - 0.48
+ // = 0.17 → muslos exactamente sobre el almohadón de cuero.
+ const sitTest2 = addHumanCharacter('sitTest2', 'Sit Test 2', 0, 0, 0, {});
+ sitAtAnchor(sitTest2, 'seat_execChair', { instant: true });
+ assert(Math.abs(sitTest2.root.position.y - (0.65 - 0.48)) < 0.02, 'sentado en gerencia: muslos sobre el almohadón (y = 0.17)');
 
 // --- personajes de pie junto a muebles: uso del frente del ancla ---
 const { standInFrontOf, standFacing } = await import(pathToFileURL('./js/characters/characters.js'));
@@ -410,6 +455,94 @@ shotDiscard.start = 9; shotDiscard.duration = 5; shotDiscard.camMode = 'top';
 Object.assign(shotDiscard, JSON.parse(JSON.stringify(snapDiscard)));
 assert(shotDiscard.start === 1 && shotDiscard.duration === 2 && shotDiscard.camMode === 'free',
   '✕ de la toma: el snapshot restaura el bloque modificado');
+
+// --- Escena estática / diálogo (reunion_prioridades_jefe) ---
+const fs = await import('fs');
+const reunionJson = JSON.parse(fs.readFileSync('scenes/reunion_prioridades_jefe.json', 'utf8'));
+applyProject(reunionJson);
+
+const boss = interactiveRegistry.get('human2');
+const alex = interactiveRegistry.get('human1');
+const elena = interactiveRegistry.get('human3');
+
+// En t = 3.9s (el timestamp de la captura del usuario):
+evaluateAllPathsAt(3.9);
+assert(Math.abs(boss.group.position.x - (-9.0)) < 0.05, 'jefe en x=-9.0 en t=3.9s');
+// Ley de suelo sólido (mejoras_gemini.md): sentado en la silla de gerencia
+// el jefe queda a Y = seatY - 0.48 = 0.65 - 0.48 = 0.17 — muslos exactamente
+// sobre el almohadón de cuero (antes: 0.06, hundido 11 cm en el cojín).
+assert(Math.abs(boss.group.position.y - 0.17) < 0.02, 'jefe sobre el almohadón (y = 0.17, no hundido)');
+assert(Math.abs(boss.group.position.z - 9.6) < 0.05, 'jefe en z=9.6 en t=3.9s');
+assert(Math.abs(boss.group.rotation.y - Math.PI) < 0.05, 'jefe mira al NORTE (PI) hacia el escritorio, no al oeste');
+assert(boss.rig.currentAction === 'sit', 'jefe en pose sit en t=3.9s');
+
+// Alex y Elena en t = 3.9s
+assert(Math.abs(alex.group.rotation.y - (-0.28)) < 0.05, 'Alex mira hacia el jefe');
+assert(Math.abs(elena.group.rotation.y - 0.28) < 0.05, 'Elena mira hacia el jefe');
+
+// En t = 6.0s el jefe habla SENTADO (sit_talk): boca activa y sin pararse
+evaluateAllPathsAt(6.0);
+boss.rig.run(0.1);   // un frame de animación: la boca ya abierta en ese t
+assert(boss.rig.currentAction === 'sit_talk', 'jefe hablando sentado (sit_talk) en t=6.0s');
+assert(Math.abs(boss.group.position.y - 0.17) < 0.02, 'jefe sigue sobre el almohadón mientras habla (y = 0.17)');
+assert(boss.rig.parts.h_mouth.scale.y > 1.0, 'lip-sync del jefe activo hablando sentado');
+
+// Turnos de palabra con lanes continuas (sin huecos): cada personaje tiene
+// su acción visible TODO el tiempo. Alex habla 9.4→15.8 y 28.6→32.4; Elena
+// 16.2→22.4 y 32.7→36.2; el jefe alterna sit/sit_talk en cada parlamento.
+evaluateAllPathsAt(12.0);
+assert(alex.rig.currentAction === 'talk', 'Alex habla en su turno (t=12, bloque 9.4→15.8)');
+assert(elena.rig.currentAction === 'idle', 'Elena aún no habla en t=12 (espera su turno, de pie)');
+assert(boss.rig.currentAction === 'sit', 'jefe sentado mientras Alex habla');
+evaluateAllPathsAt(18.0);
+assert(alex.rig.currentAction === 'idle', 'Alex terminó su parlamento: de pie (t=18)');
+assert(elena.rig.currentAction === 'talk', 'Elena habla en su turno (t=18, bloque 16.2→22.4)');
+assert(boss.rig.currentAction === 'sit', 'jefe sentado mientras Elena habla');
+evaluateAllPathsAt(34.0);
+assert(elena.rig.currentAction === 'talk', 'Elena habla en su 2º turno (t=34, bloque 32.7→36.2)');
+assert(alex.rig.currentAction === 'idle', 'Alex de pie mientras Elena habla (t=34)');
+assert(boss.rig.currentAction === 'sit', 'jefe sentado mientras Elena habla (t=34)');
+// Y en el turno del jefe, Alex también había vuelto a la base
+evaluateAllPathsAt(6.0);
+assert(alex.rig.currentAction === 'idle', 'Alex no habla en el turno del jefe (t=6)');
+
+// Ley del piso en la evaluación: los personajes de PIE no se hunden (su
+// origen queda en rig.groundY, pies apoyados) — antes el JSON con y=0 los
+// enterraba cada frame.
+evaluateAllPathsAt(0);
+assert(alex.group.position.y >= (alex.rig.groundY || 0) - 1e-6, 'Alex apoya los pies (y >= groundY, no hundido)');
+assert(elena.group.position.y >= (elena.rig.groundY || 0) - 1e-6, 'Elena apoya los pies (y >= groundY, no hundida)');
+
+// --- Imán de alineación entre pistas (tlSnap) ---
+// La toma de cámara que muestra a un personaje debe arrancar EXACTO cuando
+// él empieza a hablar: al arrastrar la toma cerca del borde del bloque de
+// talk, el imán los deja coincidiendo (0.1s de paso, radio ~8px).
+const { collectTimelineSnapTimes, snapTimeToRefs } = await import(pathToFileURL('./js/cinema/tlSnap.js'));
+const refsTalk = collectTimelineSnapTimes();
+assert(refsTalk.includes(9.4), 'imán: el inicio del talk de Alex (9.4) es una referencia');
+assert(refsTalk.includes(16.2), 'imán: el inicio del talk de Elena (16.2) es una referencia');
+// A 0.05s de la referencia (dentro del radio) → se pega exacto
+let snapped = snapTimeToRefs(9.35, 0.1, refsTalk);
+assert(Math.abs(snapped - 9.4) < 1e-6, 'imán: cerca del borde se alinea exacto');
+// Lejos (0.5s) no fuerza: solo redondea al paso 0.1
+snapped = snapTimeToRefs(9.9, 0.1, refsTalk);
+assert(Math.abs(snapped - 9.9) < 1e-6, 'imán: lejos de referencias no se fuerza (solo paso 0.1)');
+// La escena quedó sincronizada: la toma frontal de cada personaje arranca
+// con SU bloque de talk (caso "cámara enfoca → ya está hablando")
+const tShots = reunionJson.timeline.shots;
+const bossTalks = reunionJson.charBlocks.filter(b => b.actions.human2 && b.actions.human2.action === 'sit_talk');
+const alexTalks = reunionJson.charBlocks.filter(b => b.actions.human1 && b.actions.human1.action === 'talk');
+tShots.filter(s => s.camMode === 'front').forEach(s => {
+  const talks = s.subjectId === 'human2' ? bossTalks
+    : s.subjectId === 'human1' ? alexTalks
+    : s.subjectId === 'human3' ? reunionJson.charBlocks.filter(b => b.actions.human3 && b.actions.human3.action === 'talk')
+    : [];
+  const match = talks.find(b => Math.abs(b.start - s.start) < 1e-6);
+  assert(!!match || s.subjectId === 'dog',
+    `toma frontal de ${s.subjectId} arranca exacto con su bloque de habla (${s.start}s)`);
+});
+
+console.log('✓ escena de diálogo: jefe y empleados mantienen posición, orientación y pose sin derivar');
 
 console.log('\n✅ P7: todas las pruebas pasaron');
 process.exit(0);

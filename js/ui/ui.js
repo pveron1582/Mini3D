@@ -1,16 +1,17 @@
 import * as THREE from 'three';
 import { byId, qs, qsa } from '../dom.js';
 import { camera, canvas, controls } from '../core.js';
-import { store, cinema, view, playbackInstances, interactiveRegistry } from '../state.js';
+import { store, cinema, view, playbackInstances, interactiveRegistry, blockEdit } from '../state.js';
 import { getActiveEntry, getActiveObject, setActiveTarget, updateSelectionRing, clearActiveTarget } from './selection.js';
 import {
-  setCamView, cinemaDeactivate, startAllPlaybacks, stopAllPlaybacks, refreshCinemaUI
+  setCamView, cinemaDeactivate, refreshCinemaUI
 } from '../cinema/cinematics.js';
 import { setEnvironment } from '../environment.js';
 import { flyToTarget } from './viewport.js';
 import { startPickSeatMode } from './contextMenu.js';
 import { setStatus } from '../media/recorder.js';
 import { pushHistory } from '../undo.js';
+import { getMinGroundY } from '../collision.js';
 import { applyViewToSelectedShot, clearSubSelection as clearSubtitleSelection, clearSelection as clearShotSelection } from '../cinema/timeline.js';
 import { clearQuizSelection } from '../cinema/quizTrack.js';
 import { getWallTexture, wallTextureNames, setWallKind, addWall, setDoorState, addWindow, addDoor } from '../office/walls.js';
@@ -289,11 +290,10 @@ function applySlidersToTarget() {
   obj.scale.setScalar(sc);
   numScale.value = sc.toFixed(2);
 
-  // Límite de altura del piso (Y >= 0, o el piso propio del personaje)
+  // Ley de suelo sólido: Y nunca baja del mínimo de la entidad (getMinGroundY
+  // de collision.js — pies apoyados para personajes de pie).
   const entry = getActiveEntry();
-  const act = entry && entry.rig ? (entry.rig.currentAction || '') : '';
-  const seated = act.startsWith('sit') || act === 'lay';
-  const minY = entry && entry.rig && entry.rig.groundY && !seated ? entry.rig.groundY : 0;
+  const minY = getMinGroundY(entry);
   if (obj.position.y < minY) obj.position.y = minY;
 
   numX.value = obj.position.x.toFixed(2);
@@ -838,36 +838,12 @@ if (btnAddWall) {
 }
 
 // --- Botones del sistema de Cinemática ---
+// (La lista de recorridos, velocidad/bucle/invertir y reproducir-todas
+//  desaparecieron: cada personaje se maneja en su pista 🧍 de la línea de
+//  tiempo. Solo queda el cierre del editor de recorrido del personaje
+//  activo, que ahora abre/cierra con 🎬 en su lane.)
 byId('btnCinemaExit')?.addEventListener('click', () => {
   cinemaDeactivate();
-});
-
-byId('btnCinemaPlayAll')?.addEventListener('click', () => {
-  if (playbackInstances.size > 0) {
-    stopAllPlaybacks();
-    setStatus('Se detuvieron todas las cinemáticas.');
-  } else {
-    if (!startAllPlaybacks()) setStatus('No hay recorridos configurados todavía.');
-    else setStatus('Reproduciendo TODAS las cinemáticas configuradas...');
-  }
-});
-
-byId('btnCinemaReverse')?.addEventListener('click', () => {
-  cinema.reversed = !cinema.reversed;
-  const btn = byId('btnCinemaReverse');
-  if (btn) btn.classList.toggle('primary', cinema.reversed);
-  setStatus(cinema.reversed ? 'Sentido invertido (Final → Inicio).' : 'Sentido normal (Inicio → Final).');
-});
-
-const cinemaSpeedInput = byId('cinemaSpeed');
-const cinemaSpeedVal = byId('cinemaSpeedVal');
-cinemaSpeedInput?.addEventListener('input', () => {
-  cinema.speed = parseFloat(cinemaSpeedInput.value) || 2;
-  if (cinemaSpeedVal) cinemaSpeedVal.textContent = cinema.speed.toFixed(1);
-});
-
-byId('cinemaLoop')?.addEventListener('change', (e) => {
-  cinema.loop = e.target.checked;
 });
 
 // --- Vistas de cámara (1ª persona, 3ª, persecución, cine fijo) ---
@@ -888,7 +864,7 @@ qsa('.view-btn').forEach(btn => {
 // SELECTOR EDITAR: Edificio / Objetos / Personajes / Subtítulos / Cinemática
 // ==========================================
 const EDIT_MODES = ['edificio', 'objetos', 'personajes', 'subtitulos', 'cinematica'];
-const EDIT_LABELS = { edificio: 'Edificio', objetos: 'Objetos', personajes: 'Personajes', subtitulos: 'Subtítulos', cinematica: 'Cinemática' };
+const EDIT_LABELS = { edificio: 'Edificio', objetos: 'Objetos', personajes: 'Personajes', subtitulos: 'Subtítulos', cinematica: 'Cámara' };
 const EDIT_MENU_IDS = { edificio: 'mnuEditEdificio', objetos: 'mnuEditObjetos', personajes: 'mnuEditPersonajes', subtitulos: 'mnuEditSubtitulos', cinematica: 'mnuEditCinematica' };
 
 function applyEditMode() {
@@ -929,6 +905,13 @@ function applyEditMode() {
 
 export function setEditMode(mode) {
   if (!EDIT_MODES.includes(mode)) return;
+  // Bloqueo de edición: si hay un bloque de la línea de tiempo en edición
+  // (toma / subtítulo / quiz), no se puede cambiar de modo hasta guardarlo
+  // con 💾 o descartarlo con ✕. Solo se permite volver a ese mismo modo.
+  if (blockEdit.get() && mode !== store.editMode) {
+    setStatus(`Terminá de editar el bloque (💾 guardar o ✕ descartar) antes de cambiar de modo.`);
+    return;
+  }
   if (store.editMode !== mode) {
     // Al cambiar de editor se sueltan TODAS las selecciones: el objeto activo
     // y las selecciones de bloque (toma de cinemática / subtítulo), así cada
@@ -947,6 +930,18 @@ export function setEditMode(mode) {
   setStatus(`Modo Editar: ${EDIT_LABELS[mode]}`);
 }
 
+// Cambio automático de modo al seleccionar un bloque de la línea de tiempo:
+// la toma de cinemática salta a "Cinemática", y el subtítulo/cartel a
+// "Textos". No libera la selección del bloque (lo maneja el bloqueo).
+window.addEventListener('edit-mode-request', (e) => {
+  const mode = e.detail && e.detail.mode;
+  if (!mode || !EDIT_MODES.includes(mode)) return;
+  if (store.editMode === mode) return;   // ya está en el modo correcto
+  store.editMode = mode;
+  store.editObjects = (mode === 'objetos');
+  applyEditMode();
+});
+
 function cycleEditMode(dir) {
   const idx = EDIT_MODES.indexOf(store.editMode);
   const next = EDIT_MODES[(idx + dir + EDIT_MODES.length) % EDIT_MODES.length];
@@ -963,11 +958,31 @@ export function closeAllBarMenus(exceptId = null) {
   });
 }
 
+// HOVER entre menús: con un menú ya abierto, pasar el mouse por otro menú de
+// la barra lo abre sin click (comportamiento estándar de menús, igual que en
+// apps de escritorio). Solo mientras el puntero está sobre la barra.
+['menuArchivo', 'menuEditar', 'menuAyuda'].forEach(id => {
+  const el = byId(id);
+  el?.addEventListener('pointerenter', () => {
+    // Solo reacciona si ya hay OTRO menú abierto (no abre por solo hover)
+    const anyOpen = ['menuArchivo', 'menuEditar', 'menuAyuda'].some(
+      m => m !== id && byId(m)?.classList.contains('open')
+    );
+    if (anyOpen) {
+      closeAllBarMenus(id);
+      el.classList.add('open');
+    }
+  });
+});
+
 // Dropdown Editar
 const menuEditar = byId('menuEditar');
 const dropdownEditar = byId('menuEditarDropdown');
 menuEditar?.addEventListener('click', (e) => {
   e.stopPropagation();
+  // Click en una OPCIÓN del menú: no re-abrir el contenedor (la opción ya
+  // cerró el menú). Solo el click en la pestaña "Editar ▾" alterna.
+  if (e.target.closest('.menu-option')) return;
   const wasOpen = menuEditar.classList.contains('open');
   closeAllBarMenus();              // cierra Archivo/Ayuda si estaban abiertos
   menuEditar.classList.toggle('open', !wasOpen);

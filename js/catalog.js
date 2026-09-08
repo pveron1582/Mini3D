@@ -11,6 +11,7 @@ import {
 } from './office/furniture.js';
 import { pushHistory } from './undo.js';
 import { setStatus } from './media/recorder.js';
+import { clearWallHoleFor } from './construction.js';
 
 // ==========================================
 // CATÁLOGO DE PIEZAS
@@ -109,6 +110,12 @@ export function deleteActiveObject() {
   }
   entry.deleted = true;
   entry.group.visible = false;
+  // Si era una ventana pegada a una pared de construcción, cerrar su hueco
+  if (entry.type === 'window' && entry.group.userData._attachedWall) {
+    const wall = entry.group.userData._attachedWall;
+    if (wall.userData.conType === 'wall') clearWallHoleFor(wall);
+    entry.group.userData._attachedWall = null;
+  }
   if (store.activeTarget === entry.id) clearActiveTarget();
   pushHistory();
   setStatus(`${entry.name} eliminado (Ctrl+Z para deshacer).`);

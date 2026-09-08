@@ -12,6 +12,9 @@ import { store, recorderState } from '../state.js';
 const EXPORT_W = 1920;
 const EXPORT_H = 1080;
 const EXPORT_FPS = 60;
+// Proporción del video (16:9): la usa el viewport de edición para que el
+// canvas SIEMPRE tenga el mismo encuadre que el video exportado.
+export const EXPORT_ASPECT = EXPORT_W / EXPORT_H;
 
 let mediaRecorder = null;
 let recordedChunks = [];
@@ -50,6 +53,8 @@ function exitExportResolution() {
   camera.aspect = savedSize.x / savedSize.y;
   camera.updateProjectionMatrix();
   savedSize = null;
+  // El viewport recalcula su encuadre 16:9 (el canvas vuelve al letterbox)
+  window.dispatchEvent(new Event('recorder-exited'));
 }
 
 export function startRecording(durationOverride, fileName) {
