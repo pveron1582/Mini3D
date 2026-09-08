@@ -100,7 +100,7 @@ export let smoothMove = false;
 
 const MOVE_SPEEDS = {
   normal: { rotate: 1.0, pan: 2.2, fly: 0.07, wheel: 0.02 },
-  smooth: { rotate: 0.35, pan: 0.7, fly: 0.02, wheel: 0.006 }
+  smooth: { rotate: 0.2, pan: 0.4, fly: 0.012, wheel: 0.0035 }
 };
 
 export function setSmoothMove(on) {

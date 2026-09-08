@@ -2,6 +2,7 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-08] — Modo 🐢 Suave aún más lento (~1/5 de la velocidad normal)
 ## [2026-09-08] — Botón 🐢 Suave: movimiento de cámara preciso
 
 - Un solo interruptor junto a Frontal/Superior/Lateral (`smoothMoveBtn`):
