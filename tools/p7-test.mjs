@@ -443,7 +443,7 @@ assert(Math.abs(pxPerSec() - ((1280 - 116) / 40)) < 1e-9, 'escala única: cubre 
 timeline.duration = savedDuration;
 
 // --- Fase 3: resize por bordes + tiling (baldosas, no estirado) ---
-const { addConFloor, setConFloorSize, resizeConFloor, addConWall, retileConWall, clearConstruction } = await import(pathToFileURL('./js/construction.js'));
+const { addConFloor, setConFloorSize, resizeConFloor, addConWall, retileConWall, clearConstruction, syncConstruction } = await import(pathToFileURL('./js/construction.js'));
 const { getWallTexture } = await import(pathToFileURL('./js/office/walls.js'));
 const tFloor = addConFloor(0, 0, 6, 6, 'Losa de cemento');
 setConFloorSize(tFloor, 10, 4);
@@ -462,6 +462,33 @@ retileConWall(tWall);
 assert(Math.abs(tWall.userData.wallMesh.material.map.repeat.x - 12) < 1e-9, 'al agrandar se agregan baldosas (12)');
 const serCon = serializeProject().construction.find(c => c.id === tWall.userData.conId);
 assert(!!serCon && serCon.w === 8 && serCon.tex === 'Ladrillo', 'resize persiste (tamaño + textura)');
+
+// --- Fase 4: puertas y ventanas sobre paredes (huecos que se abren/cierran) ---
+const { addConDoor, addConWindow, attachOpeningToWall } = await import(pathToFileURL('./js/construction.js'));
+const { wallSnap } = await import(pathToFileURL('./js/office/walls.js'));
+const tW = addConWall(30, 30, 0, 6, 3, 0.15, 'solid', 'Cemento');
+const tD = addConDoor(30, 30.1, 0, 1.4);
+attachOpeningToWall(tD, tW);
+assert(tW.userData._wallHoleSegments && tW.userData._wallHoleSegments.length > 0, 'puerta pegada abre su hueco');
+assert(tW.userData.wallMesh.visible === false, 'puerta pegada oculta el panel original');
+assert(tD.userData._attachedWall === tW, 'puerta registra su pared');
+const serDoor = serializeProject().construction.find(c => c.id === tD.userData.conId);
+assert(!!serDoor && serDoor.wall === tW.userData.conId, 'puerta guarda su pared en el JSON');
+attachOpeningToWall(tD, null);
+assert(!tW.userData._wallHoleSegments && tW.userData.wallMesh.visible === true, 'al soltar se restaura la pared');
+const tWn = addConWindow(30, 30.1, 0, 2, 1.6);
+attachOpeningToWall(tWn, tW);
+assert(tW.userData._wallHoleSegments && tW.userData._wallHoleSegments.length > 0, 'ventana pegada abre su hueco');
+attachOpeningToWall(tWn, null);
+assert(!tW.userData._wallHoleSegments && tW.userData.wallMesh.visible === true, 'al soltar ventana se restaura (sin crash)');
+const snapD = wallSnap(tD, { x: 30, y: 0, z: 30.3 });
+assert(!!snapD && snapD.attached === true, 'puerta con imán a pared cercana');
+const snapFar = wallSnap(tD, { x: 30, y: 0, z: 35 });
+assert(!!snapFar && snapFar.attached === false, 'puerta lejos no se pega');
+attachOpeningToWall(tD, tW);
+syncConstruction(serializeProject().construction);
+const reWall = interactiveRegistry.get(tW.userData.conId);
+assert(reWall && reWall.group.userData._wallHoleSegments && reWall.group.userData._wallHoleSegments.length > 0, 'al abrir se restaura el hueco');
 clearConstruction();
 
 // --- convención de orientación (blindaje anti "dados vuelta") ---

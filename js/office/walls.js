@@ -462,19 +462,20 @@ export function addDoor(id, name, x, z, rotY = 0, width = 1.4, parent = officeGr
   return g;
 }
 
-// ---------- IMÁN DE VENTANA A PARED ----------
-// Al arrastrar una ventana, si su centro queda a menos de WALL_SNAP_DIST de la
-// cara de una pared, la "prende" ahí: la centra en la pared (a lo largo), la
-// pega a la cara (sobresaliendo el marco a ambos lados) y alinea su rotación
-// a la perpendicular de la pared. Mientras NO esté pegada, actúa libre; si
-// estaba pegada y se aleja más de WALL_SNAP_RELEASE, se libera (histéresis).
+// ---------- IMÁN DE ABERTURA A PARED (ventana o puerta) ----------
+// Al arrastrar una abertura, si su centro queda a menos de WALL_SNAP_DIST de
+// la cara de una pared, la "prende" ahí: la centra en la pared (a lo largo),
+// la pega a la cara (sobresaliendo el marco a ambos lados) y alinea su
+// rotación a la perpendicular de la pared. Mientras NO esté pegada, actúa
+// libre; si estaba pegada y se aleja más de WALL_SNAP_RELEASE, se libera
+// (histéresis). La puerta queda a y=0 (se arrastra en el piso).
 export const WALL_SNAP_DIST = 0.35;     // radio de captura (metros)
 export const WALL_SNAP_RELEASE = 0.6;   // radio de liberación (histéresis)
 
-export function wallSnap(windowObj, newPos) {
-  if (!windowObj || !windowObj.userData.windowData) return null;
+export function wallSnap(openingObj, newPos) {
+  if (!openingObj || (!openingObj.userData.windowData && !openingObj.userData.doorData)) return null;
   // ¿Estaba pegada? Entonces usar el radio de liberación, sino el de captura.
-  const wasAttached = !!windowObj.userData._attachedWall;
+  const wasAttached = !!openingObj.userData._attachedWall;
   const radius = wasAttached ? WALL_SNAP_RELEASE : WALL_SNAP_DIST;
 
   let best = null;

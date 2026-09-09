@@ -11,7 +11,7 @@ import {
 } from './office/furniture.js';
 import { pushHistory } from './undo.js';
 import { setStatus } from './media/recorder.js';
-import { clearWallHoleFor } from './construction.js';
+import { attachOpeningToWall } from './construction.js';
 
 // ==========================================
 // CATÁLOGO DE PIEZAS
@@ -111,11 +111,9 @@ export function deleteActiveObject() {
   }
   entry.deleted = true;
   entry.group.visible = false;
-  // Si era una ventana pegada a una pared de construcción, cerrar su hueco
-  if (entry.type === 'window' && entry.group.userData._attachedWall) {
-    const wall = entry.group.userData._attachedWall;
-    if (wall.userData.conType === 'wall') clearWallHoleFor(wall);
-    entry.group.userData._attachedWall = null;
+  // Si era una abertura pegada a una pared, cerrar su hueco y soltarla
+  if ((entry.type === 'window' || entry.type === 'door') && entry.group.userData._attachedWall) {
+    attachOpeningToWall(entry.group, null);
   }
   if (store.activeTarget === entry.id) clearActiveTarget();
   pushHistory();

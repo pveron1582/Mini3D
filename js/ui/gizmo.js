@@ -6,7 +6,7 @@ import { getActiveObject, getActiveEntry, setActiveTarget, updateSelectionRing, 
 import { syncSlidersFromTarget, refreshWallPanel } from './ui.js';
 import { pushHistory } from '../undo.js';
 import { getWallColliders, getWallGroups, wallSnap } from '../office/walls.js';
-import { setWallWindowHole, resizeConFloor, retileConWall } from '../construction.js';
+import { resizeConFloor, retileConWall, attachOpeningToWall } from '../construction.js';
 import { officeGroup } from '../office/group.js';
 import { entryRadius, resolveDropAfterDrag, getMinGroundY } from '../collision.js';
 import { multi, toggleInMulti, hasMulti, isInMulti, multiCount, clearMulti, beginGroupDrag, updateGroupDrag, endGroupDrag, beginMarquee, updateMarquee, endMarquee } from './multiselect.js';
@@ -383,22 +383,15 @@ function updateAirDrag(e) {
     newPos.y = obj.position.y;
   }
 
-  // IMÁN de ventana a pared: si es una ventana y hay pared cerca, la prende.
+  // IMÁN de abertura a pared (ventana o puerta): si hay pared cerca, la
+  // prende; el hueco se abre/cierra solo en paredes de construcción.
   const snapped = wallSnap(obj, newPos);
   if (snapped) {
     newPos.copy(snapped.pos);
     if (snapped.rotY !== undefined) obj.rotation.y = snapped.rotY;
-    // Gestionar la abertura en la pared de construcción: al pegar/soltar.
+    // Gestionar la abertura en la pared: al pegar/soltar.
     const newWall = snapped.attached ? snapped.wall : null;
-    if (obj.userData._attachedWall !== newWall) {
-      if (obj.userData._attachedWall && obj.userData._attachedWall.userData.conType === 'wall') {
-        setWallWindowHole(obj.userData._attachedWall, null);
-      }
-      if (newWall && newWall.userData.conType === 'wall') {
-        setWallWindowHole(newWall, obj);
-      }
-      obj.userData._attachedWall = newWall;
-    }
+    if (obj.userData._attachedWall !== newWall) attachOpeningToWall(obj, newWall);
   }
 
   applySnapXZ(newPos, obj);

@@ -14,9 +14,9 @@ import { pushHistory } from '../undo.js';
 import { getMinGroundY } from '../collision.js';
 import { applyViewToSelectedShot, clearSubSelection as clearSubtitleSelection, clearSelection as clearShotSelection } from '../cinema/timeline.js';
 import { clearQuizSelection } from '../cinema/quizTrack.js';
-import { getWallTexture, wallTextureNames, setWallKind, addWall, setDoorState, addWindow, addDoor } from '../office/walls.js';
+import { getWallTexture, wallTextureNames, setWallKind, addWall, setDoorState, addWindow, addDoor, wallSnap } from '../office/walls.js';
 import { floorTextureNames, getFloorTextureName, applyFloorTexture } from '../office/floor.js';
-import { addConFloor, addConWall, addConDoor, addConWindow, setConFloorTexture, updateConstructionVisibility, retileConWall, setConWallTexture } from '../construction.js';
+import { addConFloor, addConWall, addConDoor, addConWindow, setConFloorTexture, updateConstructionVisibility, retileConWall, setConWallTexture, attachOpeningToWall } from '../construction.js';
 import { onTargetSelected } from './selection.js';
 import { CATALOG, spawnCatalogItem, deleteActiveObject, duplicateActiveObject } from '../catalog.js';
 import { deleteMultiSelection, multiCount } from './multiselect.js';
@@ -526,6 +526,29 @@ byId('btnConAddWindow')?.addEventListener('click', () => {
   const [x, z] = constructionSpawnPos();
   const g = addConWindow(x, z);
   if (g) { populateOutliner(); setActiveTarget(g.userData.conId); pushHistory(); setStatus('Ventana añadida: movela con el gizmo para apoyarla en una pared.'); }
+});
+
+// Pega la puerta o ventana seleccionada a la pared más cercana (mismo imán
+// del arrastre): abre su hueco y la deja apoyada.
+byId('btnConSnapOpening')?.addEventListener('click', () => {
+  if (!store.editBuilding) { setStatus('Activá el Modo Construcción.'); return; }
+  const obj = getActiveObject();
+  if (!obj || (!obj.userData.windowData && !obj.userData.doorData)) {
+    setStatus('Seleccioná una puerta o ventana para pegarla.');
+    return;
+  }
+  const snapped = wallSnap(obj, obj.position);
+  if (!snapped || !snapped.attached) {
+    setStatus('Sin pared cerca: acercala a una pared y reintentá.');
+    return;
+  }
+  obj.position.copy(snapped.pos);
+  if (snapped.rotY !== undefined) obj.rotation.y = snapped.rotY;
+  attachOpeningToWall(obj, snapped.wall);
+  updateSelectionRing();
+  syncSlidersFromTarget();
+  pushHistory();
+  setStatus('Abertura pegada a la pared (hueco abierto).');
 });
 
 // ==========================================

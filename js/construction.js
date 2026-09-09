@@ -223,19 +223,26 @@ export function serializeConstruction() {
       return { ...base, w: round2(wd.w), h: round2(wd.h), d: round2(wd.d), kind: wd.kind, tex: tex || undefined };
     }
     if (t === 'door') {
-      return { ...base, width: round2(g.userData.doorData.w), state: g.userData.doorState };
+      return { ...base, width: round2(g.userData.doorData.w), state: g.userData.doorState, wall: wallRefOf(g) };
     }
     if (t === 'window') {
       const wnd = g.userData.windowData;
-      return { ...base, w: round2(wnd.w), h: round2(wnd.h) };
+      return { ...base, w: round2(wnd.w), h: round2(wnd.h), wall: wallRefOf(g) };
     }
     return base;
   });
 }
 
+// Pared a la que está pegada una abertura (por conId, o undefined si libre).
+function wallRefOf(g) {
+  const w = g.userData._attachedWall;
+  return (w && w.userData.conId) || undefined;
+}
+
 // Recrea la capa desde el snapshot del proyecto (al abrir / aplicar).
 export function syncConstruction(list = []) {
   clearConstruction();
+  const pendingWalls = []; // aberturas pegadas: se re-adhieren al final (pared ya creada)
   list.forEach(it => {
     let g = null;
     if (it.type === 'floor') g = addConFloor(it.pos[0], it.pos[2], it.w, it.d, it.tex, it.id, it.name);
@@ -247,6 +254,14 @@ export function syncConstruction(list = []) {
     g.rotation.y = it.rotY || 0;
     // Restaurar el estado de la hoja de la puerta (cerrado / entreabierto / abierto)
     if (it.type === 'door' && it.state) setDoorState(g, it.state);
+    if ((it.type === 'door' || it.type === 'window') && it.wall) {
+      pendingWalls.push({ g, wallId: it.wall });
+    }
+  });
+  // Re-pegar aberturas (reabre sus huecos con las posiciones ya cargadas)
+  pendingWalls.forEach(({ g, wallId }) => {
+    const wall = constructionItems.find(c => c.userData.conId === wallId);
+    if (wall) attachOpeningToWall(g, wall);
   });
   updateConstructionVisibility();
 }
@@ -264,34 +279,22 @@ export function clearConstruction() {
   constructionItems.length = 0;
 }
 
-// ---------- ABERTURA DE VENTANA EN PARED SÓLIDA ----------
-// Al pegar una ventana contra una pared de construcción SÓLIDA (kind='solid'),
-// se abre un hueco real dividiendo el panel en cajas alrededor de la ventana.
-// Al pasar null (ventana retirada) se restaura la pared sólida.
-// Paredes axis-aligned (rotY ≈ 0 o ±π/2); las demás se omiten.
-export function setWallWindowHole(wallGroup, windowGroup) {
-  if (!wallGroup || !wallGroup.userData.wallData) return;
+// ---------- ABERTURAS EN PARED SÓLIDA (ventanas y puertas) ----------
+// Al pegar una abertura contra una pared de construcción SÓLIDA se abre un
+// hueco real dividiendo el panel en cajas alrededor. Al retirarla se restaura
+// la pared sólida. Paredes axis-aligned (rotY ≈ 0 o ±π/2).
+function cutWallOpening(wallGroup, along, halfW, y0, y1) {
   const wd = wallGroup.userData.wallData;
-  if (wd.kind !== 'solid') return;
-
-  clearWallHole(wallGroup);       // restaurar estado previo
-  if (!windowGroup) return;       // solo cerrar
-
-  const wn = windowGroup.userData.windowData;
   const swap = Math.abs(Math.sin(wallGroup.rotation.y)) > 0.5;
-  // Largo de la pared (eje principal) y espesor (eje transversal)
   const wL = swap ? wd.d : wd.w;
   const wT = swap ? wd.w : wd.d;
   const hH = wd.h / 2;
 
-  // Centro del hueco en LOCAL de la pared (grupo centrado, y = h/2 en mundo):
-  const along = swap
-    ? (windowGroup.position.z - wallGroup.position.z)
-    : (windowGroup.position.x - wallGroup.position.x);
-  const holeY = windowGroup.position.y - wallGroup.position.y;
-  const hw = wn.w / 2;   // medio ancho del hueco
-  const hh = wn.h / 2;   // medio alto del hueco
-
+  clearWallHole(wallGroup);       // restaurar estado previo
+  // El hueco no puede salirse de la pared; sin lugar, queda sólida.
+  y0 = Math.max(y0, -hH);
+  y1 = Math.min(y1, hH);
+  if (y1 - y0 < 0.01 || halfW <= 0) return;
   // La caja original se oculta; se añaden segmentos con el mismo material.
   const mesh = wallGroup.userData.wallMesh;
   mesh.visible = false;
@@ -299,18 +302,17 @@ export function setWallWindowHole(wallGroup, windowGroup) {
   const specs = [];
   const halfLen = wL / 2;
   // Franja superior/inferior (a todo el largo)
-  const topH = hH - (holeY + hh);
-  if (topH > 0.01) specs.push({ c: 0, y: (holeY + hh) + topH / 2, s: wL, sh: topH });
-  const botH = (holeY - hh) - (-hH);
+  const topH = hH - y1;
+  if (topH > 0.01) specs.push({ c: 0, y: y1 + topH / 2, s: wL, sh: topH });
+  const botH = y0 - (-hH);
   if (botH > 0.01) specs.push({ c: 0, y: -hH + botH / 2, s: wL, sh: botH });
-  // Laterales (a la altura del hueco), a ambos lados del hueco
-  const sideS = halfLen - (Math.abs(along) + hw);   // ancho de cada lateral
+  // Laterales (entre y0 e y1), a ambos lados del hueco
+  const sideS = halfLen - (Math.abs(along) + halfW);   // ancho de cada lateral
   if (sideS > 0.01) {
-    const gap = halfLen - sideS;                     // distancia del borde al inicio del hueco
     const leftC = -halfLen + sideS / 2;              // tramo desde el extremo -L
     const rightC = halfLen - sideS / 2;              // tramo desde el extremo +L
-    specs.push({ c: leftC, y: holeY, s: sideS, sh: hh * 2 });
-    specs.push({ c: rightC, y: holeY, s: sideS, sh: hh * 2 });
+    specs.push({ c: leftC, y: (y0 + y1) / 2, s: sideS, sh: y1 - y0 });
+    specs.push({ c: rightC, y: (y0 + y1) / 2, s: sideS, sh: y1 - y0 });
   }
 
   const made = [];
@@ -328,8 +330,60 @@ export function setWallWindowHole(wallGroup, windowGroup) {
   wallGroup.userData._wallMeshOrig = mesh;
 }
 
+// Al pegar una ventana contra una pared SÓLIDA se abre su hueco; con null
+// (ventana retirada) se restaura la pared sólida.
+export function setWallWindowHole(wallGroup, windowGroup) {
+  if (!wallGroup || !wallGroup.userData.wallData) return;
+  const wd = wallGroup.userData.wallData;
+  if (wd.kind !== 'solid') return;
+  if (!windowGroup) { clearWallHole(wallGroup); return; }
+
+  const wn = windowGroup.userData.windowData;
+  const swap = Math.abs(Math.sin(wallGroup.rotation.y)) > 0.5;
+  // Centro del hueco en LOCAL de la pared (grupo centrado, y = h/2 en mundo):
+  const along = swap
+    ? (windowGroup.position.z - wallGroup.position.z)
+    : (windowGroup.position.x - wallGroup.position.x);
+  const holeY = windowGroup.position.y - wallGroup.position.y;
+  cutWallOpening(wallGroup, along, wn.w / 2, holeY - wn.h / 2, holeY + wn.h / 2);
+}
+
+// Puerta sobre pared SÓLIDA: hueco del piso al dintel (ancho de hoja + marco).
+export function setWallDoorHole(wallGroup, doorGroup) {
+  if (!wallGroup || !wallGroup.userData.wallData) return;
+  const wd = wallGroup.userData.wallData;
+  if (wd.kind !== 'solid') return;
+  if (!doorGroup) { clearWallHole(wallGroup); return; }
+
+  const dd = doorGroup.userData.doorData || { w: 1.4, h: 2.2 };
+  const swap = Math.abs(Math.sin(wallGroup.rotation.y)) > 0.5;
+  const along = swap
+    ? (doorGroup.position.z - wallGroup.position.z)
+    : (doorGroup.position.x - wallGroup.position.x);
+  const hH = wd.h / 2;
+  cutWallOpening(wallGroup, along, dd.w / 2 + 0.06, -hH, -hH + (dd.h || 2.2));
+}
+
+// Cambia la pared a la que está pegada una abertura (puerta o ventana),
+// abriendo/cerrando huecos. null = soltar.
+export function attachOpeningToWall(obj, wall) {
+  if (!obj) return;
+  const old = obj.userData._attachedWall;
+  if (old === (wall || null)) return;
+  const isDoor = !!obj.userData.doorData;
+  if (old && old.userData.conType === 'wall') {
+    if (isDoor) setWallDoorHole(old, null);
+    else setWallWindowHole(old, null);
+  }
+  if (wall && wall.userData.conType === 'wall') {
+    if (isDoor) setWallDoorHole(wall, obj);
+    else setWallWindowHole(wall, obj);
+  }
+  obj.userData._attachedWall = wall || null;
+}
+
 // Quita los segmentos generados y restaura el box original de la pared.
-export function clearWallHoleFor(wallGroup) {
+function clearWallHole(wallGroup) {
   if (!wallGroup) return;
   const segs = wallGroup.userData._wallHoleSegments;
   if (segs) {
@@ -341,4 +395,8 @@ export function clearWallHoleFor(wallGroup) {
   wallGroup.userData._wallHoleSegments = null;
   const mesh = wallGroup.userData._wallMeshOrig || wallGroup.userData.wallMesh;
   if (mesh) mesh.visible = true;
+}
+
+export function clearWallHoleFor(wallGroup) {
+  clearWallHole(wallGroup);
 }
