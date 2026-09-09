@@ -2,6 +2,11 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-08] — Render determinista en exportación (backlog #7)
+
+- Exportando, la sim avanza por pasos fijos de 1/30 s (acumulador sobre el
+  reloj real): sin saltos por drops y misma trayectoria en cada video. En
+  vivo todo igual. Tests del reloj en la suite.
 ## [2026-09-08] — Construcción Fase 3–5 completa (editor de escenas)
 
 - **Fase 3**: pisos y paredes se redimensionan arrastrando sus 4 bordes

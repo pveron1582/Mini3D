@@ -34,6 +34,32 @@ function pickMime() {
   return '';
 }
 
+// ==========================================
+// RELOJ FIJO DE EXPORTACIÓN (backlog #7)
+// ==========================================
+// Durante la grabación la simulación avanza por pasos fijos de 1/30 s
+// acumulados sobre el reloj real (en vez del dt crudo de cada frame): el
+// movimiento queda muestreado en una grilla temporal estable — sin saltos
+// por drops y con la misma trayectoria en cada exportación. El audio
+// (WebAudio, continuo) sigue en tiempo real, igual que el corte del video.
+export const SIM_STEP = 1 / 30;
+export const simClock = { acc: 0 };
+
+// Suma dt real (escalado por rate) y devuelve cuántos pasos fijos toca
+// simular este frame. Con pausa devuelve 0. Tope anti-espiral: si la máquina
+// no llega, se suelta lastre en vez de frenar la escena.
+export function consumeSimTime(rawDt, rate, paused) {
+  if (paused) return 0;
+  simClock.acc += Math.min(rawDt, 0.25) * (rate || 1);
+  let n = 0;
+  while (simClock.acc >= SIM_STEP && n < 4) {
+    simClock.acc -= SIM_STEP;
+    n++;
+  }
+  if (n === 4) simClock.acc = 0;
+  return n;
+}
+
 // Durante la exportación el canvas se fuerza a 1920×1080 para que el video
 // salga siempre en 1080p, sin importar el tamaño de la ventana. Al terminar
 // se restaura el tamaño original del viewport.
@@ -61,6 +87,7 @@ export function startRecording(durationOverride, fileName) {
   recordedChunks = [];
   recorderState.recordTime = 0;
   recorderState.recordDuration = durationOverride !== undefined ? durationOverride : 5;
+  simClock.acc = 0;   // la exportación arranca en fase cero: trayectoria idéntica siempre
   enterExportResolution();
 
   const stream = canvas.captureStream(EXPORT_FPS);

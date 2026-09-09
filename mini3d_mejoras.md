@@ -127,11 +127,11 @@ HECHO: la toma guarda encuadre de FIN (`camPosEnd`/`targetEnd`, botón
 smoothstep (vale en libre/fija, persiste en el JSON, se previsualiza en la
 aguja y el ✕ lo descarta vía snapshot).
 
-### 7. Render determinista + exportación 1080p fijo (MEDIO alto / esfuerzo medio)
-Reloj de simulación por frame fijo (1/30 s simulados por frame renderizado)
-en vez de wall-clock, y grabar offscreen a resolución fija.
-- Dónde: `js/render.js`, `js/recorder.js`. Elimina drops y hace el video
-  idéntico siempre.
+### 7. ~~Render determinista + exportación 1080p fijo~~ ✅ (2026-09-08)
+HECHO: en exportación la sim avanza por pasos fijos de 1/30 s acumulados
+sobre el reloj real (`SIM_STEP`/`consumeSimTime` en `js/media/recorder.js`,
+`stepSim` en `js/render.js`) — sin saltos por drops y misma trayectoria
+siempre; el 1080p fijo offscreen ya existía. MP4 sigue pendiente (solo WebM).
 
 ### 8. Biblioteca / navegador de escenas (UX)
 Con varias escenas en `scenes/`, un panel "Escenas" que liste los JSON del

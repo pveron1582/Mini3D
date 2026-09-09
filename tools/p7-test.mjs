@@ -419,6 +419,20 @@ assert(Array.isArray(audioBus.getExportTracks()) && audioBus.getExportTracks().l
 clearAudio();
 assert(audioTracks.length === 0, 'audio: limpiar deja cero pistas');
 
+// --- reloj fijo de exportación: pasos de 1/30 s sobre tiempo real ---
+const { SIM_STEP, simClock, consumeSimTime } = await import(pathToFileURL('./js/media/recorder.js'));
+assert(Math.abs(SIM_STEP - 1 / 30) < 1e-12, 'paso fijo de 1/30 s');
+simClock.acc = 0;
+assert(consumeSimTime(1 / 30, 1, false) === 1 && Math.abs(simClock.acc) < 1e-9, 'un frame = un paso');
+simClock.acc = 0;
+assert(consumeSimTime(0.1, 1, false) === 3, 'drop de 0.1s = 3 pasos (sin salto)');
+simClock.acc = 0;
+assert(consumeSimTime(1 / 30, 2, false) === 2, 'rate 2x duplica los pasos');
+simClock.acc = 0;
+assert(consumeSimTime(10, 1, false) === 4 && simClock.acc === 0, 'tope anti-espiral: 4 pasos y lastre fuera');
+simClock.acc = 0.02;
+assert(consumeSimTime(1 / 60, 1, true) === 0 && Math.abs(simClock.acc - 0.02) < 1e-12, 'pausa congela el reloj');
+
 // --- spawn en el centro de la vista (donde mira la cámara) ---
 const { viewCenterGround } = await import(pathToFileURL('./js/core.js'));const vc = viewCenterGround();
 assert(Number.isFinite(vc.x) && Number.isFinite(vc.z), 'centro de vista: punto finito sobre el piso');
