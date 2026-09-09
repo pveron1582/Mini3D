@@ -22,6 +22,11 @@ scene.add(constructionGroup);
 // Metros por baldosa: el texturado del piso NO se estira al redimensionar,
 // se repite a tamaño constante (Fase 3 amplía por bordes).
 const FLOOR_TILE = 2;
+// Baldosas por metro en paredes (densidad de la textura compartida: repeat
+// 6×1.5 sobre la pared 4×3 por defecto). Al redimensionar se agregan
+// baldosas en vez de estirar.
+const WALL_TILE_X = 1.5;
+const WALL_TILE_Y = 0.5;
 
 // Piezas de la capa (para serializar / limpiar al cargar otro proyecto).
 const constructionItems = [];
@@ -83,19 +88,94 @@ export function setConFloorTexture(g, texName) {
   mesh.material.needsUpdate = true;
 }
 
+// Cambia w/d RECONSTRUYENDO el plano (Fase 3: el borde arrastrado mueve solo
+// ese lado; el texturado se repite por baldosas, nunca se estira).
+export function setConFloorSize(g, w, d) {
+  const fd = g && g.userData.floorData;
+  if (!fd) return;
+  fd.w = Math.max(1, Math.min(40, w));
+  fd.d = Math.max(1, Math.min(40, d));
+  const old = g.userData.floorMesh;
+  const mesh = makeFloorMesh(fd.w, fd.d, fd.tex);
+  if (old) {
+    g.remove(old);
+    if (old.geometry) old.geometry.dispose();
+    if (old.material) {
+      if (old.material.map) old.material.map.dispose();
+      old.material.dispose();
+    }
+  }
+  g.add(mesh);
+  g.userData.floorMesh = mesh;
+}
+
+// Resize completo por bordes: tamaño nuevo + centro nuevo (el lado opuesto
+// queda fijo). Lo usa el arrastre de bordes del gizmo.
+export function resizeConFloor(g, w, d, cx, cz) {
+  if (!g || !g.userData.floorData) return;
+  setConFloorSize(g, w, d);
+  g.position.x = cx;
+  g.position.z = cz;
+}
+
 // ---------- PARED ----------
 export function addConWall(x, z, rotY = 0, w = 4, h = 3, d = 0.15, kind = 'solid', texName = null, id = null, name = null) {
   const wid = id || ('conWall' + (++conWallCounter));
   const g = addWall(w, h, d, x, z, kind, constructionGroup, wid, name || ('Pared ' + wid.slice(7)));
   g.rotation.y = rotY;
-  if (kind === 'solid' && texName) {
-    g.userData.wallMesh.material.map = getWallTexture(texName);
-    g.userData.wallMesh.material.needsUpdate = true;
-  }
   g.userData.conType = 'wall';
   g.userData.conId = wid;
   g.userData.conTex = texName;
+  if (kind === 'solid' && texName) setConWallTexture(g, texName);
+  else retileConWall(g);
   return track(g);
+}
+
+// Textura de una pared de construcción: clon propio con repeat según tamaño
+// (baldosas, no estirado). La compartida no se toca (la usan las demás).
+export function setConWallTexture(g, texName) {
+  const wd = g && g.userData.wallData;
+  const mesh = g && g.userData.wallMesh;
+  if (!wd || !mesh || wd.kind !== 'solid') return;
+  resetConWallTile(g);
+  mesh.material.map = getWallTexture(texName);
+  mesh.material.needsUpdate = true;
+  g.userData.conTex = texName;
+  retileConWall(g);
+}
+
+// Ajusta el repeat al tamaño (clona la textura UNA vez; después solo cambia
+// el repeat). Llamar al crear, redimensionar o cambiar dims por sliders.
+// Solo capa de construcción: la oficina conserva su texturado original.
+export function retileConWall(g) {
+  if (!g || g.userData.conType !== 'wall') return;
+  const wd = g.userData.wallData;
+  const mesh = g && g.userData.wallMesh;
+  if (!wd || !mesh || !mesh.material) return;
+  if (wd.kind !== 'solid' || !mesh.material.map) return;
+  if (!g.userData._wallTexOwn) {
+    const prev = mesh.material.map;
+    const tex = prev.clone();
+    tex.needsUpdate = true;
+    mesh.material.map = tex;
+    mesh.material.needsUpdate = true;
+    g.userData._wallTexOwn = true;
+    if (!g.userData.conTex) {
+      g.userData.conTex = wallTextureNames.find(n => getWallTexture(n) === prev) || 'Paneles claros';
+    }
+  }
+  const tex = mesh.material.map;
+  tex.repeat.set(Math.max(1, wd.w * WALL_TILE_X), Math.max(1, wd.h * WALL_TILE_Y));
+  tex.needsUpdate = true;
+}
+
+// Libera el clon propio (antes de cambiar de material/textura base).
+function resetConWallTile(g) {
+  const mesh = g && g.userData.wallMesh;
+  if (g && g.userData._wallTexOwn && mesh && mesh.material.map) {
+    mesh.material.map.dispose();
+  }
+  if (g) g.userData._wallTexOwn = false;
 }
 
 // ---------- PUERTA ----------

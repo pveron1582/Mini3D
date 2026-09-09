@@ -16,7 +16,7 @@ import { applyViewToSelectedShot, clearSubSelection as clearSubtitleSelection, c
 import { clearQuizSelection } from '../cinema/quizTrack.js';
 import { getWallTexture, wallTextureNames, setWallKind, addWall, setDoorState, addWindow, addDoor } from '../office/walls.js';
 import { floorTextureNames, getFloorTextureName, applyFloorTexture } from '../office/floor.js';
-import { addConFloor, addConWall, addConDoor, addConWindow, setConFloorTexture, updateConstructionVisibility } from '../construction.js';
+import { addConFloor, addConWall, addConDoor, addConWindow, setConFloorTexture, updateConstructionVisibility, retileConWall, setConWallTexture } from '../construction.js';
 import { onTargetSelected } from './selection.js';
 import { CATALOG, spawnCatalogItem, deleteActiveObject, duplicateActiveObject } from '../catalog.js';
 import { deleteMultiSelection, multiCount } from './multiselect.js';
@@ -743,7 +743,8 @@ export function refreshWallPanel() {
     if (wallKindSel) wallKindSel.value = wd.kind || 'glass';
     if (wallTextureSel && obj.userData.wallMesh) {
       const cur = wallTextureNames.find(n => getWallTexture(n) === obj.userData.wallMesh.material.map);
-      wallTextureSel.value = cur || wallTextureNames[0];
+      // Construcción: el clon propio rompe la identidad — vale el nombre guardado
+      wallTextureSel.value = obj.userData.conTex || cur || wallTextureNames[0];
     }
   } else if (isDoor && doorStateSel) {
     doorStateSel.value = obj.userData.doorState || 'cerrado';
@@ -760,6 +761,8 @@ function applyWallDims() {
   obj.userData.wallMesh.scale.set(wd.w, wd.h, wd.d);
   // La pared apoya en el piso
   obj.position.y = wd.h / 2;
+  // Construcción: baldosas, no estirado
+  retileConWall(obj);
   if (wallLenNum) wallLenNum.value = wd.w.toFixed(2);
   if (wallHeightNum) wallHeightNum.value = wd.h.toFixed(2);
   if (wallThickNum) wallThickNum.value = wd.d.toFixed(2);
@@ -780,6 +783,11 @@ if (wallTextureSel) {
   wallTextureSel.addEventListener('change', () => {
     const obj = getActiveObject();
     if (!obj || !obj.userData.wallMesh) return;
+    if (obj.userData.conType === 'wall') {
+      setConWallTexture(obj, wallTextureSel.value);
+      pushHistory();
+      return;
+    }
     const mesh = obj.userData.wallMesh;
     mesh.material.map = getWallTexture(wallTextureSel.value);
     mesh.material.needsUpdate = true;
@@ -798,6 +806,7 @@ if (wallKindSel) {
       return;
     }
     setWallKind(obj, wallKindSel.value === 'solid' ? 'solid' : 'glass');
+    retileConWall(obj);
     refreshWallPanel();
     pushHistory();
   });

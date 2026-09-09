@@ -6,7 +6,7 @@ import { getActiveObject, getActiveEntry, setActiveTarget, updateSelectionRing, 
 import { syncSlidersFromTarget, refreshWallPanel } from './ui.js';
 import { pushHistory } from '../undo.js';
 import { getWallColliders, getWallGroups, wallSnap } from '../office/walls.js';
-import { setWallWindowHole } from '../construction.js';
+import { setWallWindowHole, resizeConFloor, retileConWall } from '../construction.js';
 import { officeGroup } from '../office/group.js';
 import { entryRadius, resolveDropAfterDrag, getMinGroundY } from '../collision.js';
 import { multi, toggleInMulti, hasMulti, isInMulti, multiCount, clearMulti, beginGroupDrag, updateGroupDrag, endGroupDrag, beginMarquee, updateMarquee, endMarquee } from './multiselect.js';
@@ -604,6 +604,7 @@ function endDrag() {
   hideSnapGuides();
   hideSnapBadge();
   endWallEdgeDrag();
+  endFloorEdgeDrag();
   // Al soltar: si el personaje/objeto quedó atravesando una pared o puerta,
   // el sistema lo acomoda pegado al lado más cercano (sin quedar a medias).
   resolveDropAfterDrag();
@@ -867,6 +868,8 @@ function updateWallEdgeDrag(e) {
     if (d.axis === 'x') obj.position.x = center; else obj.position.z = center;
     if (swap) { wd.d = len; mesh.scale.z = len; } else { wd.w = len; mesh.scale.x = len; }
   }
+  // Baldosas, no estirado (solo construcción; la oficina no se toca)
+  retileConWall(obj);
   // El borde iluminado sigue al borde que se está estirando
   const best = findWallEdge(e, obj);
   if (best) showEdgeHighlight(best.a, best.b);
@@ -879,6 +882,101 @@ function endWallEdgeDrag() {
   syncSlidersFromTarget();
   pushHistory();
   wallEdgeDrag = null;
+}
+
+// ==========================================
+// BORDES DE PISO (Fase 3): igual que paredes, en planta
+// ==========================================
+// 4 bordes (E/O/N/S en local del piso, respeta su rotación): arrastrar uno
+// mueve SOLO ese lado; el plano se reconstruye (baldosas, no estirado).
+let floorEdgeHover = null;
+let floorEdgeDrag = null;
+
+function floorEdges(obj) {
+  const fd = obj.userData.floorData;
+  const th = obj.rotation.y;
+  const cos = Math.cos(th), sin = Math.sin(th);
+  const cx = obj.position.x, cz = obj.position.z;
+  const hw = fd.w / 2, hd = fd.d / 2;
+  const L = (lx, lz) => new THREE.Vector3(
+    cx + lx * cos + lz * sin, 0.03, cz - lx * sin + lz * cos);
+  return [
+    { kind: 'E', a: L(hw, -hd), b: L(hw, hd) },
+    { kind: 'W', a: L(-hw, -hd), b: L(-hw, hd) },
+    { kind: 'S', a: L(-hw, hd), b: L(hw, hd) },
+    { kind: 'N', a: L(-hw, -hd), b: L(hw, -hd) }
+  ];
+}
+
+function findFloorEdge(e, obj) {
+  if (!obj || !obj.userData.floorData || !obj.visible) return null;
+  const rect = canvas.getBoundingClientRect();
+  let best = null;
+  floorEdges(obj).forEach(ed => {
+    const a = toScreen(ed.a, rect), b = toScreen(ed.b, rect);
+    const d = distToSegment(e.clientX, e.clientY, a, b);
+    if (d < 14 && (!best || d < best.d)) best = Object.assign({}, ed, { d });
+  });
+  return best;
+}
+
+function startFloorEdgeDrag(e) {
+  const obj = getActiveObject();
+  if (!obj || !floorEdgeHover) return;
+  const fd = obj.userData.floorData;
+  floorEdgeDrag = {
+    obj,
+    kind: floorEdgeHover.kind,
+    w: fd.w, d: fd.d,
+    cx: obj.position.x, cz: obj.position.z,
+    rotY: obj.rotation.y
+  };
+  gizmoState.isDragging = true;
+  gizmoState.dragPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0));
+  controls.enabled = false;
+  canvas.style.cursor = 'grabbing';
+}
+
+function updateFloorEdgeDrag(e) {
+  const d = floorEdgeDrag;
+  if (!d) return;
+  const hit = new THREE.Vector3();
+  if (!projectPointerToPlane(e, gizmoState.dragPlane, hit)) return;
+  const obj = d.obj;
+  // Pasar a local del piso (origen en su centro)
+  const dx = hit.x - d.cx, dz = hit.z - d.cz;
+  const cos = Math.cos(d.rotY), sin = Math.sin(d.rotY);
+  const lx = dx * cos - dz * sin;
+  const lz = dx * sin + dz * cos;
+  const round05 = (v) => Math.round(v * 20) / 20;
+  let w = d.w, dd = d.d, sx = 0, sz = 0;
+  if (d.kind === 'E' || d.kind === 'W') {
+    const s = d.kind === 'E' ? 1 : -1;
+    const fixed = -s * d.w / 2;                 // lado opuesto queda fijo
+    const len = THREE.MathUtils.clamp(s > 0 ? lx - fixed : fixed - lx, 1, 40);
+    w = round05(len);
+    sx = fixed + s * (w / 2);                   // corrimiento del centro (local)
+  } else {
+    const s = d.kind === 'S' ? 1 : -1;
+    const fixed = -s * d.d / 2;
+    const len = THREE.MathUtils.clamp(s > 0 ? lz - fixed : fixed - lz, 1, 40);
+    dd = round05(len);
+    sz = fixed + s * (dd / 2);
+  }
+  // Volver a mundo y aplicar (lado opuesto fijo, baldosas intactas)
+  const ncx = d.cx + sx * cos + sz * sin;
+  const ncz = d.cz - sx * sin + sz * cos;
+  resizeConFloor(obj, w, dd, ncx, ncz);
+  const best = findFloorEdge(e, obj);
+  if (best) showEdgeHighlight(best.a, best.b);
+  syncSlidersFromTarget();
+}
+
+function endFloorEdgeDrag() {
+  if (!floorEdgeDrag) return;
+  floorEdgeDrag = null;
+  syncSlidersFromTarget();
+  pushHistory();
 }
 
 // Eventos del mouse
@@ -908,9 +1006,13 @@ canvas.addEventListener('pointerdown', (e) => {
     return;
   }
 
-  // 3. Borde de pared iluminado: agarrarlo estira SOLO ese lado
+  // 3. Borde iluminado (pared o piso): agarrarlo estira SOLO ese lado
   if (wallEdgeHover) {
     startWallEdgeDrag(e);
+    return;
+  }
+  if (floorEdgeHover) {
+    startFloorEdgeDrag(e);
     return;
   }
 
@@ -976,22 +1078,26 @@ canvas.addEventListener('pointermove', (e) => {
   // Marquesina: redimensionar el rectángulo de selección
   if (multi.marqueeActive) { updateMarquee(e); return; }
 
-  // Arrastre de borde de pared
+  // Arrastre de borde (pared o piso)
   if (wallEdgeDrag) {
     updateWallEdgeDrag(e);
     return;
   }
+  if (floorEdgeDrag) {
+    updateFloorEdgeDrag(e);
+    return;
+  }
 
-  // Hover sobre bordes de la pared seleccionada
+  // Hover sobre bordes del objeto seleccionado (pared o piso de construcción)
   if (!gizmoState.isDragging) {
     const obj = getActiveObject();
-    const edge = obj ? findWallEdge(e, obj) : null;
+    wallEdgeHover = obj ? findWallEdge(e, obj) : null;
+    floorEdgeHover = (!wallEdgeHover && obj) ? findFloorEdge(e, obj) : null;
+    const edge = wallEdgeHover || floorEdgeHover;
     if (edge) {
-      wallEdgeHover = edge;
       showEdgeHighlight(edge.a, edge.b);
       canvas.style.cursor = 'pointer';
-    } else if (wallEdgeHover) {
-      wallEdgeHover = null;
+    } else {
       edgeHighlight.visible = false;
     }
   }

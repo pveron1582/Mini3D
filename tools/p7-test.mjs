@@ -442,6 +442,28 @@ timeline.duration = 40;
 assert(Math.abs(pxPerSec() - ((1280 - 116) / 40)) < 1e-9, 'escala única: cubre la duración real');
 timeline.duration = savedDuration;
 
+// --- Fase 3: resize por bordes + tiling (baldosas, no estirado) ---
+const { addConFloor, setConFloorSize, resizeConFloor, addConWall, retileConWall, clearConstruction } = await import(pathToFileURL('./js/construction.js'));
+const { getWallTexture } = await import(pathToFileURL('./js/office/walls.js'));
+const tFloor = addConFloor(0, 0, 6, 6, 'Losa de cemento');
+setConFloorSize(tFloor, 10, 4);
+assert(tFloor.userData.floorData.w === 10 && tFloor.userData.floorData.d === 4, 'piso: cambia w/d');
+assert(Math.abs(tFloor.userData.floorMesh.geometry.parameters.width - 10) < 1e-9, 'piso: reconstruye el plano');
+assert(Math.abs(tFloor.userData.floorMesh.material.map.repeat.x - 5) < 1e-9 && Math.abs(tFloor.userData.floorMesh.material.map.repeat.y - 2) < 1e-9, 'piso: baldosas de 2m (repeat 5x2)');
+resizeConFloor(tFloor, 8, 8, 1, 1);
+assert(tFloor.position.x === 1 && tFloor.position.z === 1 && tFloor.userData.floorData.w === 8, 'piso: resize mueve centro + tamaño');
+const tWall = addConWall(20, 20, 0, 4, 3, 0.15, 'solid', 'Ladrillo');
+const tMap = tWall.userData.wallMesh.material.map;
+assert(Math.abs(tMap.repeat.x - 6) < 1e-9 && Math.abs(tMap.repeat.y - 1.5) < 1e-9, 'pared: baldosas según tamaño (6x1.5)');
+assert(tMap !== getWallTexture('Ladrillo'), 'pared: clon propio (no toca la compartida)');
+tWall.userData.wallData.w = 8;
+tWall.userData.wallMesh.scale.x = 8;
+retileConWall(tWall);
+assert(Math.abs(tWall.userData.wallMesh.material.map.repeat.x - 12) < 1e-9, 'al agrandar se agregan baldosas (12)');
+const serCon = serializeProject().construction.find(c => c.id === tWall.userData.conId);
+assert(!!serCon && serCon.w === 8 && serCon.tex === 'Ladrillo', 'resize persiste (tamaño + textura)');
+clearConstruction();
+
 // --- convención de orientación (blindaje anti "dados vuelta") ---
 const { rotYToLookAt } = await import(pathToFileURL('./js/characters/characters.js'));
 const approx = (a, b, tol = 0.02) => Math.abs(a - b) <= tol;
