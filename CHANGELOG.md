@@ -2,6 +2,16 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-08] — Construcción Fase 3–5 completa (editor de escenas)
+
+- **Fase 3**: pisos y paredes se redimensionan arrastrando sus 4 bordes
+  (solo ese lado se mueve); el texturado va por baldosas, no se estira.
+- **Fase 4**: las puertas tienen imán a pared y abren su hueco (ventanas ya
+  lo tenían), botón 🧲 Pegar a pared, y los huecos persisten en el JSON
+  (fix: soltar una abertura crasheaba por `clearWallHole` inexistente).
+- **Fase 5**: 3 diseños de puerta (vidrio/madera/doble) y 3 de ventana
+  (clásica/panorámica/persiana) con selector al crear y en el panel.
+- Higiene: ya no se hace dispose de geometrías compartidas de geoCache.
 ## [2026-09-08] — Cabezal a la regla + lugar auto-guardado en el cuadro
 
 - El cabezal rojo va anclado a la regla de segundos (antes flotaba arriba

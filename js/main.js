@@ -36,7 +36,7 @@ import './undo.js';
 import './render.js';
 
 import { setEnvironment } from './environment.js';
-import { populateOutliner, syncSlidersFromTarget } from './ui/ui.js';
+import { populateOutliner, syncSlidersFromTarget, initConstructionDesignSelects } from './ui/ui.js';
 import { updateGizmoPosition } from './ui/gizmo.js';
 import { updateCinemaCharList, refreshCinemaUI } from './cinema/cinematics.js';
 import { initUndo } from './undo.js';
@@ -47,6 +47,7 @@ import { serializeProject, applyProject } from './projectFiles.js';
 // ==========================================
 setEnvironment('office');
 populateOutliner();
+initConstructionDesignSelects();
 // Proyecto nuevo arranca VACÍO: sin personajes por defecto ni selección
 // inicial (los personajes se agregan desde el editor y los principales se
 // restauran al cargar un proyecto viejo que los tenga).

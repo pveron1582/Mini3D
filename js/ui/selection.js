@@ -72,7 +72,14 @@ export function getActiveEntry() {
 // botones de propiedades dependientes del tipo, como la puerta del mini rack).
 const targetListeners = [];
 export function onTargetSelected(cb) {
-  targetListeners.push(cb);
+  try {
+    targetListeners.push(cb);
+  } catch (err) {
+    // El grafo aún se está evaluando (ciclo selection→cinematics→gizmo→ui:
+    // un queueMicrotask durante la carga puede llegar antes de que este
+    // módulo termine): reintentar cediendo el turno hasta que la lista exista.
+    setTimeout(() => onTargetSelected(cb), 0);
+  }
 }
 function notifyTargetSelected(id) {
   targetListeners.forEach(cb => cb(id));

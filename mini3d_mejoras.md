@@ -33,10 +33,18 @@ independiente de la oficina (`js/construction.js`), terreno con césped
 - [x] **Fase 1** — Terreno limpio con césped como ambiente de arranque.
 - [x] **Fase 2** — "Modo Construcción" (ex "Editar Edificio"): reemplaza todo el
       panel izquierdo; añadir piso/pared/puerta/ventana; persistencia en el JSON.
-- [ ] **Fase 3** — Redimensionar piso y pared **arrastrando uno de los 4 bordes**
-      (solo ese lado se mueve; el texturado no se estira, se forman baldosas).
-- [ ] **Fase 4** — Editor de paredes completo + colocar puertas/ventanas sobre ellas.
-- [ ] **Fase 5** — 2–3 diseños distintos de piso, pared, puerta y ventana.
+- [x] **Fase 3** — Redimensionar piso y pared **arrastrando sus bordes**
+      (solo ese lado se mueve; el texturado no se estira: el piso reconstruye
+      su plano y la pared retilea su clon de textura por baldosas).
+      ✅ (2026-09-08)
+- [x] **Fase 4** — Editor de paredes completo + puertas/ventanas sobre ellas:
+      las puertas tienen imán a pared y abren su hueco (como las ventanas),
+      botón 🧲 Pegar a pared, y los huecos persisten en el JSON.
+      ✅ (2026-09-08)
+- [x] **Fase 5** — 3 diseños de puerta (vidrio/madera/doble hoja) y 3 de
+      ventana (clásica/panorámica/persiana), con selector al crear y en el
+      panel de pared; pisos (4) y paredes (6) ya tenían de sobra.
+      ✅ (2026-09-08)
 
 ### Catálogo de objetos por lotes
 

@@ -489,6 +489,30 @@ attachOpeningToWall(tD, tW);
 syncConstruction(serializeProject().construction);
 const reWall = interactiveRegistry.get(tW.userData.conId);
 assert(reWall && reWall.group.userData._wallHoleSegments && reWall.group.userData._wallHoleSegments.length > 0, 'al abrir se restaura el hueco');
+
+// --- Fase 5: diseños de puertas y ventanas ---
+const { addDoor, setDoorDesign, setDoorState, createWindow, setWindowDesign, DOOR_DESIGNS, WINDOW_DESIGNS } = await import(pathToFileURL('./js/office/walls.js'));
+assert(DOOR_DESIGNS.length === 3 && WINDOW_DESIGNS.length === 3, '3 diseños de puerta y 3 de ventana');
+const dGlass = addDoor('tDoorGlass', 'Puerta Vidrio', 40, 40, 0, 1.4);
+assert(dGlass.userData.doorData.design === 'vidrio', 'diseño de puerta por defecto: vidrio');
+const dWood = addDoor('tDoorWood', 'Puerta Madera', 42, 40, 0, 1.4, undefined, 'madera');
+assert(dWood.userData.doorData.design === 'madera', 'puerta de madera');
+setDoorState(dWood, 'abierto');
+assert(Math.abs(dWood.userData.doorGroup.rotation.y - 1.95) < 1e-9, 'la hoja de madera abre');
+const dDouble = addDoor('tDoorDouble', 'Puerta Doble', 44, 40, 0, 1.6, undefined, 'doble');
+setDoorState(dDouble, 'abierto');
+assert(Math.abs(dDouble.userData.doorLeaves[0].rotation.y + 1.95) < 1e-9 && Math.abs(dDouble.userData.doorLeaves[1].rotation.y - 1.95) < 1e-9, 'doble hoja abre en espejo');
+setDoorDesign(dWood, 'doble');
+assert(dWood.userData.doorData.design === 'doble' && Array.isArray(dWood.userData.doorLeaves), 'cambio de diseño reconstruye');
+const wCl = createWindow('tWinCl', 'Ventana Cl', 40, 2.1, 46, 0, 2, 1.6);
+assert(wCl.userData.windowData.design === 'clasica' && wCl.children.length === 7, 'ventana clásica (marco + travesaño + alféizar)');
+const wPa = createWindow('tWinPa', 'Ventana Pa', 44, 2.1, 46, 0, 2, 1.6, undefined, 'panoramica');
+assert(wPa.children.length === 5, 'panorámica sin travesaño ni alféizar');
+setWindowDesign(wCl, 'persiana');
+assert(wCl.userData.windowData.design === 'persiana' && wCl.children.length > 7, 'persiana agrega lamas');
+const dCon = addConDoor(50, 50, 0, 1.4, null, null, 'madera');
+const serDD = serializeProject().construction.find(c => c.id === dCon.userData.conId);
+assert(!!serDD && serDD.design === 'madera', 'diseño de puerta persiste en el JSON');
 clearConstruction();
 
 // --- convención de orientación (blindaje anti "dados vuelta") ---

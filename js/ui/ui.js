@@ -14,7 +14,7 @@ import { pushHistory } from '../undo.js';
 import { getMinGroundY } from '../collision.js';
 import { applyViewToSelectedShot, clearSubSelection as clearSubtitleSelection, clearSelection as clearShotSelection } from '../cinema/timeline.js';
 import { clearQuizSelection } from '../cinema/quizTrack.js';
-import { getWallTexture, wallTextureNames, setWallKind, addWall, setDoorState, addWindow, addDoor, wallSnap } from '../office/walls.js';
+import { getWallTexture, wallTextureNames, setWallKind, addWall, setDoorState, addWindow, addDoor, wallSnap, DOOR_DESIGNS, WINDOW_DESIGNS, setDoorDesign, setWindowDesign } from '../office/walls.js';
 import { floorTextureNames, getFloorTextureName, applyFloorTexture } from '../office/floor.js';
 import { addConFloor, addConWall, addConDoor, addConWindow, setConFloorTexture, updateConstructionVisibility, retileConWall, setConWallTexture, attachOpeningToWall } from '../construction.js';
 import { onTargetSelected } from './selection.js';
@@ -467,6 +467,23 @@ btnConOnly?.addEventListener('click', () => {
   setStatus(store.buildingOnly ? 'Vista solo edificio.' : 'Vista normal.');
 });
 
+// Selectores de diseño de aberturas (Fase 5): valen para la próxima que se
+// añada. Diferido a init (main.js): leer DOOR_DESIGNS en la evaluación
+// rompería por el ciclo selection→cinematics→gizmo→ui→walls (TDZ).
+export function initConstructionDesignSelects() {
+  [['conDoorDesign', DOOR_DESIGNS], ['conWindowDesign', WINDOW_DESIGNS]].forEach(([id, designs]) => {
+    const sel = byId(id);
+    if (!sel) return;
+    sel.innerHTML = '';
+    designs.forEach(d => {
+      const o = document.createElement('option');
+      o.value = d.id;
+      o.textContent = d.label;
+      sel.appendChild(o);
+    });
+  });
+}
+
 // Selector de tipo de piso de construcción: cambia el tipo del piso seleccionado
 const conFloorTextureSel = byId('conFloorTexture');
 if (conFloorTextureSel) {
@@ -518,13 +535,15 @@ byId('btnConAddWall')?.addEventListener('click', () => {
 byId('btnConAddDoor')?.addEventListener('click', () => {
   if (!store.editBuilding) { setStatus('Activá el Modo Construcción.'); return; }
   const [x, z] = constructionSpawnPos();
-  const g = addConDoor(x, z);
+  const design = byId('conDoorDesign') ? byId('conDoorDesign').value : 'vidrio';
+  const g = addConDoor(x, z, 0, 1.4, null, null, design);
   if (g) { populateOutliner(); setActiveTarget(g.userData.conId); pushHistory(); setStatus('Puerta añadida: movela con el gizmo para apoyarla en una pared.'); }
 });
 byId('btnConAddWindow')?.addEventListener('click', () => {
   if (!store.editBuilding) { setStatus('Activá el Modo Construcción.'); return; }
   const [x, z] = constructionSpawnPos();
-  const g = addConWindow(x, z);
+  const design = byId('conWindowDesign') ? byId('conWindowDesign').value : 'clasica';
+  const g = addConWindow(x, z, 0, 2, 1.6, null, null, design);
   if (g) { populateOutliner(); setActiveTarget(g.userData.conId); pushHistory(); setStatus('Ventana añadida: movela con el gizmo para apoyarla en una pared.'); }
 });
 
@@ -749,15 +768,18 @@ export function refreshWallPanel() {
   const obj = getActiveObject();
   const wd = obj && obj.userData.wallData;
   const dd = obj && obj.userData.doorData;
+  const wnd = obj && obj.userData.windowData;
   const isDoor = !!dd && !wd;
   const isWall = !!wd;
-  if (wallSection) wallSection.style.display = (isWall || isDoor) ? 'block' : 'none';
+  const isWindow = !!wnd && !wd && !dd;
+  if (wallSection) wallSection.style.display = (isWall || isDoor || isWindow) ? 'block' : 'none';
 
-  // Muestra los controles según el tipo de selección (pared / puerta)
+  // Muestra los controles según el tipo de selección (pared / puerta / ventana)
   [wallLen, wallHeight, wallThick, wallTextureSel, wallKindSel].forEach(el => {
     if (el) el.style.display = isWall ? '' : 'none';
   });
   if (doorStateSel) doorStateSel.style.display = isDoor ? '' : 'none';
+  syncOpeningDesignRow(obj, isDoor ? 'door' : (isWindow ? 'window' : null));
 
   if (isWall) {
     if (wallLen) wallLen.value = wd.w; if (wallLenNum) wallLenNum.value = wd.w.toFixed(2);
@@ -772,6 +794,48 @@ export function refreshWallPanel() {
   } else if (isDoor && doorStateSel) {
     doorStateSel.value = obj.userData.doorState || 'cerrado';
   }
+}
+
+// Fila "Diseño" para puertas y ventanas seleccionadas (Fase 5).
+const openingDesignSel = byId('openingDesign');
+function syncOpeningDesignRow(obj, kind) {
+  if (!openingDesignSel) return;
+  if (!kind) { openingDesignSel.style.display = 'none'; return; }
+  const designs = kind === 'door' ? DOOR_DESIGNS : WINDOW_DESIGNS;
+  openingDesignSel.innerHTML = '';
+  designs.forEach(d => {
+    const o = document.createElement('option');
+    o.value = d.id; o.textContent = d.label;
+    openingDesignSel.appendChild(o);
+  });
+  const cur = kind === 'door'
+    ? (obj.userData.doorData.design || 'vidrio')
+    : (obj.userData.windowData.design || 'clasica');
+  openingDesignSel.value = cur;
+  openingDesignSel.style.display = '';
+}
+
+if (openingDesignSel) {
+  openingDesignSel.addEventListener('change', () => {
+    const obj = getActiveObject();
+    if (!obj) return;
+    if (!store.editBuilding) {
+      setStatus('Los diseños se cambian solo con "🏢 Editar Edificio".');
+      refreshWallPanel();
+      return;
+    }
+    if (obj.userData.doorData && !obj.userData.wallData) {
+      setDoorDesign(obj, openingDesignSel.value);
+      setStatus(`Puerta: diseño ${openingDesignSel.selectedOptions[0].textContent}.`);
+    } else if (obj.userData.windowData) {
+      setWindowDesign(obj, openingDesignSel.value);
+      setStatus(`Ventana: diseño ${openingDesignSel.selectedOptions[0].textContent}.`);
+    } else {
+      return;
+    }
+    refreshWallPanel();
+    pushHistory();
+  });
 }
 
 function applyWallDims() {

@@ -581,6 +581,12 @@
             <p class="cinema-hint" style="margin-top:2px;">Seleccioná una pared para editar largo, alto, espesor, textura y tipo — o arrastrá uno de sus 4 bordes (solo ese lado se mueve, por baldosas).</p>
 
             <div class="target-category-label" style="margin-top:10px;">🚪 ABERTURAS</div>
+            <label class="inline-label" style="margin-top:4px;">Puerta
+              <select id="conDoorDesign" class="tl-input" style="flex:1;"></select>
+            </label>
+            <label class="inline-label" style="margin-top:4px;">Ventana
+              <select id="conWindowDesign" class="tl-input" style="flex:1;"></select>
+            </label>
             <div class="btn-grid" style="margin-top:4px;">
               <button class="blender-btn" id="btnConAddDoor" style="flex:1;">🚪 Añadir puerta</button>
               <button class="blender-btn" id="btnConAddWindow" style="flex:1;">🪟 Añadir ventana</button>
@@ -848,6 +854,9 @@
                 <option value="entreabierto">🚪➖ Entreabierto</option>
                 <option value="abierto">🚪➡️ Abierto</option>
               </select>
+            </label>
+            <label class="inline-label" style="margin-top:4px;">Diseño
+              <select id="openingDesign" class="tl-input" style="flex:1; display:none;"></select>
             </label>
             <div class="btn-grid" style="margin-top:4px;">
               <button class="blender-btn primary" id="btnAddWall" style="flex:1;">➕ Añadir pared</button>

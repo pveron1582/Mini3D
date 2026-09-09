@@ -251,7 +251,8 @@ export function serializeProject(opts = {}) {
       pos: [round2(g.position.x), round2(g.position.y), round2(g.position.z)],
       rotY: round2(g.rotation.y),
       w: round2(g.userData.windowData.w),
-      h: round2(g.userData.windowData.h)
+      h: round2(g.userData.windowData.h),
+      design: g.userData.windowData.design || undefined
     });
   });
 

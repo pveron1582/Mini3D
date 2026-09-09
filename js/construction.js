@@ -179,19 +179,19 @@ function resetConWallTile(g) {
 }
 
 // ---------- PUERTA ----------
-export function addConDoor(x, z, rotY = 0, width = 1.4, id = null, name = null) {
+export function addConDoor(x, z, rotY = 0, width = 1.4, id = null, name = null, design = 'vidrio') {
   const did = id || ('conDoor' + (++conDoorCounter));
-  const g = addDoor(did, name || ('Puerta ' + did.slice(7)), x, z, rotY, width, constructionGroup);
+  const g = addDoor(did, name || ('Puerta ' + did.slice(7)), x, z, rotY, width, constructionGroup, design);
   g.userData.conType = 'door';
   g.userData.conId = did;
   return track(g);
 }
 
 // ---------- VENTANA ----------
-export function addConWindow(x, z, rotY = 0, w = 2, h = 1.6, id = null, name = null) {
+export function addConWindow(x, z, rotY = 0, w = 2, h = 1.6, id = null, name = null, design = 'clasica') {
   const nid = id || ('conWindow' + (++conWindowCounter));
   const y = 0.9 + h / 2;   // alféizar a 0.9 m del piso
-  const g = createWindow(nid, name || ('Ventana ' + nid.slice(9)), x, y, z, rotY, w, h, constructionGroup);
+  const g = createWindow(nid, name || ('Ventana ' + nid.slice(9)), x, y, z, rotY, w, h, constructionGroup, design);
   g.userData.conType = 'window';
   g.userData.conId = nid;
   return track(g);
@@ -223,11 +223,11 @@ export function serializeConstruction() {
       return { ...base, w: round2(wd.w), h: round2(wd.h), d: round2(wd.d), kind: wd.kind, tex: tex || undefined };
     }
     if (t === 'door') {
-      return { ...base, width: round2(g.userData.doorData.w), state: g.userData.doorState, wall: wallRefOf(g) };
+      return { ...base, width: round2(g.userData.doorData.w), state: g.userData.doorState, design: g.userData.doorData.design || undefined, wall: wallRefOf(g) };
     }
     if (t === 'window') {
       const wnd = g.userData.windowData;
-      return { ...base, w: round2(wnd.w), h: round2(wnd.h), wall: wallRefOf(g) };
+      return { ...base, w: round2(wnd.w), h: round2(wnd.h), design: wnd.design || undefined, wall: wallRefOf(g) };
     }
     return base;
   });
@@ -247,8 +247,8 @@ export function syncConstruction(list = []) {
     let g = null;
     if (it.type === 'floor') g = addConFloor(it.pos[0], it.pos[2], it.w, it.d, it.tex, it.id, it.name);
     else if (it.type === 'wall') g = addConWall(it.pos[0], it.pos[2], it.rotY || 0, it.w, it.h, it.d, it.kind, it.tex, it.id, it.name);
-    else if (it.type === 'door') g = addConDoor(it.pos[0], it.pos[2], it.rotY || 0, it.width, it.id, it.name);
-    else if (it.type === 'window') g = addConWindow(it.pos[0], it.pos[2], it.rotY || 0, it.w, it.h, it.id, it.name);
+    else if (it.type === 'door') g = addConDoor(it.pos[0], it.pos[2], it.rotY || 0, it.width, it.id, it.name, it.design);
+    else if (it.type === 'window') g = addConWindow(it.pos[0], it.pos[2], it.rotY || 0, it.w, it.h, it.id, it.name, it.design);
     if (!g) return;
     g.position.set(it.pos[0], it.pos[1], it.pos[2]);
     g.rotation.y = it.rotY || 0;
@@ -273,7 +273,25 @@ export function clearConstruction() {
     removeFromArray(wallGroups, g);
     removeFromArray(doorGroups, g);
     removeFromArray(windowGroups, g);
-    g.traverse(child => { if (child.isMesh && child.geometry) child.geometry.dispose(); });
+    // Solo se libera lo PROPIO de cada pieza: las geometrías de geoCache son
+    // compartidas y NUNCA se hace dispose (rompería a las demás piezas).
+    const t = g.userData.conType;
+    if (t === 'floor' && g.userData.floorMesh) {
+      const m = g.userData.floorMesh;
+      if (m.geometry) m.geometry.dispose();   // plano propio (new)
+      if (m.material) {
+        if (m.material.map) m.material.map.dispose();   // clon propio
+        m.material.dispose();
+      }
+    }
+    if (t === 'wall' && g.userData.wallMesh) {
+      const m = g.userData.wallMesh;
+      if (m.material) {
+        // El mapa solo si es clon propio (el compartido lo usan otras paredes)
+        if (g.userData._wallTexOwn && m.material.map) m.material.map.dispose();
+        m.material.dispose();   // el material sí es clon por pared
+      }
+    }
     if (g.parent) g.parent.remove(g);
   });
   constructionItems.length = 0;
@@ -387,10 +405,8 @@ function clearWallHole(wallGroup) {
   if (!wallGroup) return;
   const segs = wallGroup.userData._wallHoleSegments;
   if (segs) {
-    segs.forEach(s => {
-      if (s.parent) s.parent.remove(s);
-      if (s.geometry) s.geometry.dispose();
-    });
+    // Sin dispose de geometría: los segmentos usan geo.box COMPARTIDO.
+    segs.forEach(s => { if (s.parent) s.parent.remove(s); });
   }
   wallGroup.userData._wallHoleSegments = null;
   const mesh = wallGroup.userData._wallMeshOrig || wallGroup.userData.wallMesh;

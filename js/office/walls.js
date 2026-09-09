@@ -35,8 +35,16 @@ export const DOOR_STATE_ANGLES = { cerrado: 0, entreabierto: 0.65, abierto: 1.95
 export function setDoorState(door, state) {
   if (!door || !DOOR_STATE_ANGLES[state]) return;
   door.userData.doorState = state;
+  const angle = DOOR_STATE_ANGLES[state];
+  // Doble hoja: abre en espejo; simple: un solo pivote.
+  if (Array.isArray(door.userData.doorLeaves)) {
+    door.userData.doorLeaves.forEach((pivot, i) => {
+      pivot.rotation.y = (i === 0 ? -1 : 1) * angle;
+    });
+    return;
+  }
   const pivot = door.userData.doorGroup;
-  if (pivot) pivot.rotation.y = DOOR_STATE_ANGLES[state];
+  if (pivot) pivot.rotation.y = angle;
 }
 
 // Colliders AABB de puertas: las cerradas y entreabiertas bloquean el paso;
@@ -338,30 +346,38 @@ createDoor('door_se', 'Puerta SE', 9.25, 4.5, 0, 1.4);            // SE
 export const windowGroups = [];
 let windowCounter = 0;
 
-export function createWindow(id, name, x, y, z, rotY, w, h, parent = officeGroup) {
+// 3 diseños (Fase 5): 'clasica' (marco + travesaño + alféizar), 'panoramica'
+// (perfil fino, sin travesaño) y 'persiana' (lamas orientables sobre vidrio).
+export const WINDOW_DESIGNS = [
+  { id: 'clasica', label: '🪟 Clásica' },
+  { id: 'panoramica', label: '🪟 Panorámica' },
+  { id: 'persiana', label: '🪟 Persiana' }
+];
+const windowFrameMat = new THREE.MeshStandardMaterial({ color: 0x3a3f47, roughness: 0.35, metalness: 0.6 });
+const windowSillMat = new THREE.MeshStandardMaterial({ color: 0xb2b6be, roughness: 0.9 });
+
+export function createWindow(id, name, x, y, z, rotY, w, h, parent = officeGroup, design = 'clasica') {
   const g = new THREE.Group();
   g.position.set(x, y, z);
   g.rotation.y = rotY;
-  const frameM = new THREE.MeshStandardMaterial({ color: 0x3a3f47, roughness: 0.35, metalness: 0.6 });
-  const t = 0.09;   // ancho del perfil
-  const dep = 0.12; // profundidad del marco
-  const top = new THREE.Mesh(geo.box(w, t, dep), frameM);
-  top.position.y = h / 2 - t / 2;
-  top.castShadow = true;
-  g.add(top);
-  const bot = new THREE.Mesh(geo.box(w, t, dep), frameM);
-  bot.position.y = -(h / 2) + t / 2;
-  g.add(bot);
-  [1, -1].forEach(s => {
-    const jamb = new THREE.Mesh(geo.box(t, h - 2 * t, dep), frameM);
-    jamb.position.set(s * (w / 2 - t / 2), 0, 0);
-    g.add(jamb);
-  });
+  buildWindowFrame(g, design, w, h);
+  parent.add(g);
+  windowCounter++;
+  const wid = id || ('window' + windowCounter);
+  registerSelectable(wid, name || ('Ventana ' + windowCounter), g, 'window', null);
+  g.userData.windowData = { w, h, rotY, design };
+  g.userData.windowId = wid;
+  g.userData.windowName = name;
+  windowGroups.push(g);
+  return g;
+}
+
+function windowGlass(w, h) {
   // Vidrio TINTADO pero bien transparente: se ve nítido lo de afuera, con un
   // leve tinte azulado que le da cuerpo a la superficie (no es un agujero
   // vacío, se percibe que hay vidrio).
-  const glass = new THREE.Mesh(
-    geo.plane(w - 2 * t, h - 2 * t),
+  return new THREE.Mesh(
+    geo.plane(w, h),
     new THREE.MeshPhysicalMaterial({
       color: 0x9fc6d6,
       transparent: true,
@@ -373,33 +389,75 @@ export function createWindow(id, name, x, y, z, rotY, w, h, parent = officeGroup
       side: THREE.DoubleSide
     })
   );
+}
+
+// Marco + contenido según diseño (dentro del grupo).
+function buildWindowFrame(g, design, w, h) {
+  const t = design === 'panoramica' ? 0.06 : 0.09;   // ancho del perfil
+  const dep = 0.12; // profundidad del marco
+  const top = new THREE.Mesh(geo.box(w, t, dep), windowFrameMat);
+  top.position.y = h / 2 - t / 2;
+  top.castShadow = true;
+  g.add(top);
+  const bot = new THREE.Mesh(geo.box(w, t, dep), windowFrameMat);
+  bot.position.y = -(h / 2) + t / 2;
+  g.add(bot);
+  [1, -1].forEach(s => {
+    const jamb = new THREE.Mesh(geo.box(t, h - 2 * t, dep), windowFrameMat);
+    jamb.position.set(s * (w / 2 - t / 2), 0, 0);
+    g.add(jamb);
+  });
+  const glass = windowGlass(w - 2 * t, h - 2 * t);
   g.add(glass);
-  // Travesaño fino al centro
-  const mull = new THREE.Mesh(geo.box(w - 2 * t, 0.035, 0.04), frameM);
-  mull.position.z = 0.03;
-  g.add(mull);
-  // Alféizar interior
-  const sill = new THREE.Mesh(geo.box(w + 0.16, 0.04, 0.2),
-    new THREE.MeshStandardMaterial({ color: 0xb2b6be, roughness: 0.9 }));
-  sill.position.set(0, -(h / 2) - 0.02, 0.08);
-  sill.castShadow = true;
-  g.add(sill);
-  parent.add(g);
-  windowCounter++;
-  const wid = id || ('window' + windowCounter);
-  registerSelectable(wid, name || ('Ventana ' + windowCounter), g, 'window', null);
-  g.userData.windowData = { w, h, rotY };
-  g.userData.windowId = wid;
-  g.userData.windowName = name;
-  windowGroups.push(g);
-  return g;
+  if (design === 'persiana') {
+    // Lamas horizontales orientables delante del vidrio
+    const n = Math.max(3, Math.floor(h / 0.28));
+    for (let i = 0; i < n; i++) {
+      const slat = new THREE.Mesh(geo.box(w - 2 * t - 0.04, 0.09, 0.02), windowFrameMat);
+      slat.position.set(0, -h / 2 + t + 0.1 + i * ((h - 2 * t - 0.2) / Math.max(1, n - 1)), 0.05);
+      slat.rotation.x = 0.6;
+      g.add(slat);
+    }
+  } else if (design !== 'panoramica') {
+    // Travesaño fino al centro (clásica)
+    const mull = new THREE.Mesh(geo.box(w - 2 * t, 0.035, 0.04), windowFrameMat);
+    mull.position.z = 0.03;
+    g.add(mull);
+  }
+  if (design !== 'panoramica') {
+    // Alféizar interior
+    const sill = new THREE.Mesh(geo.box(w + 0.16, 0.04, 0.2), windowSillMat);
+    sill.position.set(0, -(h / 2) - 0.02, 0.08);
+    sill.castShadow = true;
+    g.add(sill);
+  }
+}
+
+// Cambiar el diseño de una ventana ya creada (reconstruye marco in situ:
+// conserva id, posición, tamaño y pared pegada).
+export function setWindowDesign(g, design) {
+  const wn = g && g.userData.windowData;
+  if (!wn || !WINDOW_DESIGNS.some(d => d.id === design)) return;
+  if (wn.design === design) return;
+  // Se suelta el marco viejo (materiales propios como el vidrio se liberan;
+  // geos y mats compartidos no se tocan).
+  [...g.children].forEach(c => {
+    g.remove(c);
+    c.traverse(o => {
+      if (o.isMesh && o.material && o.material !== windowFrameMat && o.material !== windowSillMat) {
+        o.material.dispose();
+      }
+    });
+  });
+  wn.design = design;
+  buildWindowFrame(g, design, wn.w, wn.h);
 }
 
 // Ventana spawneable (P8): crea en la posición dada y la deja lista para mover
 // con el gizmo. Solo en modo "Editar Edificio". Las spawneadas viajan en el
 // JSON de proyecto (campo windows[]) para poder recrearse al abrir.
-export function addWindow(id, name, x, z, rotY = 0, w = 2, h = 1.6) {
-  const g = createWindow(id, name, x, 2.1, z, rotY, w, h);
+export function addWindow(id, name, x, z, rotY = 0, w = 2, h = 1.6, design = 'clasica') {
+  const g = createWindow(id, name, x, 2.1, z, rotY, w, h, officeGroup, design);
   g.userData.spawnedWindow = true;
   return g;
 }
@@ -417,7 +475,7 @@ export function syncWindows(list = []) {
   list.forEach(s => {
     const existing = windowGroups.find(g => g.userData.windowId === s.id);
     if (existing) { existing.visible = true; return; }
-    const g = addWindow(s.id, s.name, s.pos[0], s.pos[2], s.rotY || 0, s.w, s.h);
+    const g = addWindow(s.id, s.name, s.pos[0], s.pos[2], s.rotY || 0, s.w, s.h, s.design);
     g.visible = true;
   });
 }
@@ -425,20 +483,20 @@ export function syncWindows(list = []) {
 // ---------- PUERTA SPAWNEABLE (P8) ----------
 // Equivale a la createDoor interna de buildWalls, pero exportada para poder
 // agregar puertas nuevas con el modo "Editar Edificio". Nacen CERRADAS.
+// 3 diseños (Fase 5): 'vidrio' (hoja vidriada), 'madera' (hoja maciza con
+// picaporte) y 'doble' (dos hojas angostas que abren en espejo).
+export const DOOR_DESIGNS = [
+  { id: 'vidrio', label: '🚪 Vidrio' },
+  { id: 'madera', label: '🚪 Madera' },
+  { id: 'doble', label: '🚪🚪 Doble hoja' }
+];
 let spawnDoorCounter = 0;
-export function addDoor(id, name, x, z, rotY = 0, width = 1.4, parent = officeGroup) {
+export function addDoor(id, name, x, z, rotY = 0, width = 1.4, parent = officeGroup, design = 'vidrio') {
   const g = new THREE.Group();
   g.position.set(x, 0, z);
   g.rotation.y = rotY;
   const h = 2.2, thick = 0.12;
-  const pivot = new THREE.Group();
-  pivot.position.set(width / 2, 0, 0);
-  const leaf = new THREE.Mesh(geo.box(width, h, thick), doorGlassMat);
-  leaf.position.set(-width / 2, h / 2, 0);
-  pivot.add(leaf);
-  const handle = new THREE.Mesh(geo.box(0.12, 0.05, 0.05), doorLeafMat);
-  handle.position.set(-width, h / 2 - 0.12, thick / 2);
-  pivot.add(handle);
+  // Marco fijo (jambas + dintel), común a los 3 diseños
   [-1].forEach(sx => {
     const jamb2 = new THREE.Mesh(geo.box(0.1, h, thick), wallFrameMat);
     jamb2.position.set(sx * (width / 2 + 0.05), h / 2, 0);
@@ -447,19 +505,101 @@ export function addDoor(id, name, x, z, rotY = 0, width = 1.4, parent = officeGr
   const header = new THREE.Mesh(geo.box(width + 0.2, 0.1, thick), wallFrameMat);
   header.position.set(0, h, 0);
   g.add(header);
-  g.add(pivot);
+  const built = buildDoorLeaves(g, design, width, h, thick);
   parent.add(g);
   spawnDoorCounter++;
   const did = id || ('door_spawn' + spawnDoorCounter);
   registerSelectable(did, name || ('Puerta ' + spawnDoorCounter), g, 'door', null);
-  g.userData.doorData = { w: width, h, rotY };
-  g.userData.doorGroup = pivot;
+  g.userData.doorData = { w: width, h, rotY, design };
+  storeDoorRefs(g, built);
   g.userData.doorState = 'cerrado';
   g.userData.doorId = did;
   g.userData.spawnedDoor = true;
   doorGroups.push(g);
-  pivot.rotation.y = DOOR_STATE_ANGLES['cerrado'];
+  setDoorState(g, 'cerrado');
   return g;
+}
+
+const doorWoodMat = new THREE.MeshStandardMaterial({ color: 0x8a5a33, roughness: 0.7 });
+const doorKnobMat = new THREE.MeshStandardMaterial({ color: 0xd9d9d9, roughness: 0.3, metalness: 0.8 });
+
+// Hojas según diseño (dentro del grupo, sobre el marco ya puesto).
+// Devuelve { group, leaves }: el llamador los guarda en userData DESPUÉS de
+// registerSelectable (que reemplaza userData por { id, name, type }).
+function buildDoorLeaves(g, design, width, h, thick) {
+  if (design === 'madera') {
+    const pivot = new THREE.Group();
+    pivot.position.set(width / 2, 0, 0);
+    const leaf = new THREE.Mesh(geo.box(width, h, thick), doorWoodMat);
+    leaf.position.set(-width / 2, h / 2, 0);
+    leaf.castShadow = true;
+    pivot.add(leaf);
+    [thick / 2 + 0.04, -(thick / 2 + 0.04)].forEach(z => {
+      const knob = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 12), doorKnobMat);
+      knob.position.set(-width + 0.15, h / 2, z);
+      pivot.add(knob);
+    });
+    g.add(pivot);
+    return { group: pivot, leaves: null };
+  } else if (design === 'doble') {
+    const holder = new THREE.Group();
+    const leaves = [];
+    [-1, 1].forEach(s => {
+      const lw = width / 2;
+      const pivot = new THREE.Group();
+      pivot.position.set(s * width / 2, 0, 0);
+      const leaf = new THREE.Mesh(geo.box(lw, h, thick), doorGlassMat);
+      leaf.position.set(-s * lw / 2, h / 2, 0);
+      leaf.castShadow = true;
+      pivot.add(leaf);
+      const pull = new THREE.Mesh(geo.box(0.05, 0.5, 0.05), doorLeafMat);
+      pull.position.set(-s * 0.12, h / 2, thick / 2 + 0.03);
+      pivot.add(pull);
+      holder.add(pivot);
+      leaves.push(pivot);
+    });
+    const mull = new THREE.Mesh(geo.box(0.06, h, thick), wallFrameMat);
+    mull.position.set(0, h / 2, 0);
+    holder.add(mull);
+    g.add(holder);
+    return { group: holder, leaves };
+  } else {
+    const pivot = new THREE.Group();
+    pivot.position.set(width / 2, 0, 0);
+    const leaf = new THREE.Mesh(geo.box(width, h, thick), doorGlassMat);
+    leaf.position.set(-width / 2, h / 2, 0);
+    pivot.add(leaf);
+    const handle = new THREE.Mesh(geo.box(0.12, 0.05, 0.05), doorLeafMat);
+    handle.position.set(-width, h / 2 - 0.12, thick / 2);
+    pivot.add(handle);
+    g.add(pivot);
+    return { group: pivot, leaves: null };
+  }
+}
+
+function storeDoorRefs(g, built) {
+  g.userData.doorGroup = built.group;
+  if (built.leaves) g.userData.doorLeaves = built.leaves;
+  else delete g.userData.doorLeaves;
+}
+
+// Cambiar el diseño de una puerta ya creada (reconstruye hojas in situ:
+// conserva id, posición, estado y pared pegada).
+export function setDoorDesign(g, design) {
+  const dd = g && g.userData.doorData;
+  if (!dd || !DOOR_DESIGNS.some(d => d.id === design)) return;
+  if (dd.design === design) return;
+  const drop = [];
+  g.children.forEach(c => {
+    // El marco se queda; solo salen las hojas/pivotes (geometrías y
+    // materiales compartidos: sin dispose; GC se lleva los nodos sueltos).
+    if (c === g.userData.doorGroup) drop.push(c);
+  });
+  drop.forEach(c => g.remove(c));
+  dd.design = design;
+  const w = dd.w, h = dd.h || 2.2, thick = 0.12;
+  storeDoorRefs(g, buildDoorLeaves(g, design, w, h, thick));
+  setDoorState(g, g.userData.doorState || 'cerrado');
 }
 
 // ---------- IMÁN DE ABERTURA A PARED (ventana o puerta) ----------
