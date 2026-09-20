@@ -2,6 +2,11 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Elegir tramo no se pierde + sentados continuos en alarma
+
+- Marcar el tramo DESPUÉS de abrir (antes el toggle lo borraba cuando había
+  otro cuadro en edición: a veces no se iluminaba).
+- Perro/gato: sentado llega hasta tirarse, sin hueco.
 ## [2026-09-20] — Pastillas solo en el tramo elegido (no en todos)
 
 - 💾/✕ se veían en todos los tramos del camino a la vez (dos acá, dos

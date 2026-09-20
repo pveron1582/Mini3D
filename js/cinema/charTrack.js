@@ -91,8 +91,8 @@ function renderCaminoSegments(inner, entry, info, pps) {
     editBtn.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
     editBtn.addEventListener('click', (ev) => {
       ev.stopPropagation();
-      selectedCamino = { charId: entry.id, seg: idx };
       togglePathEditor(entry.id);
+      selectedCamino = { charId: entry.id, seg: idx };
       renderCharBlocks();
     });
     el.appendChild(editBtn);
@@ -147,8 +147,8 @@ function renderCaminoSegments(inner, entry, info, pps) {
     el.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
     el.addEventListener('click', (ev) => {
       ev.stopPropagation();
-      selectedCamino = { charId: entry.id, seg: idx };
       togglePathEditor(entry.id);
+      selectedCamino = { charId: entry.id, seg: idx };
       renderCharBlocks();
     });
     inner.appendChild(el);
