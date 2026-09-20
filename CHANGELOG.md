@@ -2,6 +2,14 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Bloques de desplazamiento: verde→rojo con duración auto
+
+- El ＋ de personajes ofrece **estático** (lo de siempre) o
+  **desplazamiento**: se marcan inicio (verde) y fin (rojo) en el piso y la
+  duración sale sola (distancia/velocidad); al editarla, la velocidad se
+  adapta. Animación obligatoria (caminar/correr): sin ella no guarda.
+- En reproducción el personaje viaja (manda sobre camino y pose) y al
+  terminar conserva lugar y acción; puntos intermedios quedan pendientes.
 ## [2026-09-20] — Paquetes suben por las bajadas (red conexa)
 
 - El tramo del rack terminaba en la pared (callejón): la norte ahora llega

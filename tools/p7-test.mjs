@@ -405,7 +405,7 @@ setCharBlocks([], {});
 // --- bloques guardan pose (lugar + rotación) y la reproducen ---
 // Cada cuadro recuerda dónde quedó el personaje: al pasar de un cuadro a
 // otro salta a su pose, y terminada la escena conserva la última.
-const { charPoseAt, createInitialCharBlock, captureBlockPose } = await import(pathToFileURL('./js/cinema/charTrack.js'));const poseRig = addHumanCharacter('poseTestChar', 'Pose Test', 1, 2, 0, {});
+const { charPoseAt, createInitialCharBlock, captureBlockPose, charMoveAt, calcMoveDuration, calcMoveSpeed, moveDist, moveBlockReady } = await import(pathToFileURL('./js/cinema/charTrack.js'));const poseRig = addHumanCharacter('poseTestChar', 'Pose Test', 1, 2, 0, {});
 // El bloque inicial (3 s) nace con el lugar de creación
 const poseInit = createInitialCharBlock('poseTestChar', 'idle');
 assert(poseInit.start === 0 && poseInit.duration === 3, 'bloque inicial: arranca en 0 y dura 3 s');
@@ -438,6 +438,35 @@ poseEntry.group.position.set(11, 0, 12);
 poseEntry.group.rotation.y = 0.7;
 captureBlockPose(capBlock);
 assert(Math.abs(capBlock.actions.poseTestChar.pos[0] - 11) < 1e-6 && Math.abs(capBlock.actions.poseTestChar.rotY - 0.7) < 1e-6, 'definir en el cuadro captura el lugar');
+
+// --- bloques de desplazamiento: duración auto + interpolación ---
+const mvTest = { from: { x: 0, z: 0 }, to: { x: 3, z: 4 }, speed: 2 };
+assert(moveDist(mvTest) === 5, 'distancia del recorrido');
+assert(Math.abs(calcMoveDuration(mvTest) - 2.5) < 1e-9, 'duración = distancia/velocidad');
+assert(Math.abs(calcMoveSpeed(mvTest, 5) - 1) < 1e-9, 'editar duración adapta la velocidad');
+assert(moveBlockReady({ actions: { c: { action: 'walk', move: { from: { x: 0, z: 0 }, to: { x: 1, z: 0 }, speed: 2 } } } }) === true, 'move completo listo para guardar');
+assert(moveBlockReady({ actions: { c: { action: null, move: { from: null, to: null, speed: 2 } } } }) === false, 'sin animación ni puntos no guarda');
+assert(moveBlockReady({ actions: { c: { action: 'idle' } } }) === true, 'estático siempre listo');
+setCharBlocks([
+  { id: 'cbM1', start: 2, duration: 4, actions: { poseTestChar: { action: 'walk', pos: [6, 0.17, 8], rotY: 0.64, move: { from: { x: 0, z: 0 }, to: { x: 6, z: 8 }, speed: 2.5 } } } }
+], {});
+const mm = charMoveAt(4).get('poseTestChar');
+assert(!!mm && Math.abs(mm.k - 0.5) < 1e-9 && mm.action === 'walk', 'move vigente a mitad del tramo');
+assert(Math.abs(mm.rotY - Math.atan2(6, 8)) < 1e-9, 'rumbo = dirección del recorrido');
+assert(!charMoveAt(1).has('poseTestChar') && !charMoveAt(7).has('poseTestChar'), 'fuera del tramo no hay move');
+assert(charActionsAt(4).get('poseTestChar').action === 'walk', 'acción durante el tramo');
+assert(!charActionsAt(7).has('poseTestChar'), 'al terminar expira (vuelve a la base)');
+setCharBlocks([{ id: 'cbM0', start: 0, duration: 2, actions: { poseTestChar: { action: null } } }], {});
+assert(!charActionsAt(1).has('poseTestChar'), 'acción sin definir no pisa');
+setCharBlocks([
+  { id: 'cbM1', start: 2, duration: 4, actions: { poseTestChar: { action: 'walk', pos: [6, 0.17, 8], rotY: 0.64, move: { from: { x: 0, z: 0 }, to: { x: 6, z: 8 }, speed: 2.5 } } } }
+], {});
+evaluateAllPathsAt(4);
+assert(Math.abs(poseEntry.group.position.x - 3) < 1e-6 && Math.abs(poseEntry.group.position.z - 4) < 1e-6, 'reproducción: interpola el recorrido');
+assert(Math.abs(poseEntry.group.rotation.y - Math.atan2(6, 8)) < 1e-6, 'reproducción: mira el rumbo');
+assert(poseEntry.group.userData && poseRig.currentAction === 'walk', 'reproducción: anima caminando');
+const serM = serializeProject().charBlocks.find(b => b.id === 'cbM1');
+assert(!!serM && serM.actions.poseTestChar.move.to.x === 6, 'move persiste en el JSON');
 setCharBlocks([], {});
 
 // --- reproducción con solo bloques (sin tomas): siempre funciona ---

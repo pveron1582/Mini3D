@@ -13,8 +13,10 @@
 // (posición + rotación) al 💾 — en reproducción el personaje aparece donde
 // quedó en cada cuadro, aunque sea de un salto.
 
+import * as THREE from 'three';
 import { charBlocks, timeline, interactiveRegistry, blockEdit, charLaneBus, charFullRange, store, timelineBus } from '../state.js';
-import { byId } from '../dom.js';
+import { byId, showViewportHint } from '../dom.js';
+import { camera, canvas, scene } from '../core.js';
 import { setActiveTarget } from '../ui/selection.js';
 import { pushHistory } from '../undo.js';
 import { setStatus } from '../media/recorder.js';
@@ -34,6 +36,8 @@ const collapsedLanes = new Set(); // ids de lanes colapsadas (rótulo click)
 export function charBlockSelection() { return selectedBlock; }
 
 export function clearCharBlockSelection() {
+  if (chooserFor) closeBlockChooser();
+  if (movePick) cancelMovePick();
   if (selectedBlock) {
     selectedBlock = null;
     blockSnapshot = null;
@@ -101,12 +105,37 @@ export function charActionsAt(t) {
       const expired = t >= end;
       Object.keys(b.actions || {}).forEach(charId => {
         const a = b.actions[charId];
-        if (!a) return;
-        if (expired && TALK_ACTIONS.has(a.action)) return;  // hablar expira con el tramo
+        if (!a || !a.action) return;   // en definición (ej. anim sin elegir)
+        // HABLAR y DESPLAZARSE son acciones de tramo: al TERMINAR el bloque
+        // expiran y el personaje vuelve a su acción base.
+        if (expired && (TALK_ACTIONS.has(a.action) || a.move)) return;
         state.set(charId, { action: a.action, mood: a.mood || null, t0: b.start });
       });
     });
   return state;
+}
+
+// Desplazamiento vigente en el instante t: por personaje, { from, to, k
+// (0→1 en su tramo), action, rotY (rumbo) }. Solo dentro del tramo y con
+// puntos válidos; fuera, la pose de fin (charPoseAt) lo conserva.
+export function charMoveAt(t) {
+  const moves = new Map();
+  charBlocks.forEach(b => {
+    if (t < b.start || t >= b.start + b.duration) return;
+    Object.keys(b.actions || {}).forEach(charId => {
+      const a = b.actions[charId];
+      if (!a || !a.move || !a.move.from || !a.move.to) return;
+      const d = moveDist(a.move);
+      if (d < 1e-6 || !(b.duration > 0)) return;
+      const k = Math.max(0, Math.min(1, (t - b.start) / b.duration));
+      moves.set(charId, {
+        from: a.move.from, to: a.move.to, k,
+        action: a.action || null,
+        rotY: Math.atan2(a.move.to.x - a.move.from.x, a.move.to.z - a.move.from.z)
+      });
+    });
+  });
+  return moves;
 }
 
 // ---------- charFullRange: acción que dura TODA la escena ----------
@@ -143,6 +172,16 @@ function blockLabel(b) {
     return act;
   });
   return names.length ? names.join(' + ') : '(vacío)';
+}
+
+// Etiqueta de un cuadro en su lane: estático = acción; desplazamiento = anim + →.
+function charBlockLabel(b, charId) {
+  const a = b.actions ? b.actions[charId] : null;
+  if (a && a.move) {
+    const anim = MOVE_ACTIONS.find(m => m.id === a.action);
+    return anim ? `🚶 ${anim.label} →` : '❓ Mover';
+  }
+  return actionLabel(a ? a.action : 'idle');
 }
 
 export function renderCharBlocks() {
@@ -183,7 +222,7 @@ export function renderCharBlocks() {
     addBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
     addBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      addBlockFor(entry);
+      openBlockChooser(entry);
     });
     label.appendChild(addBtn);
 
@@ -341,7 +380,7 @@ export function renderCharBlocks() {
           el.style.width = Math.max(18, b.duration * pps) + 'px';
           const lab = document.createElement('span');
           lab.className = 'tl-shot-label';
-          lab.textContent = actionLabel(a.action);
+          lab.textContent = charBlockLabel(b, entry.id);
           el.appendChild(lab);
 
           const left = document.createElement('div');
@@ -359,6 +398,11 @@ export function renderCharBlocks() {
             save.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
             save.addEventListener('click', (ev) => {
               ev.stopPropagation();
+              // Desplazamiento incompleto (falta animación o puntos): no guarda.
+              if (!moveBlockReady(b)) {
+                setStatus('Falta definir el movimiento: animación (caminar/correr) + inicio verde y fin rojo.');
+                return;
+              }
               // Guardar también DÓNDE está cada personaje del bloque ahora:
               // su posición y rotación actuales quedan en el cuadro — en
               // reproducción aparece ahí (lugar + acción + ánimo).
@@ -405,7 +449,7 @@ export function renderCharBlocks() {
             el.appendChild(close);
           }
 
-          el.title = `${entry.name}: ${actionLabel(a.action)} · ${b.start.toFixed(1)}s → ${(b.start + b.duration).toFixed(1)}s`;
+          el.title = `${entry.name}: ${charBlockLabel(b, entry.id)} · ${b.start.toFixed(1)}s → ${(b.start + b.duration).toFixed(1)}s`;
           el.addEventListener('pointerdown', (e) => beginCharBlockDrag(e, b, el));
           el.addEventListener('click', () => {
             if (el.dataset.dragged === '1') { el.dataset.dragged = ''; return; }
@@ -419,6 +463,7 @@ export function renderCharBlocks() {
     host.appendChild(lane);
   });
   renderCharBlockEditor();
+  updateMoveMarkers();
 }
 
 function laneContentCount(charId) {
@@ -540,13 +585,17 @@ function openCharBlockEditor(b) {
   // base (bloque ⏳), cualquier otra pista (tomas/subtítulos/cartels por el
   // mismo evento) y cerrar el editor de recorrido si estaba abierto.
   if (baseSelectionId) clearBaseSelection();
+  chooserFor = null;
   charLaneBus.closeEditor();
   window.dispatchEvent(new CustomEvent('char-block-selected'));
   selectedBlock = b;
   blockSnapshot = JSON.parse(JSON.stringify({ start: b.start, duration: b.duration, actions: b.actions }));
   blockEdit.set('charblock');
   renderCharBlocks();
-  setStatus('Editando el cuadro: acción, ánimo y lugar quedan guardados en él (💾 confirma, ✕ descarta).');
+  const soloA = b.actions ? b.actions[Object.keys(b.actions)[0]] : null;
+  setStatus(soloA && soloA.move
+    ? 'Bloque de movimiento: marcá inicio/fin y elegí caminar o correr (💾 guarda, ✕ descarta).'
+    : 'Editando el cuadro: acción, ánimo y lugar quedan guardados en él (💾 confirma, ✕ descarta).');
   window.dispatchEvent(new CustomEvent('edit-mode-request', { detail: { mode: 'personajes' } }));
 }
 
@@ -568,9 +617,19 @@ function renderCharBlockEditor() {
   if (!list) return;
   list.innerHTML = '';
 
+  // Chooser de tipo (tras el ＋): estático o desplazamiento.
+  if (chooserFor && !selectedBlock) {
+    renderBlockChooser(list, chooserFor);
+    return;
+  }
+
   Object.keys(selectedBlock.actions || {}).forEach(charId => {
     const entry = interactiveRegistry.get(charId);
     const a = selectedBlock.actions[charId];
+    if (a && a.move) {
+      renderMoveEditorRow(list, entry, charId, a);
+      return;
+    }
     const row = document.createElement('div');
     row.className = 'char-block-row';
     row.style.cssText = 'display:flex; gap:4px; align-items:center; flex-wrap:wrap;';
@@ -621,6 +680,166 @@ function renderCharBlockEditor() {
   // Bloques de UN personaje: sin botón de añadir más.
   const addBtn = byId('charBlockAddChar');
   if (addBtn) addBtn.style.display = 'none';
+}
+
+// ---------- Chooser estático / desplazamiento (tras el ＋) ----------
+function renderBlockChooser(list, entry) {
+  const title = byId('charBlockTitle');
+  if (title) title.textContent = `Nuevo bloque para ${entry.name}`;
+  const mkBtn = (label, hint, fn) => {
+    const b = document.createElement('button');
+    b.className = 'blender-btn';
+    b.style.cssText = 'width:100%; margin-top:4px;';
+    b.textContent = label;
+    b.title = hint;
+    b.addEventListener('click', fn);
+    list.appendChild(b);
+  };
+  mkBtn('🧍 Estático', 'Dura lo que le pongas: acción, lugar, mirada y ánimo fijos.', () => {
+    chooserFor = null;
+    addStaticBlockFor(entry);
+  });
+  mkBtn('🚶 Desplazamiento', 'Marca inicio (verde) y fin (rojo) en el piso: la duración sale sola.', () => {
+    chooserFor = null;
+    addMoveBlockFor(entry);
+  });
+  mkBtn('← Volver', 'Sin bloque nuevo.', () => closeBlockChooser());
+}
+
+// ---------- Editor del bloque de desplazamiento ----------
+function movePointText(m, end) {
+  const p = m[end];
+  return p ? `(${p.x.toFixed(1)}, ${p.z.toFixed(1)})` : '— sin marcar —';
+}
+
+function renderMoveEditorRow(list, entry, charId, a) {
+  const m = a.move;
+  const row = document.createElement('div');
+  row.className = 'char-block-row';
+  row.style.cssText = 'display:flex; gap:4px; align-items:center; flex-wrap:wrap;';
+
+  const name = document.createElement('span');
+  name.style.cssText = 'flex:1; min-width:70px; font-size:11px; font-weight:600;';
+  name.textContent = '🚶 ' + (entry ? entry.name : charId);
+  row.appendChild(name);
+
+  // Animación de movimiento OBLIGATORIA (caminar/correr): sin ella no guarda.
+  const animSel = document.createElement('select');
+  animSel.className = 'tl-input';
+  animSel.style.cssText = 'flex:1; min-width:110px;';
+  [['', '—elegir: caminar/correr—'], ...MOVE_ACTIONS].forEach(([v, label]) => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = label;
+    animSel.appendChild(o);
+  });
+  animSel.value = a.action || '';
+  animSel.addEventListener('change', () => {
+    a.action = animSel.value || null;
+    renderCharBlocks();
+    pushHistory();
+  });
+  row.appendChild(animSel);
+  list.appendChild(row);
+
+  const info = document.createElement('div');
+  info.className = 'cinema-hint';
+  const dist = moveDist(m);
+  info.textContent = dist > 0
+    ? `De ${movePointText(m, 'from')} → a ${movePointText(m, 'to')} · ${dist.toFixed(1)} m`
+    : 'Marcá inicio (verde) y fin (rojo) en el piso.';
+  list.appendChild(info);
+
+  const row2 = document.createElement('div');
+  row2.className = 'char-block-row';
+  row2.style.cssText = 'display:flex; gap:4px; align-items:center; flex-wrap:wrap;';
+
+  const pickFrom = document.createElement('button');
+  pickFrom.className = 'blender-btn';
+  pickFrom.style.cssText = 'flex:1;';
+  pickFrom.textContent = '🟢 Inicio';
+  pickFrom.title = 'Marcar el punto verde en el piso';
+  pickFrom.addEventListener('click', () => startMovePick(selectedBlock, charId, 'from'));
+  row2.appendChild(pickFrom);
+
+  const pickTo = document.createElement('button');
+  pickTo.className = 'blender-btn';
+  pickTo.style.cssText = 'flex:1;';
+  pickTo.textContent = '🔴 Fin';
+  pickTo.title = 'Marcar el punto rojo en el piso';
+  pickTo.addEventListener('click', () => startMovePick(selectedBlock, charId, 'to'));
+  row2.appendChild(pickTo);
+  list.appendChild(row2);
+
+  const row3 = document.createElement('div');
+  row3.className = 'char-block-row';
+  row3.style.cssText = 'display:flex; gap:4px; align-items:center; flex-wrap:wrap;';
+
+  const speedLab = document.createElement('span');
+  speedLab.style.cssText = 'font-size:10px;';
+  speedLab.textContent = 'Vel.';
+  row3.appendChild(speedLab);
+  const speedIn = document.createElement('input');
+  speedIn.type = 'number'; speedIn.min = '0.2'; speedIn.step = '0.1';
+  speedIn.className = 'tl-input';
+  speedIn.style.cssText = 'width:56px;';
+  speedIn.title = 'Velocidad (m/s): recalcula la duración';
+  speedIn.value = String(m.speed || DEFAULT_MOVE_SPEED);
+  speedIn.addEventListener('change', () => {
+    m.speed = Math.max(0.2, +speedIn.value || DEFAULT_MOVE_SPEED);
+    selectedBlock.duration = Math.max(0.5, Math.round(calcMoveDuration(m) * 10) / 10);
+    renderCharBlocks();
+    pushHistory();
+    if (timelineBus.refreshDuration) timelineBus.refreshDuration();
+  });
+  row3.appendChild(speedIn);
+  const sLab = document.createElement('span');
+  sLab.style.cssText = 'font-size:10px; color:var(--text-muted);';
+  sLab.textContent = 'm/s';
+  row3.appendChild(sLab);
+
+  const durLab = document.createElement('span');
+  durLab.style.cssText = 'font-size:10px;';
+  durLab.textContent = 'Dur.';
+  row3.appendChild(durLab);
+  const durIn = document.createElement('input');
+  durIn.type = 'number'; durIn.min = '0.5'; durIn.step = '0.1';
+  durIn.className = 'tl-input';
+  durIn.style.cssText = 'width:56px;';
+  durIn.title = 'Duración (s): la velocidad se adapta para cumplirla';
+  durIn.value = String(selectedBlock.duration);
+  durIn.addEventListener('change', () => {
+    selectedBlock.duration = Math.max(0.5, +durIn.value || selectedBlock.duration);
+    // La velocidad se adapta para cumplir el tiempo con los mismos puntos
+    if (moveDist(m) > 0.05) m.speed = Math.round(calcMoveSpeed(m, selectedBlock.duration) * 100) / 100;
+    renderCharBlocks();
+    pushHistory();
+    if (timelineBus.refreshDuration) timelineBus.refreshDuration();
+  });
+  row3.appendChild(durIn);
+  const dLab = document.createElement('span');
+  dLab.style.cssText = 'font-size:10px; color:var(--text-muted);';
+  dLab.textContent = 's';
+  row3.appendChild(dLab);
+  list.appendChild(row3);
+
+  const moodRow = document.createElement('div');
+  moodRow.className = 'char-block-row';
+  moodRow.style.cssText = 'display:flex; gap:4px; align-items:center; flex-wrap:wrap;';
+  const moodSel = document.createElement('select');
+  moodSel.className = 'tl-input';
+  moodSel.style.cssText = 'flex:1; min-width:80px;';
+  CHAR_MOODS.forEach(op => {
+    const o = document.createElement('option');
+    o.value = op.id; o.textContent = op.label;
+    moodSel.appendChild(o);
+  });
+  moodSel.value = a.mood || '';
+  moodSel.addEventListener('change', () => {
+    a.mood = moodSel.value || undefined;
+    pushHistory();
+  });
+  moodRow.appendChild(moodSel);
+  list.appendChild(moodRow);
 }
 
 // ---------- Acción base rápida (desde el panel Personajes) ----------
@@ -712,6 +931,44 @@ function beginCharBlockDrag(e, b, el) {
 // cosas en la línea.
 export const INITIAL_CHAR_BLOCK_DURATION = 3;
 
+// ---------- Bloques de DESPLAZAMIENTO (vs estáticos) ----------
+// Un bloque es de UN personaje y de UN tipo:
+//   - estático (lo de siempre): dura `duration`, el personaje hace `action`
+//     con `mood` en su `pos`/`rotY`.
+//   - desplazamiento: va de `move.from` (verde) a `move.to` (rojo) con
+//     `move.speed` (m/s) y animación obligatoria (`walk`/`run`). La duración
+//     sale sola (distancia/velocidad); si se edita, la velocidad se adapta.
+// actions = { [charId]: { action, mood?, pos?, rotY?, move? } }
+export const MOVE_ACTIONS = [
+  { id: 'walk', label: '🚶 Caminar' },
+  { id: 'run', label: '🏃 Correr' }
+];
+export const DEFAULT_MOVE_SPEED = 2; // m/s (igual que la cinemática)
+
+export function moveDist(m) {
+  if (!m || !m.from || !m.to) return 0;
+  return Math.hypot(m.to.x - m.from.x, m.to.z - m.from.z);
+}
+
+export function calcMoveDuration(m) {
+  const d = moveDist(m);
+  if (d < 1e-6) return 0;
+  return d / Math.max(0.1, m.speed || DEFAULT_MOVE_SPEED);
+}
+
+export function calcMoveSpeed(m, duration) {
+  const d = moveDist(m);
+  if (!(duration > 0)) return m.speed || DEFAULT_MOVE_SPEED;
+  return d / duration;
+}
+
+// ¿El bloque de desplazamiento está completo (se puede guardar)?
+export function moveBlockReady(b) {
+  const a = b && b.actions ? Object.values(b.actions).find(v => v && v.move) : null;
+  if (!a) return true; // no es de desplazamiento
+  return !!(a.action && a.move.from && a.move.to && moveDist(a.move) > 0.05);
+}
+
 // Pose actual de un personaje en la escena (para guardar en su bloque).
 function currentPoseOf(charId) {
   const entry = interactiveRegistry.get(charId);
@@ -743,8 +1000,10 @@ export function createInitialCharBlock(charId, action = 'idle', duration = INITI
 export function captureBlockPose(b) {
   if (!b) return;
   Object.keys(b.actions || {}).forEach(charId => {
+    const a = b.actions[charId];
+    if (!a || a.move) return;   // desplazamiento: mandan los puntos verde/rojo
     const pose = currentPoseOf(charId);
-    if (pose) Object.assign(b.actions[charId], pose);
+    if (pose) Object.assign(a, pose);
   });
 }
 
@@ -768,13 +1027,32 @@ export function charPoseAt(t) {
 }
 
 // ---------- Botón ＋ de la pista ----------
-// Crea un bloque NUEVO de ACCIÓN para un personaje, al final de sus bloques
-// (un bloque = un personaje), seleccionado para editar directo.
-function addBlockFor(entry) {
+// Primero se elige el TIPO de bloque: estático (acción en un lugar) o
+// desplazamiento (verde→rojo con duración automática).
+let chooserFor = null; // entry del personaje mientras se elige el tipo
+
+export function openBlockChooser(entry) {
   if (!entry || (entry.type !== 'human' && entry.type !== 'pet')) {
     setStatus('Elegí un personaje primero (su lane o la lista): el bloque nuevo es de UN personaje.');
     return;
   }
+  if (baseSelectionId) clearBaseSelection();
+  charLaneBus.closeEditor();
+  window.dispatchEvent(new CustomEvent('char-block-selected'));
+  chooserFor = entry;
+  renderCharBlocks();
+  window.dispatchEvent(new CustomEvent('edit-mode-request', { detail: { mode: 'personajes' } }));
+}
+
+function closeBlockChooser() {
+  if (!chooserFor) return;
+  chooserFor = null;
+  renderCharBlocks();
+}
+
+// Crea un bloque NUEVO ESTÁTICO para un personaje, al final de sus bloques
+// (un bloque = un personaje), seleccionado para editar directo.
+function addStaticBlockFor(entry) {
   // Fin del último bloque de ESTE personaje (sin superponerse)
   const endOfLast = charBlocks
     .filter(b => b.actions && b.actions[entry.id])
@@ -796,10 +1074,153 @@ function addBlockFor(entry) {
   setStatus(`Bloque nuevo de ${entry.name}: elegí qué hace y hasta cuándo. 💾 guarda, ✕ descarta.`);
 }
 
+// Crea un bloque NUEVO DE DESPLAZAMIENTO: arranca en modo de marcado
+// (clic = inicio verde, clic = fin rojo) y la duración sale sola.
+function addMoveBlockFor(entry) {
+  const endOfLast = charBlocks
+    .filter(b => b.actions && b.actions[entry.id])
+    .reduce((m, b) => Math.max(m, b.start + b.duration), 0);
+  const b = {
+    id: 'cb' + (++blockCounter),
+    start: Math.round(Math.max(endOfLast, 0) * 10) / 10,
+    duration: 2,
+    actions: { [entry.id]: { action: null, mood: undefined, move: { from: null, to: null, speed: DEFAULT_MOVE_SPEED } } }
+  };
+  charBlocks.push(b);
+  openCharBlockEditor(b);
+  pushHistory();
+  if (timelineBus.refreshDuration) timelineBus.refreshDuration();
+  startMovePick(b, entry.id, 'from');
+}
+
 byId('btnAddCharBlock')?.addEventListener('pointerdown', (e) => e.stopPropagation());
 byId('btnAddCharBlock')?.addEventListener('click', (e) => {
   e.stopPropagation();
-  addBlockFor(interactiveRegistry.get(store.activeTarget));
+  openBlockChooser(interactiveRegistry.get(store.activeTarget));
+});
+
+// ---------- Marcado de inicio/fin en el viewport ----------
+// Modo de marcado: clic en el piso = punto VERDE (inicio), clic = punto ROJO
+// (fin). La duración del bloque sale sola (distancia/velocidad).
+let movePick = null; // { block, charId, end: 'from'|'to' }
+
+const pickRay = new THREE.Raycaster();
+const pickPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const pickHit = new THREE.Vector3();
+let markFrom = null;   // esfera verde (inicio)
+let markTo = null;     // esfera roja (fin)
+let markLine = null;   // línea entre ambas
+
+function ensureMoveMarkers() {
+  if (markFrom) return;
+  const mat = (c) => new THREE.MeshBasicMaterial({ color: c, depthTest: false, transparent: true, opacity: 0.95 });
+  markFrom = new THREE.Mesh(new THREE.SphereGeometry(0.12, 14, 14), mat(0x35d03a));
+  markTo = new THREE.Mesh(new THREE.SphereGeometry(0.12, 14, 14), mat(0xe04040));
+  markLine = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
+    new THREE.LineBasicMaterial({ color: 0xffd24d, depthTest: false, transparent: true, opacity: 0.9 })
+  );
+  markFrom.renderOrder = 998;
+  markTo.renderOrder = 998;
+  markLine.renderOrder = 997;
+  markFrom.visible = markTo.visible = markLine.visible = false;
+  scene.add(markFrom, markTo, markLine);
+}
+
+// Muestra los puntos del bloque en edición (o los que se están marcando).
+function updateMoveMarkers() {
+  ensureMoveMarkers();
+  let from = movePick && movePick.block.actions[movePick.charId].move.from;
+  let to = movePick && movePick.block.actions[movePick.charId].move.to;
+  if (!movePick && selectedBlock) {
+    const solo = Object.keys(selectedBlock.actions || {})[0];
+    const mv = solo && selectedBlock.actions[solo].move;
+    if (mv) { from = mv.from; to = mv.to; }
+  }
+  markFrom.visible = !!from;
+  markTo.visible = !!to;
+  markLine.visible = !!(from && to);
+  if (from) markFrom.position.set(from.x, 0.12, from.z);
+  if (to) markTo.position.set(to.x, 0.12, to.z);
+  if (from && to) {
+    markLine.geometry.setFromPoints([
+      new THREE.Vector3(from.x, 0.12, from.z),
+      new THREE.Vector3(to.x, 0.12, to.z)
+    ]);
+  }
+}
+
+function floorPointAt(e) {
+  const rect = canvas.getBoundingClientRect();
+  const ndc = new THREE.Vector2(
+    ((e.clientX - rect.left) / rect.width) * 2 - 1,
+    -((e.clientY - rect.top) / rect.height) * 2 + 1
+  );
+  pickRay.setFromCamera(ndc, camera);
+  if (!pickRay.ray.intersectPlane(pickPlane, pickHit)) return null;
+  return { x: Math.round(pickHit.x * 20) / 20, z: Math.round(pickHit.z * 20) / 20 };
+}
+
+export function startMovePick(block, charId, end) {
+  if (!block || !charBlocks.includes(block)) return;
+  const a = block.actions[charId];
+  if (!a || !a.move) return;
+  movePick = { block, charId, end: end === 'to' ? 'to' : 'from' };
+  store.pickMovePoints = true;
+  updateMoveMarkers();
+  showViewportHint(
+    end === 'to' ? 'Clic en el piso: punto ROJO de llegada' : 'Clic en el piso: punto VERDE de inicio',
+    { sticky: true }
+  );
+  setStatus(end === 'to' ? 'Marcá el punto ROJO (fin) en el piso. ESC cancela.' : 'Marcá el punto VERDE (inicio) en el piso. ESC cancela.');
+}
+
+export function cancelMovePick() {
+  if (!movePick) return;
+  movePick = null;
+  store.pickMovePoints = false;
+  showViewportHint('');
+  updateMoveMarkers();
+}
+
+// Fija el punto marcado y, al completar el fin, calcula la duración.
+function commitMovePoint(pt) {
+  const pick = movePick;
+  if (!pick) return;
+  const a = pick.block.actions[pick.charId];
+  if (!a || !a.move) { cancelMovePick(); return; }
+  a.move[pick.end] = pt;
+  if (pick.end === 'from') {
+    startMovePick(pick.block, pick.charId, 'to');
+  } else {
+    const d = calcMoveDuration(a.move);
+    pick.block.duration = Math.max(0.5, Math.round(d * 10) / 10);
+    // La pose de fin queda guardada (al terminar, conserva lugar y acción)
+    const entry = interactiveRegistry.get(pick.charId);
+    a.pos = [pt.x, (entry && entry.rig && entry.rig.groundY) || 0, pt.z];
+    a.rotY = Math.atan2(pt.x - a.move.from.x, pt.z - a.move.from.z);
+    cancelMovePick();
+    renderCharBlocks();
+    pushHistory();
+    if (timelineBus.refreshDuration) timelineBus.refreshDuration();
+    setStatus(`Recorrido de ${pick.block.duration.toFixed(1)}s: elegí la animación (caminar/correr). 💾 guarda.`);
+  }
+  updateMoveMarkers();
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (!movePick || e.button !== 0) return;
+  e.stopPropagation();
+  const pt = floorPointAt(e);
+  if (pt) commitMovePoint(pt);
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && movePick) {
+    cancelMovePick();
+    renderCharBlocks();
+    setStatus('Marcado cancelado (se conserva lo marcado hasta ahora).');
+  }
 });
 
 // Exclusividad entre pistas: un solo bloque seleccionado en TODA la línea

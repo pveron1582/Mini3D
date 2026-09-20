@@ -75,8 +75,11 @@ independiente de la oficina (`js/construction.js`), terreno con césped
 - [x] **MVP**: proyectos nuevos sin personajes; botón “➕ Añadir Personaje”;
       editor 3D con cámara libre, nombre, piel, peinado, ropa y zapatos;
       persistencia en `characters[]`.
+- [x] **Bloques de desplazamiento** (2026-09-20): el ＋ ofrece estático o
+      desplazamiento (verde→rojo en el piso, duración auto, anim obligatoria).
 - [ ] Editar/borrar personajes existentes, más opciones de vestuario/props y
       plantillas de personajes.
+- [ ] Desplazamientos con puntos intermedios (hoy solo inicio/fin).
 
 ---
 
@@ -127,11 +130,15 @@ HECHO: la toma guarda encuadre de FIN (`camPosEnd`/`targetEnd`, botón
 smoothstep (vale en libre/fija, persiste en el JSON, se previsualiza en la
 aguja y el ✕ lo descarta vía snapshot).
 
-### 7. ~~Render determinista + exportación 1080p fijo~~ ✅ (2026-09-08)
+### 7. ~~Render determinista + exportación 1080p fijo~~ ✅ (2026-09-08, ampliado 2026-09-18)
 HECHO: en exportación la sim avanza por pasos fijos de 1/30 s acumulados
 sobre el reloj real (`SIM_STEP`/`consumeSimTime` en `js/media/recorder.js`,
 `stepSim` en `js/render.js`) — sin saltos por drops y misma trayectoria
-siempre; el 1080p fijo offscreen ya existía. MP4 sigue pendiente (solo WebM).
+siempre. El 1080p es **fijo y offscreen** de verdad (2026-09-18): canvas y
+renderer propios de 1920×1080 reutilizados entre exportaciones, con
+`output.renderer` en `js/core.js` para que el render, los subtítulos y el
+quiz escriban ahí. Contenedor: **MP4 (H.264)** con respaldo WebM y selector
+de formato (#1 de GLM.md, 2026-09-18).
 
 ### 8. Biblioteca / navegador de escenas (UX)
 Con varias escenas en `scenes/`, un panel "Escenas" que liste los JSON del
@@ -140,9 +147,14 @@ directorio y los cargue con un clic (hoy hay que ir a Archivo → Abrir).
   `serve.py`).
 
 ### 9. Más props narrativos (contenido)
-Pizarra/pantalla con texto editable (diagramas de red), paquetes de datos
-animados viajando entre dispositivos, celular en la mano.
-- Dónde: `js/office.js` (props seleccionables) + texto dinámico vía canvas
+Pizarra/pantalla con texto editable (diagramas de red), celular en la mano.
+- ✅ **Paquetes de datos animados** (2026-09-18): `js/office/packets.js` hace
+  viajar pulsos luminosos por la red de canaletas (fija + dibujada punto a
+  punto); se reconecta solo al agregar/mover/borrar tramos.
+- ✅ **Cámaras colocables** (2026-09-18): prop `📷 Cámara` con FOV propio y la
+  vista de toma "📷 Cámara puesta" (`js/office/sceneCameras.js`). Eran el #6 de
+  GLM.md.
+- Dónde: `js/office/*.js` (props seleccionables) + texto dinámico vía canvas
   texture.
 
 ### 10. Exterior utilizable (postergado)

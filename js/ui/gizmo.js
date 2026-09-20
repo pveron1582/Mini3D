@@ -980,6 +980,7 @@ canvas.addEventListener('pointerdown', (e) => {
   if (e.button !== 0) return;
   if (cinema.active && cinema.mode !== 'play') return;
   if (store.trayDrawing) return;   // dibujando canaleta: no seleccionar/deseleccionar
+  if (store.pickMovePoints) return; // marcando inicio/fin: el clic es del bloque
   const now = performance.now();
   gizmoState.pointerDownTime = now;
   gizmoState.pointerDownPos = { x: e.clientX, y: e.clientY };
@@ -1065,6 +1066,7 @@ canvas.addEventListener('dblclick', (e) => {
 canvas.addEventListener('pointermove', (e) => {
   if (cinema.active && cinema.mode !== 'play') return;
   if (store.trayDrawing) return;   // dibujando canaleta: el ghost lo maneja trayDraw
+  if (store.pickMovePoints) return;
 
   // Movimiento del bloque seleccionado (multiselección)
   if (multi.dragging) { updateGroupDrag(e); return; }

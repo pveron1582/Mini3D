@@ -1,17 +1,18 @@
 import * as THREE from 'three';
-import { byId, qs, qsa } from '../dom.js';
+import { byId, qs } from '../dom.js';
 import { scene, camera, canvas, controls } from '../core.js';
 import { cinema, cinemaPaths, playbackInstances, view, interactiveRegistry, timelineBus, charLaneBus, blockEdit } from '../state.js';
 import { getActiveObject, getActiveEntry, setActiveTarget } from '../ui/selection.js';
 import { raycaster, getPointerNDC, projectPointerToPlane } from '../ui/gizmo.js';
 import { setStatus } from '../media/recorder.js';
 import { solvePath } from './navigation.js';
-import { charActionsAt, charPoseAt } from './charTrack.js';
+import { charActionsAt, charPoseAt, charMoveAt } from './charTrack.js';
 import { pushHistory } from '../undo.js';
 import { anchorSeats } from '../characters/anchors.js';
 import { getWallColliders, getDoorColliders } from '../office/walls.js';
 import { stepLadder, STEP_LADDER_ORIGIN } from '../office/group.js';
 import { getMinGroundY } from '../collision.js';
+import { sceneCameraFov, setSceneCameraFov } from '../office/sceneCameras.js';
 
 // ==========================================
 // SISTEMA DE CINEMÁTICA (RECORRIDO ANIMADO)
@@ -139,7 +140,6 @@ function cinemaPointerToGround(e, out) {
 function cinemaSetMode(mode) {
   cinema.mode = mode;
   const hint = byId('cinemaHint');
-  const editCtrls = byId('cinemaEditControls');
   const banner = byId('cinemaBanner');
   if (hint) {
     if (mode === 'pickStart') hint.textContent = 'Paso 1: haz clic en el escenario para fijar el punto de INICIO (círculo verde).';
@@ -152,7 +152,6 @@ function cinemaSetMode(mode) {
     else if (mode === 'pickEnd') { banner.textContent = '🔴 PON EL PUNTO FINAL'; banner.style.display = 'block'; }
     else banner.style.display = 'none';
   }
-  if (editCtrls) editCtrls.style.display = (mode === 'edit' || mode === 'play' || playbackInstances.has(cinema.targetId)) ? 'flex' : 'none';
   refreshCinemaUI();
 }
 
@@ -555,11 +554,13 @@ const SHOT_CAM_MAP = {
   '3p': 'third',
   'front': 'front',
   'profile': 'profile',
+  'sceneCam': 'sceneCam',
   'free': 'free'
 };
 
-// Llena el dropdown de "Quién" con todos los personajes de la escena + la
-// opción "Cámara libre" (sin protagonista). Mantiene la selección actual.
+// Llena el dropdown de "Quién" con todos los personajes de la escena, las
+// cámaras colocables (📷) y la opción "Cámara libre" (sin protagonista).
+// Mantiene la selección actual.
 function populateShotCamSubject() {
   const sel = byId('shotCamSubject');
   if (!sel) return;
@@ -570,9 +571,11 @@ function populateShotCamSubject() {
   free.textContent = '🎥 Cámara libre';
   sel.appendChild(free);
   const entries = [];
+  const cams = [];
   interactiveRegistry.forEach(entry => {
     if (entry.deleted) return;
     if (entry.type === 'human' || entry.type === 'pet') entries.push(entry);
+    else if (isSceneCamera(entry)) cams.push(entry);
   });
   entries.sort((a, b) => a.name.localeCompare(b.name));
   entries.forEach(entry => {
@@ -581,7 +584,19 @@ function populateShotCamSubject() {
     o.textContent = (entry.type === 'human' ? '🧍 ' : '🐾 ') + entry.name;
     sel.appendChild(o);
   });
+  // Cámaras puestas al final, agrupadas visualmente con 📷
+  cams.sort((a, b) => a.name.localeCompare(b.name));
+  cams.forEach(entry => {
+    const o = document.createElement('option');
+    o.value = entry.id;
+    o.textContent = '📷 ' + entry.name;
+    sel.appendChild(o);
+  });
   if (current) sel.value = current;
+}
+
+function isSceneCamera(entry) {
+  return !!(entry && entry.group && entry.group.userData.catalogId === 'sceneCamera');
 }
 
 // Refleja la toma seleccionada en los dropdowns (quién + vista). Si no hay
@@ -648,18 +663,45 @@ function applyShotCamControl() {
     shot.subjectId = personId;
     timelineBus.renderShots();
     cutCameraToShot(mode, personId, shot);
-    setStatus(`${label(mode)} sobre ${entry ? entry.name : 'objeto'} (toma seleccionada).`);
+    setStatus(`${label(mode)} ${mode === 'sceneCam' ? 'con' : 'sobre'} ${entry ? entry.name : 'objeto'} (toma seleccionada).`);
   } else {
     view.mode = mode;
     view.subjectId = personId;
     controls.enabled = false;
     updateCinematicCamera(true);
-    setStatus(`${label(mode)} sobre ${entry ? entry.name : 'objeto'}.`);
+    setStatus(`${label(mode)} ${mode === 'sceneCam' ? 'con' : 'sobre'} ${entry ? entry.name : 'objeto'}.`);
   }
+  syncSceneCamUI();
 }
 
 function label(mode) {
-  return { fpv: '1ª persona', third: '3ª persona', front: 'Frente', profile: 'Perfil' }[mode] || mode;
+  return {
+    fpv: '1ª persona', third: '3ª persona', front: 'Frente', profile: 'Perfil',
+    sceneCam: '📷 Cámara puesta'
+  }[mode] || mode;
+}
+
+// Panel de la cámara colocable: aparece cuando la vista es "📷 Cámara puesta"
+// o cuando el prop 📷 está seleccionado en el editor. Su slider edita el FOV
+// del prop, que es lo que las tomas usan al mirar por ella.
+function currentSceneCam() {
+  const byView = view.mode === 'sceneCam' ? interactiveRegistry.get(view.subjectId) : null;
+  if (isSceneCamera(byView)) return byView;
+  const active = getActiveEntry();
+  return isSceneCamera(active) ? active : null;
+}
+
+function syncSceneCamUI() {
+  const panel = byId('sceneCamPanel');
+  const slider = byId('sceneCamFov');
+  const val = byId('sceneCamFovVal');
+  if (!panel) return;
+  const entry = currentSceneCam();
+  panel.style.display = entry ? 'block' : 'none';
+  if (!entry || !slider) return;
+  const fov = sceneCameraFov(entry.group);
+  slider.value = String(fov);
+  if (val) val.textContent = fov + '°';
 }
 
 // Cableado de la UI: dropdowns y botón "Ver". Se llama una sola vez al evaluar
@@ -706,9 +748,23 @@ function label(mode) {
       setStatus('Movimiento de la toma quitado: vuelve a plano fijo.');
     }
   });
+  // Panel de la cámara colocable: el slider edita el FOV del prop activo y,
+  // si la vista es "📷 Cámara puesta", la cámara de escena lo refleja al vivo.
+  const fovSlider = byId('sceneCamFov');
+  fovSlider?.addEventListener('input', () => {
+    const entry = currentSceneCam();
+    if (!entry) return;
+    setSceneCameraFov(entry.group, +fovSlider.value);
+    const val = byId('sceneCamFovVal');
+    if (val) val.textContent = sceneCameraFov(entry.group) + '°';
+    if (view.mode === 'sceneCam') updateCinematicCamera(true);
+  });
+  fovSlider?.addEventListener('change', () => {
+    if (currentSceneCam()) pushHistory();
+  });
   // Mantener el dropdown de personajes y la vista sincronizados con la toma
   // seleccionada: refrescamos al seleccionar/descartar tomas.
-  timelineBus.syncShotCamUI = syncShotCamUI;
+  timelineBus.syncShotCamUI = () => { syncShotCamUI(); syncSceneCamUI(); };
   timelineBus.populateShotCamSubject = populateShotCamSubject;
 })();
 
@@ -783,19 +839,19 @@ export function refreshCharLanes() {
 // VISTAS DE CÁMARA (1ª persona, 3ª, persecución, cine fijo)
 // ==========================================
 export function updateCameraViewVisibility() {
-  const entry = getActiveEntry();
-  const show = !!(entry && (entry.type === 'human' || entry.type === 'pet'));
-  const ctrls = byId('cameraViewControls');
-  if (ctrls) ctrls.style.display = show ? 'flex' : 'none';
+  // Sin UI propia de vistas (el panel .view-btn se quitó en la Fase A), pero
+  // sí hay que refrescar el panel de la cámara colocable 📷 cuando cambia el
+  // objetivo seleccionado (selection.js llama acá en cada cambio).
+  syncSceneCamUI();
 }
 
 export function setCamView(mode) {
   view.mode = mode;
   view.subjectId = null; // vista manual: sigue al objeto seleccionado
   controls.enabled = (mode === 'orbit');
-  qsa('.view-btn').forEach(b => {
-    b.classList.toggle('active', b.getAttribute('data-view') === mode);
-  });
+  // (El panel de botones .view-btn se quitó en la Fase A —hoy las vistas se
+  // eligen por toma en la línea de tiempo o con 1P/3P de cada personaje—,
+  // así que acá no hay UI que marcar activa.)
   if (mode === 'orbit') setStatus('Vista libre (órbita).');
   else setStatus('Vista de cámara: ' + mode);
 }
@@ -845,6 +901,14 @@ export function cutCameraToShot(mode, subjectId, shot = null) {
     camera.position.set(shot.camPos[0], shot.camPos[1], shot.camPos[2]);
     controls.target.set(shot.target[0], shot.target[1], shot.target[2]);
     camera.lookAt(controls.target);
+    return;
+  }
+  if (mode === 'sceneCam') {
+    // Cámara puesta: la toma mira con el prop elegido (posición + FOV propios).
+    view.mode = 'sceneCam';
+    view.subjectId = subjectId || null;
+    controls.enabled = false;
+    updateCinematicCamera(true);
     return;
   }
   view.mode = mode;
@@ -906,6 +970,33 @@ export function clearShotDolly() {
   delete shot.targetEnd;
   return had;
 }
+// Cámara colocable (GLM #3): la toma mira con la posición y el FOV de un prop
+// 📷 Cámara del catálogo. La dirección la marca la rotación del prop (la lente
+// apunta a +z local, como los personajes: rotY=0 mira al SUR).
+const _sceneCamFwd = new THREE.Vector3();
+function applySceneCameraView(snap = false) {
+  const entry = interactiveRegistry.get(view.subjectId) || getActiveEntry();
+  const obj = entry && entry.group;
+  if (!obj || obj.userData.catalogId !== 'sceneCamera') return false;
+  // La óptica: a la altura del prop (el cuerpo está a 1.5 m sobre su origen).
+  const camPos = _camTmp.set(obj.position.x, obj.position.y + 1.5, obj.position.z);
+  // Mira 1 m por delante de la lente (el encuadre lo da el FOV del prop).
+  const ry = obj.rotation.y;
+  _sceneCamFwd.set(Math.sin(ry), 0, Math.cos(ry));
+  const look = new THREE.Vector3().copy(camPos).addScaledVector(_sceneCamFwd, 1);
+  if (snap) {
+    camera.position.copy(camPos);
+    controls.target.copy(look);
+  } else {
+    camera.position.lerp(camPos, 0.2);
+    controls.target.lerp(look, 0.3);
+  }
+  camera.fov = sceneCameraFov(obj);
+  camera.updateProjectionMatrix();
+  camera.lookAt(controls.target);
+  return true;
+}
+
 function getAerialCenter() {
   // Centro aproximado de la escena: promedio de personajes visibles
   let n = 0;
@@ -922,6 +1013,13 @@ function getAerialCenter() {
 }
 
 export function updateCinematicCamera(snap = false) {
+  if (view.mode === 'sceneCam') {
+    if (applySceneCameraView(snap)) return;
+    // La cámara elegida se borró: caer a órbita para no quedar colgados.
+    view.mode = 'orbit';
+    controls.enabled = true;
+    return;
+  }
   if (view.mode === 'aerial') {
     const c = getAerialCenter();
     const camPos = _camTmp.set(c.x + 4, 16, c.z + 10);
@@ -1142,13 +1240,28 @@ export function evaluateAllPathsAt(t) {
   // bloque. Sin recorrido, el personaje aparece en su pose vigente (salto
   // entre cuadros incluido) y la conserva cuando la escena sigue sin bloques.
   const blockPoses = charPoseAt(t);
+  // Desplazamientos de bloque (verde→rojo): mandan sobre camino y pose
+  // durante su tramo (la pose de fin lo conserva después).
+  const blockMoves = charMoveAt(t);
+  const applyCharMove = (entry, mv) => {
+    entry.group.position.set(
+      mv.from.x + (mv.to.x - mv.from.x) * mv.k,
+      applyFloorLaw(entry, 0),
+      mv.from.z + (mv.to.z - mv.from.z) * mv.k
+    );
+    entry.group.rotation.y = mv.rotY;
+    if (entry.rig && mv.action && entry.rig.currentAction !== mv.action) {
+      entry.rig.setAction(mv.action);
+    }
+  };
   interactiveRegistry.forEach((entry, id) => {
     if (!(entry.type === 'human' || entry.type === 'pet')) return;
     const ba = blockActions.get(id);
     const pose = blockPoses.get(id);
-    // Sin contenido en la pista (ni acción ni pose vigentes): no se toca,
-    // queda donde está en el editor — como siempre.
-    if (!ba && !pose) return;
+    const mv = blockMoves.get(id);
+    // Sin contenido en la pista (ni acción ni pose ni movimiento vigentes):
+    // no se toca, queda donde está en el editor — como siempre.
+    if (!ba && !pose && !mv) return;
     if (ba) {
       if (entry.rig && entry.rig.currentAction !== ba.action) {
         entry.rig.setAction(ba.action);
@@ -1160,9 +1273,11 @@ export function evaluateAllPathsAt(t) {
     // Sin recorrido: el personaje queda en su pose de bloque, en su lugar.
     // La pose se aplica aunque la acción del cuadro ya haya expirado (ej.
     // hablar): el último lugar se conserva siempre hasta que otro cuadro,
-    // un recorrido o el estado inicial lo cambien.
+    // un recorrido o el estado inicial lo cambien. El desplazamiento manda
+    // primero (está en camino dentro de su tramo).
     const stored = cinemaPaths.get(id);
     if (!stored || !stored.waypoints || stored.waypoints.length < 2) {
+      if (mv) { applyCharMove(entry, mv); return; }
       if (pose && pose.pos) {
         entry.group.position.set(pose.pos[0], applyFloorLaw(entry, pose.pos[1]), pose.pos[2]);
         if (pose.rotY !== undefined) entry.group.rotation.y = pose.rotY;
@@ -1178,6 +1293,9 @@ export function evaluateAllPathsAt(t) {
   cinemaPaths.forEach((stored, id) => {
     const entry = interactiveRegistry.get(id);
     if (!entry || !stored.waypoints || stored.waypoints.length < 2) return;
+    // Bloque de desplazamiento vigente: manda sobre el camino en su tramo.
+    const mv = blockMoves.get(id);
+    if (mv) { applyCharMove(entry, mv); return; }
     const pv = getPreviewPath(stored);
     const s = samplePreviewPath(pv, t, entry);
     if (!pv) {

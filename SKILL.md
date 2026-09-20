@@ -46,7 +46,9 @@ La filosofía del proyecto:
   género/vestimenta/accesorios) y `anchors.js`.
 - `js/cinema/` — narrativa temporal: `cinematics.js` (recorridos por waypoints
   y vistas de cámara), `timeline.js` (secuenciador de tomas + eventos de
-  waypoint), `quizTrack.js` (pista de carteles de pregunta), `wizard.js`
+  waypoint), `charTrack.js` (pista PERSONAJES: bloques estáticos y de
+  desplazamiento verde→rojo), `tlSnap.js` (imán entre pistas), `tlScale.js`
+  (escala única), `quizTrack.js` (pista de carteles de pregunta), `wizard.js`
   (asistente de escenas) y `navigation.js` (A* de recorridos).
 - `js/ui/` — interacción: `ui.js` (paneles y selector Editar), `gizmo.js`
   (flechas/anillo de transformación), `selection.js` (registro de
@@ -64,7 +66,10 @@ La filosofía del proyecto:
   `lounge.js` (sala de juntas, oficina del jefe, bar, cocina), `network.js`
   (mini rack con puerta multi-instancia, canaletas, APs WiFi), `city.js`
   (calle/vereda exterior), `alarm.js` (balizas), `hackerHouse.js` (casa del
-  hacker), `geoCache.js` (caché de primitivas, P9) e `index.js` (orquestador).
+  hacker), `geoCache.js` (caché de primitivas, P9), `packets.js` (paquetes de
+  datos animados recorriendo las canaletas, GLM #4), `sceneCameras.js` (prop
+  📷 Cámara colocable con FOV propio usado por las tomas, GLM #3) e `index.js`
+  (orquestador).
 - `js/catalog.js` — catálogo de piezas (P7): spawn/duplicar/borrar objetos y su
   persistencia en el JSON de proyecto.
 - `js/park.js`, `js/lights.js`, `js/terrain.js`, `js/environment.js` —
