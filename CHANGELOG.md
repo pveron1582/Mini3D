@@ -2,6 +2,10 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Botón ⤵ Hasta el final en el editor de bloques
+
+- El cuadro seleccionado se estira hasta que termina el clip (quieto ahí
+  hasta el final); en movimiento adapta la velocidad a los mismos puntos.
 ## [2026-09-20] — Botón ⧉ Duplicar en bloques de personajes
 
 - Cada cuadro seleccionado ofrece ⧉: copia idéntica (acción, ánimo, lugar,

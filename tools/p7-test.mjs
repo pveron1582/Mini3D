@@ -496,11 +496,19 @@ setCharBlocks([
 ], {});
 const srcD = charBlocks.find(b => b.id === 'cbD1');
 const dupD = duplicateCharBlock(srcD, 'poseTestChar');
-assert(!!dupD && dupD.id !== 'cbD1', 'duplicado con id nuevo');
-assert(dupD.start === 5 && dupD.duration === 2, 'copia al final aunque el original esté antes');
+assert(!!dupD && dupD.id !== 'cbD1', 'duplicado con id nuevo');assert(dupD.start === 5 && dupD.duration === 2, 'copia al final aunque el original esté antes');
 assert(dupD.actions.poseTestChar.action === 'idle' && dupD.actions.poseTestChar.pos[0] === 1, 'copia idéntica (acción + lugar)');
 assert(duplicateCharBlock({ id: 'cbX' }, 'poseTestChar') === null, 'fuera de la pista no duplica');
 setCharBlocks([], {});
+
+// --- extender bloque hasta el final del clip ---
+const { extendBlockDataTo } = await import(pathToFileURL('./js/cinema/charTrack.js'));
+const extB = { id: 'cbE', start: 8, duration: 4, actions: { poseTestChar: { action: 'idle' } } };
+assert(extendBlockDataTo(extB, 45.8) === true && Math.abs(extB.duration - 37.8) < 1e-9, 'estira hasta el final');
+assert(extendBlockDataTo(extB, 45.8) === false, 'si ya llega no hace nada');
+const extM = { id: 'cbEM', start: 0, duration: 2, actions: { poseTestChar: { action: 'walk', move: { from: { x: 0, z: 0 }, to: { x: 6, z: 8 }, speed: 2.5 } } } };
+assert(extendBlockDataTo(extM, 10) === true && extM.duration === 10, 'move también se estira');
+assert(Math.abs(extM.actions.poseTestChar.move.speed - 1) < 1e-9, 'al estirar adapta la velocidad');
 
 // --- reproducción con solo bloques (sin tomas): siempre funciona ---
 // La duración cubre los bloques y el play no se niega aunque no haya tomas.

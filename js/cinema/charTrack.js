@@ -715,6 +715,15 @@ function renderCharBlockEditor() {
   // Bloques de UN personaje: sin botón de añadir más.
   const addBtn = byId('charBlockAddChar');
   if (addBtn) addBtn.style.display = 'none';
+
+  // ⤵ Llevar el bloque hasta que termine el clip (quieto ahí hasta el final).
+  const endBtn = document.createElement('button');
+  endBtn.className = 'blender-btn';
+  endBtn.style.cssText = 'width:100%; margin-top:4px;';
+  endBtn.textContent = `⤵ Hasta el final (${timeline.duration.toFixed(1)}s)`;
+  endBtn.title = 'Estira el bloque hasta que termine el clip';
+  endBtn.addEventListener('click', extendSelectedToEnd);
+  list.appendChild(endBtn);
 }
 
 // ---------- Chooser estático / desplazamiento (tras el ＋) ----------
@@ -875,6 +884,33 @@ function renderMoveEditorRow(list, entry, charId, a) {
   });
   moodRow.appendChild(moodSel);
   list.appendChild(moodRow);
+}
+
+// Estira el bloque hasta `end` (puro/testeable): en move adapta la
+// velocidad para cumplir el tiempo con los mismos puntos. Devuelve si cambió.
+export function extendBlockDataTo(b, end) {
+  if (!b) return false;
+  const target = Math.max(0.5, Math.round((end - b.start) * 10) / 10);
+  if (target <= b.duration) return false;
+  b.duration = target;
+  const solo = Object.keys(b.actions || {})[0];
+  const a = solo && b.actions[solo];
+  if (a && a.move && moveDist(a.move) > 0.05) {
+    a.move.speed = Math.round(calcMoveSpeed(a.move, target) * 100) / 100;
+  }
+  return true;
+}
+
+function extendSelectedToEnd() {
+  if (!selectedBlock) return;
+  if (!extendBlockDataTo(selectedBlock, timeline.duration)) {
+    setStatus('El bloque ya llega hasta el final.');
+    return;
+  }
+  renderCharBlocks();
+  pushHistory();
+  if (timelineBus.refreshDuration) timelineBus.refreshDuration();
+  setStatus(`Bloque extendido hasta el final (${timeline.duration.toFixed(1)}s).`);
 }
 
 // ---------- Acción base rápida (desde el panel Personajes) ----------
