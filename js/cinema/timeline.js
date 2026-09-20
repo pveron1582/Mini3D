@@ -11,7 +11,7 @@ import { pxPerSec, LANE_LABEL_W } from './tlScale.js';
 import { subtitleTrack, refreshSubtitles } from '../media/subtitles.js';
 import { audioPlay, audioStop } from '../media/audio.js';
 import { stopAllPlaybacks, cutCameraToShot, setCamView, cinemaStorePath, updateCameraViewVisibility, evaluateAllPathsAt, cinemaDeactivate, cinemaClearVisuals, cinemaClearAllVisuals, cinemaSetMode, refreshCharLanes, applyShotDolly } from './cinematics.js';
-import { startRecording, mediaRecorder, setStatus } from '../media/recorder.js';
+import { startRecording, mediaRecorder, setStatus, exportFormatOptions } from '../media/recorder.js';
 import { pushHistory } from '../undo.js';
 import { setActiveTarget } from '../ui/selection.js';
 import { getAnchor } from '../characters/anchors.js';
@@ -180,6 +180,7 @@ export function playScene() {
   timeline.activeShotId = null;
   setAlarm(computeAlarmAt(0));   // la alarma arranca apagada
   timeline.playing = true;
+  playheadUsed = true;   // tocó Play: la aguja ya es parte de la escena
   audioPlay(0);   // música + efectos desde el inicio (también al exportar)
   const first = currentShot(0);
   if (first) {
@@ -202,7 +203,8 @@ export function recordScene() {
   // La exportación dura lo que la escena a la velocidad elegida (+margen)
   const secs = timeline.duration / Math.max(0.1, playback.rate) + 0.05;
   const base = store.projectName || ('pelicula_' + store.currentEnv);
-  startRecording(secs, base + '.webm');
+  const pref = byId('exportFormat')?.value || 'auto';
+  startRecording(secs, base, pref);
   setStatus(`Exportando película (${(timeline.duration / playback.rate).toFixed(1)}s a 1080p 60 fps)...`);
 }
 
@@ -456,29 +458,50 @@ function renderRuler() {
   }
 }
 
+// La aguja se muestra mientras se reproduce y también una vez que se usó
+// (scrub/play): al llevarla al segundo 0 queda VISIBLE haciendo tope ahí — sin
+// esto se ocultaba al pasar por 0 y parecía que se metía detrás de las pistas.
+let playheadUsed = false;
+
 function updatePlayheadUI() {
   const ph = byId('tlPlayhead');
   if (ph) {
-    ph.style.display = (timeline.playing || timeline.time > 0) ? 'block' : 'none';
+    const show = timeline.playing || playheadUsed || timeline.time > 0;
+    ph.style.display = show ? 'block' : 'none';
+    // Tope duro en el segundo 0: nunca a la izquierda de la marca 0s.
     ph.style.left = (playheadBaseX() + Math.max(0, timeline.time) * pxPerSec()) + 'px';
     positionPlayheadKnob(ph);
   }
   if (clockEl) clockEl.textContent = fmt(timeline.time) + ' / ' + fmt(timeline.duration);
 }
 
-// El cabezal rojo va a la altura de la REGLA (donde se leen los segundos),
-// no arriba del panel: la barra de herramientas cambia de alto según el
-// ancho, así que se ancla al ruler en vivo (cacheado mientras no se mueva).
-let knobGeoKey = null;
+// El cabezal rojo va a la altura de la REGLA (donde se leen los segundos), no
+// arriba del panel. OJO: la regla vive dentro de `.tl-body`, que es
+// `position: relative` — así que `ruler.offsetTop` se mide contra el CUERPO
+// (siempre 0) y no contra el panel de la aguja. Por eso la posición se calcula
+// con rectángulos y se acota al área visible del cuerpo.
+// La línea arranca en la regla (nada de rojo sobre la botonera) y el
+// cuadradito, más chico, queda centrado en ella.
+let knobGeo = null;
 function positionPlayheadKnob(ph) {
   const knob = ph.firstElementChild;
   const ruler = byId('timelineRuler');
-  if (!knob || !ruler) return;
-  if (ph.style.display === 'none') { knobGeoKey = null; return; }
-  const key = ruler.offsetTop + 'x' + ruler.clientHeight;
-  if (key === knobGeoKey) return;
-  knobGeoKey = key;
-  knob.style.top = (ruler.offsetTop + ruler.clientHeight / 2 - knob.offsetHeight / 2) + 'px';
+  const sec = ph.offsetParent;
+  const body = ruler ? ruler.parentElement : null;
+  if (!knob || !ruler || !sec || !body) return;
+  if (ph.style.display === 'none') { knobGeo = null; return; }
+  const sr = sec.getBoundingClientRect();
+  const rr = ruler.getBoundingClientRect();
+  const br = body.getBoundingClientRect();
+  const kh = knob.offsetHeight || 22;
+  // Arriba del área visible, sin invadir la botonera: la regla si se ve,
+  // si no el borde superior visible del cuerpo.
+  const anchor = Math.max(rr.top, br.top);
+  const key = Math.round(anchor - sr.top) + 'x' + Math.round(rr.height);
+  if (key === knobGeo) return;
+  knobGeo = key;
+  ph.style.top = Math.round(anchor - (sr.top + sec.clientTop)) + 'px';
+  knob.style.top = Math.round(rr.height / 2 - kh / 2) + 'px';
 }
 
 // La aguja vive en #scene-timeline (fuera del cuerpo con scroll) pero sus
@@ -534,6 +557,7 @@ function selectedBlockTimeRange() {
 let scrubDrag = false;
 function startScrub(e) {
   if (!track) return;
+  playheadUsed = true;   // apenas se agarra el cabezal, la aguja queda visible
   if (timeline.playing) {
     timeline.playing = false;
     timeline.paused = false;
@@ -596,6 +620,7 @@ const FRAME_STEP = 1 / 30; // un frame a 30 fps
 function scrubTo(t) {
   const maxT = timeline.duration > 0 ? timeline.duration : Math.max(0, t);
   timeline.time = Math.max(0, Math.min(maxT, t));
+  playheadUsed = true;   // la aguja ya se usó: se muestra aunque quede en 0
   if (timeline.playing) {
     timeline.playing = false;
     timeline.paused = false;
@@ -829,8 +854,6 @@ function selectShot(id) {
 // El bloque "🎥 Vista de Cámara" del menú izquierdo aparece también cuando
 // hay una toma seleccionada (no solo con personajes)
 function syncCameraControlsVisibility(shot) {
-  const el = byId('cameraViewControls');
-  if (el) el.style.display = shot ? 'block' : 'none';
   if (!shot) {
     // Sin toma seleccionada: cámara LIBRE que el usuario maneja a gusto
     // (1P/3P dejan de estar anclados a un corte).
@@ -947,6 +970,24 @@ loopSceneBtn?.addEventListener('click', () => {
     ? 'Bucle de reproducción activado: la escena se repetirá al terminar.'
     : 'Bucle de reproducción desactivado.');
 });
+// Refleja la disponibilidad real de formatos en el selector (#1: MP4/WebM):
+// si el navegador no soporta MP4 en MediaRecorder, "Auto" solo puede dar WebM.
+(function initExportFormatUI() {
+  const sel = byId('exportFormat');
+  if (!sel) return;
+  const { mp4, webm } = exportFormatOptions();
+  if (mp4) {
+    sel.title = 'Auto: MP4 (H.264) en este navegador; WebM como respaldo.';
+  } else if (webm) {
+    sel.title = 'Este navegador no soporta MP4 en MediaRecorder: Auto graba WebM (VP9/VP8).';
+    const autoOpt = sel.querySelector('option[value="auto"]');
+    if (autoOpt) autoOpt.textContent = 'Auto (WebM)';
+  } else {
+    sel.title = 'Sin formatos de grabación disponibles en este navegador.';
+    sel.disabled = true;
+  }
+})();
+
 // ⬇ Exportar: reproduce la película completa desde el inicio y genera el
 // video (1080p 60 fps). Si ya se está exportando, el click la detiene.
 byId('exportBtn')?.addEventListener('click', () => {

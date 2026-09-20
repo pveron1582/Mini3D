@@ -2,6 +2,10 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Cabezal más chico y sin línea sobre la botonera
+
+- El cuadradito rojo baja de 27 a 22 px y la línea arranca en la regla
+  (nada de rojo sobre play y compañía, ni aunque scrollee la línea).
 ## [2026-09-20] — Escenas viejas: caminar vuelve a animarse (migración real)
 
 - Alarma/ransomware/incidente no traían bloques: se migraban con tiempos

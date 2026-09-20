@@ -61,7 +61,7 @@ body, html {
   gap: 12px;
 }
 
-/* Bloque central de proyecto (guardar Â· nuevo Â· undo Â· redo) */
+/* Bloque central de proyecto (guardar · nuevo · undo · redo) */
 .top-bar-center {
   display: flex;
   align-items: center;
@@ -472,28 +472,7 @@ body, html {
   text-transform: uppercase;
 }
 
-.view-btn-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-}
-
-/* Fila de dos (Vista Libre + AÃ©rea): simÃ©trica, cada botÃ³n ocupa la mitad */
-.view-btn-grid.duo {
-  grid-template-columns: repeat(2, 1fr);
-}
-
-.view-btn-grid.duo .view-btn {
-  padding: 8px 4px;
-  font-weight: 600;
-}
-
-.view-btn.active {
-  background-color: var(--accent-primary);
-  border-color: var(--accent-primary-hover);
-  color: #fff;
-  font-weight: 600;
-}
+/* (El panel .view-btn se quitó en la Fase A: estilos huérfanos eliminados) */
 
 .cinema-banner {
   position: absolute;
@@ -929,7 +908,7 @@ body, html {
 }
 
 /* ==========================================
-   SECUENCIADOR DE ESCENAS (LÃNEA DE TIEMPO)
+   SECUENCIADOR DE ESCENAS (LÍNEA DE TIEMPO)
    ========================================== */
 .blender-btn.danger {
   background: var(--accent-danger);
@@ -1183,13 +1162,16 @@ body, html {
   box-shadow: 0 0 8px rgba(255, 82, 82, 0.75);
 }
 
-/* Cabezal rojo de la cabeza de reproducciÃ³n: grande, por encima de la regla */
+/* Cabezal rojo de la cabeza de reproducción: se ancla a la altura de la regla
+   (donde se leen los segundos). El `top` real lo calcula positionPlayheadKnob()
+   en timeline.js con la geometría del panel; este es el valor previo a la
+   primera medición. */
 .tl-playhead-knob {
   position: absolute;
-  top: -9px;
-  left: -12px;
-  width: 27px;
-  height: 27px;
+  top: 0;
+  left: -10px;
+  width: 22px;
+  height: 22px;
   background: #ff5252;
   border: 2px solid #ffffff;
   border-radius: 6px;
@@ -1342,8 +1324,8 @@ body, html {
   white-space: nowrap;
 }
 
-/* Pista de subtÃ­tulos debajo de las tomas: mismo alto y formato que la
-   pista de cinemÃ¡tica */
+/* Pista de subtítulos debajo de las tomas: mismo alto y formato que la
+   pista de cinemática */
 .tl-sub-lane {
   position: relative;
   height: 44px;
@@ -1356,7 +1338,7 @@ body, html {
   overflow: hidden;
 }
 
-/* Bloques de subtÃ­tulo: misma forma/tamaÃ±o que los clips de cinemÃ¡tica
+/* Bloques de subtítulo: misma forma/tamaño que los clips de cinemática
    (.tl-shot), pero con UN SOLO color fijo */
 .tl-sub {
   position: absolute;
@@ -1368,7 +1350,7 @@ body, html {
   user-select: none;
   touch-action: none;
   border: 1px solid rgba(0,0,0,0.35);
-  background: #a8822e; /* Ãºnico color de la pista de subtÃ­tulos */
+  background: #a8822e; /* único color de la pista de subtítulos */
 }
 
 .tl-sub:hover {
@@ -1478,7 +1460,7 @@ body, html {
    blancos" y oscurecimiento: ahora la UI es por secciones de edición y la
    selección de un bloque se suelta sola al hacer click fuera de su sección.) */
 
-/* ---------- SubmenÃº de subtÃ­tulos --------------------------------------- */
+/* ---------- Submenú de subtítulos --------------------------------------- */
 .sub-icon-row {
   display: flex;
   flex-wrap: wrap;
@@ -1516,7 +1498,7 @@ body, html {
   font-size: 11px;
 }
 
-/* Panel de eventos de waypoint (cinemÃ¡tica) */
+/* Panel de eventos de waypoint (cinemática) */
 .waypoint-event-panel {
   margin-top: 8px;
   padding: 8px;
@@ -1528,7 +1510,7 @@ body, html {
   gap: 6px;
 }
 
-/* MenÃº Archivo (dropdown) */
+/* Menú Archivo (dropdown) */
 .top-menu .has-dropdown {
   position: relative;
   cursor: pointer;
@@ -1562,7 +1544,7 @@ body, html {
 .menu-option:hover { background: var(--accent-primary); color: #fff; }
 .menu-option.disabled { color: var(--text-muted); pointer-events: none; opacity: 0.5; }
 
-/* Aviso flotante de snap (Ã¡ngulos / escala) */
+/* Aviso flotante de snap (ángulos / escala) */
 .snap-badge {
   position: absolute;
   top: 14px;
