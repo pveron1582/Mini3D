@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { byId, qs, qsa } from '../dom.js';
 import { camera, canvas, controls, viewCenterGround } from '../core.js';
-import { store, cinema, view, playbackInstances, interactiveRegistry, blockEdit } from '../state.js';
+import { store, cinema, view, playbackInstances, interactiveRegistry, blockEdit, blockPin } from '../state.js';
 import { getActiveEntry, getActiveObject, setActiveTarget, updateSelectionRing, clearActiveTarget } from './selection.js';
 import {
   setCamView, cinemaDeactivate, refreshCinemaUI
@@ -12,14 +12,14 @@ import { startPickSeatMode } from './contextMenu.js';
 import { setStatus } from '../media/recorder.js';
 import { pushHistory } from '../undo.js';
 import { getMinGroundY } from '../collision.js';
-import { applyViewToSelectedShot, clearSubSelection as clearSubtitleSelection, clearSelection as clearShotSelection } from '../cinema/timeline.js';
+import { clearSubSelection as clearSubtitleSelection, clearSelection as clearShotSelection } from '../cinema/timeline.js';
 import { clearQuizSelection } from '../cinema/quizTrack.js';
 import { getWallTexture, wallTextureNames, setWallKind, addWall, setDoorState, addWindow, addDoor, wallSnap, DOOR_DESIGNS, WINDOW_DESIGNS, setDoorDesign, setWindowDesign } from '../office/walls.js';
 import { floorTextureNames, getFloorTextureName, applyFloorTexture } from '../office/floor.js';
 import { addConFloor, addConWall, addConDoor, addConWindow, setConFloorTexture, updateConstructionVisibility, retileConWall, setConWallTexture, attachOpeningToWall } from '../construction.js';
 import { onTargetSelected } from './selection.js';
-import { CATALOG, spawnCatalogItem, deleteActiveObject, duplicateActiveObject } from '../catalog.js';
-import { deleteMultiSelection, multiCount } from './multiselect.js';
+import { CATALOG, spawnCatalogItem, deleteActiveObject } from '../catalog.js';
+import { multiCount, deleteMultiSelection } from './multiselect.js';
 import { startTrayDraw, onTrayCreated } from '../trayDraw.js';
 
 // ==========================================
@@ -321,24 +321,8 @@ numScale?.addEventListener('input', () => { sliderScale.value = numScale.value; 
   inp?.addEventListener('change', pushHistory);
 });
 
-byId('btnResetTargetPos')?.addEventListener('click', () => {
-  const obj = getActiveObject();
-  if (obj) {
-    obj.position.set(0, 0, 0);
-    obj.rotation.set(0, 0, 0);
-    syncSlidersFromTarget();
-    pushHistory();
-  }
-});
-
-byId('btnFaceCamera')?.addEventListener('click', () => {
-  const obj = getActiveObject();
-  if (obj) {
-    obj.lookAt(camera.position.x, obj.position.y, camera.position.z);
-    syncSlidersFromTarget();
-    pushHistory();
-  }
-});
+// (Los botones btnResetTargetPos / btnFaceCamera ya no existen: la
+// transformación se hace con los sliders/números y el gizmo.)
 
 // Modo "Editar Objetos" legacy: ahora se controla vía store.editMode.
 // Se mantiene store.editObjects para compatibilidad pero sin botón dedicado.
@@ -406,17 +390,8 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Borrar / duplicar el objeto activo (P7)
-byId('btnDeleteObj')?.addEventListener('click', () => {
-  if (deleteActiveObject()) populateOutliner();
-});
-byId('btnDuplicateObj')?.addEventListener('click', () => {
-  if (duplicateActiveObject()) populateOutliner();
-});
-// Borrar toda la selección múltiple
-byId('btnDeleteMulti')?.addEventListener('click', () => {
-  if (deleteMultiSelection() > 0) populateOutliner();
-});
+// (Sin botones dedicados de borrar/duplicar: la supresión vive en el
+// teclado —Supr/Backspace, arriba— y en el menú contextual del objeto.)
 
 // ==========================================
 // MODO CONSTRUCCIÓN (Fase 2 del editor de escenas)
@@ -434,11 +409,6 @@ function setConstructionMode(on) {
   });
   const cp = byId('constructionPanel');
   if (cp) cp.style.display = on ? 'block' : 'none';
-  const btn = byId('btnConstruction');
-  if (btn) {
-    btn.textContent = on ? '🏗️ Modo Construcción: ON' : '🏗️ Modo Construcción: OFF';
-    btn.classList.toggle('primary', on);
-  }
   updateConstructionVisibility();
   if (on) {
     const ws = byId('section-wall');
@@ -938,23 +908,14 @@ if (btnAddWall) {
 //  desaparecieron: cada personaje se maneja en su pista 🧍 de la línea de
 //  tiempo. Solo queda el cierre del editor de recorrido del personaje
 //  activo, que ahora abre/cierra con 🎬 en su lane.)
-byId('btnCinemaExit')?.addEventListener('click', () => {
-  cinemaDeactivate();
-});
+// (btnCinemaExit ya no existe: el editor de recorrido abre/cierra con el
+// botón 🎬 de la lane de cada personaje en la línea de tiempo.)
 
-// --- Vistas de cámara (1ª persona, 3ª, persecución, cine fijo) ---
-// Si hay una toma seleccionada en la línea de tiempo, el botón reconfigura
-// ESA toma y la deja guardada así; si no, cambia la vista global.
-qsa('.view-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const v = btn.getAttribute('data-view');
-    if (applyViewToSelectedShot(v)) {
-      setStatus(`Cámara de la toma seleccionada: ${v}`);
-      return;
-    }
-    setCamView(v === view.mode ? 'orbit' : v);
-  });
-});
+// --- Vistas de cámara ---
+// (El panel de botones .view-btn —órbita/1ª/3ª/persecución/cine— se quitó en
+// la Fase A: hoy la cámara de cada toma se elige en el <select> "Vista" del
+// panel 🎥 Cámara de la toma, y 1P/3P en vivo con los botones de la lista de
+// personajes. Acá no queda wiring.)
 
 // ==========================================
 // SELECTOR EDITAR: Edificio / Objetos / Personajes / Subtítulos / Cinemática
@@ -1004,11 +965,16 @@ function applyEditMode() {
 
 export function setEditMode(mode) {
   if (!EDIT_MODES.includes(mode)) return;
+  // Bloque fijado con pin: no se sale del modo de edición hasta soltarlo.
+  if (blockPin.kind) {
+    setStatus('Bloque fijado con 📌: soltalo (doble clic o 📌) para cambiar de modo.');
+    return;
+  }
   // Bloqueo de edición: si hay un bloque de la línea de tiempo en edición
   // (toma / subtítulo / quiz), no se puede cambiar de modo hasta guardarlo
   // con 💾 o descartarlo con ✕. Solo se permite volver a ese mismo modo.
   if (blockEdit.get() && mode !== store.editMode) {
-    setStatus(`Terminá de editar el bloque (💾 guardar o ✕ descartar) antes de cambiar de modo.`);
+    setStatus(`Terminá de editar el bloque (↻ restablece o ✕ cierra) antes de cambiar de modo.`);
     return;
   }
   if (store.editMode !== mode) {

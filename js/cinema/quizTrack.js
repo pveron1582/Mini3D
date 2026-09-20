@@ -7,7 +7,7 @@
 // Compatibilidad: los proyectos viejos traían shot.quiz anclado a una toma;
 // al abrirlos, projectFiles.js lo migra a esta pista.
 
-import { quizTrack, timeline, blockEdit } from '../state.js';
+import { quizTrack, timeline, blockEdit, blockPin, pinMatches, togglePinBlock, blockSelectionBlocked, blockBus } from '../state.js';
 import { byId } from '../dom.js';
 import { showQuiz, resetQuiz, quizIsActive } from '../media/quiz.js';
 import { pushHistory } from '../undo.js';
@@ -30,6 +30,52 @@ export function clearQuizSelection() {
     renderQuizLane();
     blockEdit.set(null);
   }
+  if (blockBus.refreshBar) blockBus.refreshBar();
+}
+
+// Restaurar el cartel a su snapshot (↻: descarta cambios, sigue editando)
+export function resetQuizBlock() {
+  if (!selectedQuiz) return false;
+  if (quizSnapshot) {
+    Object.assign(selectedQuiz, JSON.parse(JSON.stringify(quizSnapshot)));
+  }
+  renderQuizLane();
+  pushHistory();
+  setStatus('Cartel restablecido.');
+  return true;
+}
+
+// Duplicar el cartel al final (copia idéntica, sin superponerse).
+// No cambia la selección (así vale con pin).
+export function duplicateQuizBlock() {
+  if (!selectedQuiz) return false;
+  const endOfLast = quizTrack.reduce((m, q) => Math.max(m, q.end), 0);
+  const copy = JSON.parse(JSON.stringify(selectedQuiz));
+  copy.id = 'quiz' + (++quizCounter);
+  const dur = copy.end - copy.start;
+  copy.start = Math.round(Math.max(endOfLast, 0) * 10) / 10;
+  copy.end = Math.round((copy.start + dur) * 10) / 10;
+  quizTrack.push(copy);
+  quizTrack.sort((a, b) => a.start - b.start);
+  renderQuizLane();
+  pushHistory();
+  setStatus(`Cartel duplicado al final (${copy.start.toFixed(1)}s).`);
+  return true;
+}
+
+// Borrar el cartel seleccionado (🗑)
+export function deleteQuizBlock() {
+  if (!selectedQuiz) return false;
+  const i = quizTrack.indexOf(selectedQuiz);
+  if (i >= 0) quizTrack.splice(i, 1);
+  selectedQuiz = null;
+  if (blockPin.kind === 'quiz') { blockPin.kind = null; blockPin.ref = null; }
+  setQuizFieldsEnabled(false);
+  renderQuizLane();
+  pushHistory();
+  if (blockBus.refreshBar) blockBus.refreshBar();
+  setStatus('Cartel de pregunta eliminado.');
+  return true;
 }
 
 function setQuizFieldsEnabled(on) {
@@ -42,8 +88,12 @@ function setQuizFieldsEnabled(on) {
   if (del) del.disabled = !on;
 }
 
-function openQuizEditor(q) {
+export function openQuizEditor(q) {
   if (!q || !quizTrack.includes(q)) return;
+  if (blockSelectionBlocked('quiz', q)) {
+    setStatus('Bloque fijado con 📌: soltalo (doble clic o 📌) para elegir otro.');
+    return;
+  }
   // Exclusividad: elegir un cartel libera la toma y el subtítulo en edición.
   // Se avisa por evento (la timeline escucha y limpia) para no crear un ciclo
   // de imports quizTrack ↔ timeline.
@@ -65,6 +115,7 @@ function openQuizEditor(q) {
   renderQuizLane();
   blockEdit.set('quiz');
   window.dispatchEvent(new CustomEvent('edit-mode-request', { detail: { mode: 'subtitulos' } }));
+  if (blockBus.refreshBar) blockBus.refreshBar();
 }
 
 // Exclusividad con la pista 🧍 PERSONAJES: elegir un bloque de personajes
@@ -81,7 +132,7 @@ export function renderQuizLane() {
   const pps = pxPerSec();
   quizTrack.forEach(q => {
     const el = document.createElement('div');
-    el.className = 'tl-sub tl-quiz' + (q === selectedQuiz ? ' selected' : '');
+    el.className = 'tl-sub tl-quiz' + (q === selectedQuiz ? ' selected' : '') + (pinMatches('quiz', q) ? ' pinned' : '');
     el.style.left = (LANE_LABEL_W + q.start * pps) + 'px';
     el.style.width = Math.max(18, (q.end - q.start) * pps) + 'px';
 
@@ -97,44 +148,18 @@ export function renderQuizLane() {
     el.appendChild(left);
     el.appendChild(right);
 
-    // 💾 / ✕ solo en el bloque seleccionado: guardar o descartar su edición.
-    if (q === selectedQuiz) {
-      const saveQuiz = document.createElement('div');
-      saveQuiz.className = 'tl-shot-save';
-      saveQuiz.textContent = '💾';
-      saveQuiz.title = 'Guardar la edición del cartel';
-      saveQuiz.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-      saveQuiz.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        clearQuizSelection();
-        pushHistory();
-        setStatus('Cartel guardado.');
-      });
-      el.appendChild(saveQuiz);
-
-      const closeQuiz = document.createElement('div');
-      closeQuiz.className = 'tl-shot-close';
-      closeQuiz.textContent = '✕';
-      closeQuiz.title = 'Descartar cambios del cartel (vuelve a la pregunta previa)';
-      closeQuiz.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-      closeQuiz.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        // Restaurar el cartel al snapshot tomado al seleccionarlo
-        if (quizSnapshot && selectedQuiz) {
-          Object.assign(selectedQuiz, JSON.parse(JSON.stringify(quizSnapshot)));
-        }
-        clearQuizSelection();
-        renderQuizLane();
-        setStatus('Cambios del cartel descartados.');
-      });
-      el.appendChild(closeQuiz);
-    }
-
-    el.title = `${q.start.toFixed(1)}s → ${q.end.toFixed(1)}s: ${q.question || 'Pregunta'} (click para editar; arrastrá bordes para ajustar)`;
+    el.title = `${q.start.toFixed(1)}s → ${q.end.toFixed(1)}s: ${q.question || 'Pregunta'} (click para editar, doble clic para fijar; arrastrá bordes para ajustar)`;
     el.addEventListener('pointerdown', (e) => beginQuizDrag(e, q, el));
     el.addEventListener('click', () => {
       if (el.dataset.dragged === '1') { el.dataset.dragged = ''; return; }
       openQuizEditor(q);
+    });
+    el.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      openQuizEditor(q);
+      togglePinBlock('quiz', q);
+      renderQuizLane();
+      if (blockBus.refreshBar) blockBus.refreshBar();
     });
     lane.appendChild(el);
   });
@@ -291,10 +316,14 @@ let quizShown = null;
 export { resetQuiz };
 
 // Botón ＋ de la pista QUIZ: cartel nuevo (10s) en el cabezal, seleccionado
-// para editarlo en vivo (pregunta, opciones, correcta, tiempos). 💾 guarda, ✕ descarta.
+// para editarlo en vivo (pregunta, opciones, correcta, tiempos).
 byId('btnAddQuiz')?.addEventListener('pointerdown', (e) => e.stopPropagation());
 byId('btnAddQuiz')?.addEventListener('click', (e) => {
   e.stopPropagation();
+  if (blockPin.kind) {
+    setStatus('Bloque fijado con 📌: soltalo (doble clic o 📌) para crear otro.');
+    return;
+  }
   // Al final del último cartel (sin superponerse) o en el cabezal si está vacío
   const endOfLast = quizTrack.reduce((m, q) => Math.max(m, q.end), 0);
   const start = Math.max(endOfLast, 0);
@@ -311,5 +340,5 @@ byId('btnAddQuiz')?.addEventListener('click', (e) => {
   quizTrack.sort((a, b) => a.start - b.start);
   openQuizEditor(q);
   pushHistory();
-  setStatus('Cartel nuevo: escribí la pregunta y sus opciones. 💾 guarda, ✕ descarta.');
+  setStatus('Cartel nuevo: escribí la pregunta y sus opciones.');
 });

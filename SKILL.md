@@ -48,7 +48,7 @@ La filosofía del proyecto:
   y vistas de cámara), `timeline.js` (secuenciador de tomas + eventos de
   waypoint), `charTrack.js` (pista PERSONAJES: bloques estáticos y de
   desplazamiento verde→rojo), `tlSnap.js` (imán entre pistas), `tlScale.js`
-  (escala única), `quizTrack.js` (pista de carteles de pregunta), `wizard.js`
+  (escala única), `blockBar.js` (barra 🎬↻⧉🗑✕📌 + pin rojo), `quizTrack.js` (pista de carteles de pregunta), `wizard.js`
   (asistente de escenas) y `navigation.js` (A* de recorridos).
 - `js/ui/` — interacción: `ui.js` (paneles y selector Editar), `gizmo.js`
   (flechas/anillo de transformación), `selection.js` (registro de

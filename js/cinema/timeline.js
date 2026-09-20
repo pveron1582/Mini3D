@@ -1,4 +1,4 @@
-import { timeline, cinema, cinemaPaths, interactiveRegistry, recorderState, playback, view, store, blockEdit, charBlocks, charFullRange, quizTrack } from '../state.js';
+import { timeline, cinema, cinemaPaths, interactiveRegistry, recorderState, playback, view, store, blockEdit, charBlocks, charFullRange, quizTrack, blockPin, pinMatches, togglePinBlock, blockSelectionBlocked, blockBus } from '../state.js';
 import { byId, qs, qsa } from '../dom.js';
 import { camera, controls } from '../core.js';
 import { stepLadder, STEP_LADDER_ORIGIN, openAllRackDoors } from '../office/group.js';
@@ -269,7 +269,7 @@ function renderShots() {
   const pps = pxPerSec();
   timeline.shots.forEach(shot => {
     const el = document.createElement('div');
-    el.className = 'tl-shot' + (shot.id === selectedShotId ? ' selected' : '');
+    el.className = 'tl-shot' + (shot.id === selectedShotId ? ' selected' : '') + (pinMatches('shot', shot) ? ' pinned' : '');
     el.style.left = (LANE_LABEL_W + shot.start * pps) + 'px';
     el.style.width = Math.max(18, shot.duration * pps) + 'px';
     el.style.background = shot.color;
@@ -289,26 +289,17 @@ function renderShots() {
     el.appendChild(left);
     el.appendChild(right);
 
-    const close = document.createElement('div');
-    close.className = 'tl-shot-close';
-    close.textContent = '✕';
-    close.title = 'Descartar cambios de la toma (vuelve al estado previo)';
-    close.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-    close.addEventListener('click', (ev) => { ev.stopPropagation(); discardSelection(); });
-
-    const save = document.createElement('div');
-    save.className = 'tl-shot-save';
-    save.textContent = '💾';
-    save.title = 'Guardar la edición de la toma (cinemática, cámara, tiempos)';
-    save.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-    save.addEventListener('click', (ev) => { ev.stopPropagation(); clearSelection(); });
-    el.appendChild(save);
-    el.appendChild(close);
-
     el.addEventListener('pointerdown', (e) => beginShotDrag(e, shot, el));
     el.addEventListener('click', (e) => {
       if (el.dataset.dragged === '1') { el.dataset.dragged = ''; return; }
       selectShot(shot.id);
+    });
+    el.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      selectShot(shot.id);
+      togglePinBlock('shot', shot);
+      renderShots();
+      if (blockBus.refreshBar) blockBus.refreshBar();
     });
     track.appendChild(el);
   });
@@ -328,7 +319,7 @@ function renderSubtitles() {
   const pps = pxPerSec();
   subtitleTrack.forEach(c => {
     const el = document.createElement('div');
-    el.className = 'tl-sub' + (c === selectedCue ? ' selected' : '');
+    el.className = 'tl-sub' + (c === selectedCue ? ' selected' : '') + (pinMatches('sub', c) ? ' pinned' : '');
     el.style.left = (LANE_LABEL_W + c.start * pps) + 'px';
     el.style.width = Math.max(18, (c.end - c.start) * pps) + 'px';
 
@@ -344,45 +335,18 @@ function renderSubtitles() {
     el.appendChild(left);
     el.appendChild(right);
 
-    // 💾 / ✕ solo en el bloque seleccionado: guardar o descartar su edición.
-    if (c === selectedCue) {
-      const saveSub = document.createElement('div');
-      saveSub.className = 'tl-shot-save';
-      saveSub.textContent = '💾';
-      saveSub.title = 'Guardar la edición del subtítulo';
-      saveSub.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-      saveSub.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        clearSubSelection();
-        pushHistory();
-        setStatus('Subtítulo guardado.');
-      });
-      el.appendChild(saveSub);
-
-      const closeSub = document.createElement('div');
-      closeSub.className = 'tl-shot-close';
-      closeSub.textContent = '✕';
-      closeSub.title = 'Descartar cambios del subtítulo (vuelve al texto previo)';
-      closeSub.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-      closeSub.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        // Restaurar el cue al snapshot tomado al seleccionarlo
-        if (subSnapshot && selectedCue) {
-          Object.assign(selectedCue, JSON.parse(JSON.stringify(subSnapshot)));
-        }
-        clearSubSelection();
-        refreshSubtitles();
-        renderSubtitles();
-        setStatus('Cambios del subtítulo descartados.');
-      });
-      el.appendChild(closeSub);
-    }
-
-    el.title = `${c.start.toFixed(1)}s → ${c.end.toFixed(1)}s: ${c.text} (click para editar; arrastrá bordes para ajustar)`;
+    el.title = `${c.start.toFixed(1)}s → ${c.end.toFixed(1)}s: ${c.text} (click para editar; doble clic para fijar; arrastrá bordes para ajustar)`;
     el.addEventListener('pointerdown', (e) => beginSubDrag(e, c, el));
     el.addEventListener('click', () => {
       if (el.dataset.dragged === '1') { el.dataset.dragged = ''; return; }
       openSubEditor(c);
+    });
+    el.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      openSubEditor(c);
+      togglePinBlock('sub', c);
+      renderSubtitles();
+      if (blockBus.refreshBar) blockBus.refreshBar();
     });
     lane.appendChild(el);
   });
@@ -580,11 +544,17 @@ window.addEventListener('pointermove', (e) => {
 // pausándose en startScrub), así que la pose visible es la real.
 window.addEventListener('pointerup', () => { scrubDrag = false; });
 window.addEventListener('pointercancel', () => { scrubDrag = false; });
-rulerEl?.addEventListener('pointerdown', startScrub);
+rulerEl?.addEventListener('pointerdown', (e) => {
+  if (blockBus.deselectAll) blockBus.deselectAll();
+  startScrub(e);
+});
 track?.addEventListener('pointerdown', (e) => {
   // El fondo de la pista inicia el arrastre; las tomas no
   // (ellas tienen su propio click/drag de edición)
-  if (e.target === track) startScrub(e);
+  if (e.target === track) {
+    if (blockBus.deselectAll) blockBus.deselectAll();
+    startScrub(e);
+  }
 });
 qs('#tlPlayhead .tl-playhead-knob')?.addEventListener('pointerdown', (e) => {
   e.stopPropagation();
@@ -617,7 +587,7 @@ const FRAME_STEP = 1 / 30; // un frame a 30 fps
 // Mover la cabeza de la línea de tiempo a un instante dado: el video manda.
 // Reconstruye el estado de la escena en ese instante (recorridos, acciones,
 // subtítulos y cámara de la toma correspondiente).
-function scrubTo(t) {
+export function scrubTo(t) {
   const maxT = timeline.duration > 0 ? timeline.duration : Math.max(0, t);
   timeline.time = Math.max(0, Math.min(maxT, t));
   playheadUsed = true;   // la aguja ya se usó: se muestra aunque quede en 0
@@ -705,6 +675,7 @@ export function clearSelection() {
   pushHistory();   // el 💾 confirma los cambios de esta toma
   notifyShotCamSync();
   blockEdit.set(null);
+  if (blockBus.refreshBar) blockBus.refreshBar();
 }
 
 // Descartar (✕): restaura el bloque al estado que tenía al seleccionarse
@@ -738,12 +709,111 @@ export function discardSelection() {
   renderRuler();
   notifyShotCamSync();
   blockEdit.set(null);
+  if (blockBus.refreshBar) blockBus.refreshBar();
 }
 
 // Snapshot de la toma al seleccionarla (para poder descartar con ✕)
 let shotSnapshot = null;
 function takeShotSnapshot(shot) {
   shotSnapshot = shot ? JSON.parse(JSON.stringify(shot)) : null;
+}
+
+// Acciones de la barra de bloques sobre la toma seleccionada ==========
+export function subSelection() { return selectedCue; }
+
+// Restaurar la toma a su snapshot (↻: descarta cambios, sigue editando)
+export function resetShotToSnapshot() {
+  const shot = selectedShot();
+  if (!shot) return false;
+  if (shotSnapshot) Object.assign(shot, JSON.parse(JSON.stringify(shotSnapshot)));
+  renderShots();
+  renderRuler();
+  notifyShotCamSync();
+  pushHistory();
+  setStatus('Toma restablecida.');
+  return true;
+}
+
+// Duplicar la toma al final (copia idéntica, sin superponerse).
+// No cambia la selección (así vale con pin).
+export function duplicateShot() {
+  const shot = selectedShot();
+  if (!shot) return false;
+  const endOfLast = timeline.shots.reduce((m, s) => Math.max(m, s.start + s.duration), 0);
+  const copy = JSON.parse(JSON.stringify(shot));
+  copy.id = 'shot' + (++shotCounter);
+  copy.start = Math.round(Math.max(endOfLast, 0) * 10) / 10;
+  timeline.shots.push(copy);
+  timeline.shots.sort((a, b) => a.start - b.start);
+  refreshDuration();
+  renderShots();
+  renderRuler();
+  pushHistory();
+  setStatus(`Toma duplicada al final (${copy.start.toFixed(1)}s).`);
+  return true;
+}
+
+// Borrar la toma seleccionada
+export function deleteShot() {
+  const shot = selectedShot();
+  if (!shot) return false;
+  const i = timeline.shots.indexOf(shot);
+  if (i >= 0) timeline.shots.splice(i, 1);
+  selectedShotId = null;
+  shotSnapshot = null;
+  if (blockPin.kind === 'shot') { blockPin.kind = null; blockPin.ref = null; }
+  renderShots();
+  syncCameraControlsVisibility(null);
+  refreshDuration();
+  renderRuler();
+  notifyShotCamSync();
+  blockEdit.set(null);
+  pushHistory();
+  if (blockBus.refreshBar) blockBus.refreshBar();
+  setStatus('Toma eliminada.');
+  return true;
+}
+
+// Restaurar el subtítulo a su snapshot (↻: descarta cambios, sigue editando)
+export function resetSubToSnapshot() {
+  if (!selectedCue) return false;
+  if (subSnapshot) Object.assign(selectedCue, JSON.parse(JSON.stringify(subSnapshot)));
+  refreshSubtitles();
+  renderSubtitles();
+  pushHistory();
+  setStatus('Subtítulo restablecido.');
+  return true;
+}
+
+// Duplicar el subtítulo al final (copia idéntica, sin superponerse).
+// No cambia la selección (así vale con pin).
+export function duplicateSub() {
+  if (!selectedCue) return false;
+  const endOfLast = subtitleTrack.reduce((m, c) => Math.max(m, c.end), 0);
+  const dur = selectedCue.end - selectedCue.start;
+  const copy = JSON.parse(JSON.stringify(selectedCue));
+  copy.start = Math.round(Math.max(endOfLast, 0) * 10) / 10;
+  copy.end = Math.round((copy.start + dur) * 10) / 10;
+  subtitleTrack.push(copy);
+  commitSubtitles();
+  pushHistory();
+  setStatus(`Subtítulo duplicado al final (${copy.start.toFixed(1)}s).`);
+  return true;
+}
+
+// Borrar el subtítulo seleccionado
+export function deleteSub() {
+  if (!selectedCue) return false;
+  const i = subtitleTrack.indexOf(selectedCue);
+  if (i >= 0) subtitleTrack.splice(i, 1);
+  selectedCue = null;
+  if (blockPin.kind === 'sub') { blockPin.kind = null; blockPin.ref = null; }
+  setSubFieldsEnabled(false);
+  commitSubtitles();
+  pushHistory();
+  if (blockBus.refreshBar) blockBus.refreshBar();
+  setStatus('Subtítulo eliminado.');
+  return true;
 }
 
 // Guarda el encuadre actual de la cámara en una toma en Vista Libre, para que
@@ -817,9 +887,13 @@ function notifyShotCamSync() {
   if (timelineBus.syncShotCamUI) timelineBus.syncShotCamUI();
 }
 
-function selectShot(id) {
+export function selectShot(id) {
   // Exclusividad: elegir una toma libera el subtítulo y el cartel (quiz)
   // en edición (cada bloque selecciona uno a la vez).
+  if (blockSelectionBlocked('shot', timeline.shots.find(s => s.id === id) || null)) {
+    setStatus('Bloque fijado con 📌: soltalo (doble clic o 📌) para elegir otro.');
+    return;
+  }
   clearSubSelection();
   clearQuizSelection();
   selectedShotId = id;
@@ -849,6 +923,7 @@ function selectShot(id) {
   blockEdit.set('shot');
   window.dispatchEvent(new CustomEvent('shot-selected'));
   window.dispatchEvent(new CustomEvent('edit-mode-request', { detail: { mode: 'cinematica' } }));
+  if (blockBus.refreshBar) blockBus.refreshBar();
 }
 
 // El bloque "🎥 Vista de Cámara" del menú izquierdo aparece también cuando
@@ -1159,10 +1234,14 @@ function setSubFieldsEnabled(on) {
 // (Sin bloqueo visual: la selección de un subtítulo no oscurece nada; la
 // edición es en vivo y se des-selecciona al hacer click fuera de Subtítulos.)
 
-function openSubEditor(cue) {
+export function openSubEditor(cue) {
   if (!cue || !subPanel || !subtitleTrack.includes(cue)) return;
   // Exclusividad con la toma seleccionada y el cartel (quiz): elegir un
   // subtítulo libera los otros bloques en edición.
+  if (blockSelectionBlocked('sub', cue)) {
+    setStatus('Bloque fijado con 📌: soltalo (doble clic o 📌) para elegir otro.');
+    return;
+  }
   if (selectedShotId) clearSelection();
   clearQuizSelection();
   selectedCue = cue;
@@ -1180,6 +1259,7 @@ function openSubEditor(cue) {
   blockEdit.set('sub');
   window.dispatchEvent(new CustomEvent('sub-selected'));
   window.dispatchEvent(new CustomEvent('edit-mode-request', { detail: { mode: 'subtitulos' } }));
+  if (blockBus.refreshBar) blockBus.refreshBar();
 }
 
 export function clearSubSelection() {
@@ -1187,6 +1267,7 @@ export function clearSubSelection() {
   selectedCue = null;
   setSubFieldsEnabled(false);
   if (hadSelection) { renderSubtitles(); blockEdit.set(null); }
+  if (blockBus.refreshBar) blockBus.refreshBar();
 }
 
 function cueValid() {
@@ -1294,10 +1375,14 @@ byId('subEditNew')?.addEventListener('click', () => {
 // Toma nueva: VA AL FINAL de la última toma existente (continuación de la
 // cinemática), no al cabezal — así nunca se superpone con lo que ya hay y
 // sigue el hilo temporal. Seleccionada para editarla en vivo (cámara,
-// personaje, duración…). 💾 guarda, ✕ descarta.
+// personaje, duración…).
 byId('btnAddShot')?.addEventListener('pointerdown', (e) => e.stopPropagation());
 byId('btnAddShot')?.addEventListener('click', (e) => {
   e.stopPropagation();
+  if (blockPin.kind) {
+    setStatus('Bloque fijado con 📌: soltalo (doble clic o 📌) para crear otro.');
+    return;
+  }
   // Fin de la última toma (o el cabezal si no hay ninguna — lo que sea mayor)
   const endOfLast = timeline.shots.reduce((m, s) => Math.max(m, s.start + s.duration), 0);
   const t = Math.max(endOfLast, 0);
@@ -1320,7 +1405,7 @@ byId('btnAddShot')?.addEventListener('click', (e) => {
   updatePlayheadUI();
   selectShot(shot.id);
   updateTransportUI();
-  setStatus('Toma nueva al final: elegí la vista/cámara y su duración. 💾 guarda, ✕ descarta.');
+  setStatus('Toma nueva al final: elegí la vista/cámara y su duración.');
 });
 
 // Subtítulo nuevo: al final del último subtítulo (sin superponerse),
@@ -1328,6 +1413,10 @@ byId('btnAddShot')?.addEventListener('click', (e) => {
 byId('btnAddSub')?.addEventListener('pointerdown', (e) => e.stopPropagation());
 byId('btnAddSub')?.addEventListener('click', (e) => {
   e.stopPropagation();
+  if (blockPin.kind) {
+    setStatus('Bloque fijado con 📌: soltalo (doble clic o 📌) para crear otro.');
+    return;
+  }
   const endOfLast = subtitleTrack.reduce((m, c) => Math.max(m, c.end), 0);
   const t = Math.max(endOfLast, 0);
   const cue = { start: round2(t), end: round2(t + 2), text: 'Nuevo subtítulo' };
@@ -1336,7 +1425,7 @@ byId('btnAddSub')?.addEventListener('click', (e) => {
   openSubEditor(cue);
   pushHistory();
   if (subText) subText.select();
-  setStatus('Subtítulo nuevo: escribí el texto. 💾 guarda, ✕ descarta.');
+  setStatus('Subtítulo nuevo: escribí el texto.');
 });
 
 // ---------- Init ----------

@@ -886,12 +886,23 @@
                   <option value="3p">3P</option>
                   <option value="front">Frente</option>
                   <option value="profile">Perfil</option>
+                  <option value="sceneCam">📷 Cámara puesta</option>
                 </select>
               </label>
               <div class="btn-grid" style="margin-top:4px;">
                 <button class="blender-btn" id="btnShotCamView">👁 Ver</button>
               </div>
-              <p class="cinema-hint" style="margin-top:4px;">Elegí el personaje y la vista, luego “Ver” para saltar a ese encuadre. La cámara libre se queda donde la dejes y se guarda con el 💾 del bloque.</p>
+              <p class="cinema-hint" style="margin-top:4px;">Elegí el personaje y la vista, luego “Ver” para saltar a ese encuadre. La cámara libre se queda donde la dejes y se guarda con el 💾 del bloque. “Cámara puesta” usa un prop 📷 Cámara del catálogo (su posición, orientación y FOV).</p>
+            </div>
+
+            <!-- Panel de la cámara colocable seleccionada (prop 📷): su FOV -->
+            <div class="camera-view-block" id="sceneCamPanel" style="display:none;">
+              <div class="camera-view-label">📷 Cámara puesta</div>
+              <label class="inline-label">FOV (zoom)
+                <input type="range" id="sceneCamFov" min="20" max="100" step="1" value="50" style="flex:1;" />
+                <span id="sceneCamFovVal" style="min-width:34px; text-align:right;">50°</span>
+              </label>
+              <p class="cinema-hint" style="margin-top:4px;">Posicionala con el gizmo/sliders y apuntala con la rotación (la lente marca el frente). Las tomas con vista "📷 Cámara puesta" la usan.</p>
             </div>
 
             <div class="camera-view-block">
@@ -1015,6 +1026,13 @@
         <button class="blender-btn" id="btnStepFwd" title="Avanzar 1 frame">⏵</button>
         <button class="blender-btn" id="btnFwd10" title="Avanzar 10 segundos">⏩</button>
         <button class="blender-btn" id="btnWizard" title="Asistente para armar escenas con guion">🪄</button>
+        <span class="tb-sep"></span>
+        <button class="blender-btn" id="btnBlockCine" title="Ir al bloque: aguja al inicio + abrir su editor">🎬</button>
+        <button class="blender-btn" id="btnBlockReset" title="Restablecer el bloque (descarta cambios, sigue editando)">↻</button>
+        <button class="blender-btn" id="btnBlockDup" title="Duplicar el bloque al final">⧉</button>
+        <button class="blender-btn" id="btnBlockDel" title="Borrar el bloque">🗑</button>
+        <button class="blender-btn" id="btnBlockClose" title="Cerrar (terminar edición)">✕</button>
+        <button class="blender-btn" id="btnBlockPin" title="Fijar con pin (doble clic)">📌</button>
         <span class="tl-clock" title="Velocidad de reproducción de la escena">⏱
           <input type="range" id="rateSlider" min="0.25" max="2" step="0.05" value="1" style="width:90px; vertical-align:middle;">
           <span id="rateVal">1.0×</span>
@@ -1049,6 +1067,10 @@
       <div class="timeline-header">
         <div class="transport-controls">
           <button class="blender-btn primary" id="exportBtn" style="padding: 4px 14px;" title="Genera el video de la película completa (1080p a 60 fps)">⬇ Exportar</button>
+          <select id="exportFormat" class="tl-input" title="Formato del video: MP4 (H.264) si el navegador lo soporta, o WebM (VP9/VP8)" style="padding: 4px 6px;">
+            <option value="auto" selected>Auto (MP4/WebM)</option>
+            <option value="webm">WebM</option>
+          </select>
           <span style="color: var(--text-muted); font-size: 11px; margin-left: 8px;">(Genera el video de toda la escena en 1080p a 60 fps)</span>
         </div>
 

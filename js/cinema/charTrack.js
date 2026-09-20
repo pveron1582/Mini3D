@@ -14,7 +14,7 @@
 // quedó en cada cuadro, aunque sea de un salto.
 
 import * as THREE from 'three';
-import { charBlocks, timeline, interactiveRegistry, blockEdit, charLaneBus, charFullRange, store, timelineBus } from '../state.js';
+import { charBlocks, timeline, interactiveRegistry, blockEdit, charLaneBus, charFullRange, store, timelineBus, blockPin, pinMatches, togglePinBlock, blockSelectionBlocked, blockBus } from '../state.js';
 import { byId, showViewportHint } from '../dom.js';
 import { camera, canvas, scene } from '../core.js';
 import { setActiveTarget } from '../ui/selection.js';
@@ -68,14 +68,13 @@ export function caminoGaps(charId, totalEnd) {
 function renderCaminoSegments(inner, entry, info, pps) {
   const totalEnd = Math.min(info.duration > 0 ? info.duration : 1, Math.max(timeline.duration, 20));
   const gaps = caminoGaps(entry.id, totalEnd);
-  const editing = charLaneBus.isEditing(entry.id);
   gaps.forEach(([s, e], idx) => {
     const el = document.createElement('div');
     // El tramo se marca SOLO si está elegido Y editándose: si el editor se
     // cerró por otro lado (💾 de toma, otro bloque...), no queda un blanco
     // huérfano con dos iconos sueltos.
     const sel = selectedCamino && selectedCamino.charId === entry.id && selectedCamino.seg === idx && charLaneBus.isEditing(entry.id);
-    el.className = 'tl-sub tl-charblock tl-charpath' + (sel ? ' selected' : '');
+    el.className = 'tl-sub tl-charblock tl-charpath' + (sel ? ' selected' : '') + (pinMatches('camino', entry.id) ? ' pinned' : '');
     el.style.left = (LANE_LABEL_W + s * pps) + 'px';
     el.style.width = Math.max(18, (e - s) * pps) + 'px';
     const lab = document.createElement('span');
@@ -83,76 +82,30 @@ function renderCaminoSegments(inner, entry, info, pps) {
     lab.textContent = `🚶 camino${info.loop ? ' 🔁' : ''}`;
     el.appendChild(lab);
 
-    // Editar los waypoints sobre el piso (🎬/🎥). Va junto a 💾⧉✕ a la
-    // derecha del tramo: las cuatro pastillas siempre juntas.
-    const editBtn = document.createElement('div');
-    editBtn.className = 'tl-shot-save tl-path-edit';
-    editBtn.textContent = editing ? '🎥' : '🎬';
-    editBtn.title = editing
-      ? `Editando el recorrido de ${entry.name} (💾 guarda, ✕ descarta)`
-      : `Editar el recorrido de ${entry.name} (waypoints sobre el piso)`;
-    editBtn.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-    editBtn.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      togglePathEditor(entry.id);
-      selectedCamino = { charId: entry.id, seg: idx };
-      renderCharBlocks();
-    });
-    el.appendChild(editBtn);
-
-        // ⧉ Repetir recorrido: lo camina dos veces (waypoints + eventos).
-        const dupPath = document.createElement('div');
-        dupPath.className = 'tl-shot-dup';
-    dupPath.textContent = '⧉';
-    dupPath.title = `Repetir el recorrido de ${entry.name} (lo camina dos veces)`;
-    dupPath.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-    dupPath.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      if (charLaneBus.duplicatePath(entry.id)) {
-        setStatus(`Recorrido de ${entry.name} duplicado: lo camina dos veces.`);
-      } else {
-        setStatus(`${entry.name} no tiene recorrido para duplicar.`);
-      }
-    });
-    el.appendChild(dupPath);
-
-        // Mientras se edita: 💾 guarda y cierra, ✕ descarta lo dibujado.
-        if (editing) {
-          const savePath = document.createElement('div');
-          savePath.className = 'tl-shot-save tl-path-save';
-      savePath.textContent = '💾';
-      savePath.title = `Guardar el recorrido de ${entry.name} y cerrar`;
-      savePath.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-          savePath.addEventListener('click', (ev) => {
-            ev.stopPropagation();
-            charLaneBus.toggleEditor(entry.id);
-            clearCaminoSelection();
-            pushHistory();
-            setStatus(`Recorrido de ${entry.name} guardado.`);
-          });
-      el.appendChild(savePath);
-
-      const closePath = document.createElement('div');
-      closePath.className = 'tl-shot-close';
-      closePath.textContent = '✕';
-      closePath.title = `Descartar lo dibujado (vuelve al recorrido guardado)`;
-      closePath.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-      closePath.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        charLaneBus.discardPathDraft();
-        clearCaminoSelection();
-        renderCharBlocks();
-      });
-      el.appendChild(closePath);
-    }
-
-    el.title = `Recorrido de ${entry.name}: tramo ${s.toFixed(1)}s → ${e.toFixed(1)}s (de ${info.duration.toFixed(1)}s) · ${info.speed} m/s${info.loop ? ' · en bucle' : ''} — 🎬 edita los waypoints sobre el piso`;
+    el.title = `Recorrido de ${entry.name}: tramo ${s.toFixed(1)}s → ${e.toFixed(1)}s (de ${info.duration.toFixed(1)}s) · ${info.speed} m/s${info.loop ? ' · en bucle' : ''} — click para editar, doble clic para fijar`;
     el.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
     el.addEventListener('click', (ev) => {
       ev.stopPropagation();
+      if (blockSelectionBlocked('camino', entry.id)) {
+        setStatus('Bloque fijado con 📌: soltalo (doble clic o 📌) para elegir otro.');
+        return;
+      }
       togglePathEditor(entry.id);
       selectedCamino = { charId: entry.id, seg: idx };
       renderCharBlocks();
+      if (blockBus.refreshBar) blockBus.refreshBar();
+    });
+    el.addEventListener('dblclick', (ev) => {
+      ev.stopPropagation();
+      if (blockSelectionBlocked('camino', entry.id)) {
+        setStatus('Bloque fijado con 📌: soltalo (doble clic o 📌) para elegir otro.');
+        return;
+      }
+      togglePathEditor(entry.id);
+      selectedCamino = { charId: entry.id, seg: idx };
+      togglePinBlock('camino', entry.id);
+      renderCharBlocks();
+      if (blockBus.refreshBar) blockBus.refreshBar();
     });
     inner.appendChild(el);
   });
@@ -170,12 +123,26 @@ export function clearCharBlockSelection() {
     blockEdit.set(null);
   }
   if (baseSelectionId) clearBaseSelection();
+  if (blockBus.refreshBar) blockBus.refreshBar();
+}
+
+// Selección de camino vigente (tramo elegido y editándose) para la barra.
+export function caminoSelection() {
+  if (!selectedCamino) return null;
+  if (!charLaneBus.isEditing(selectedCamino.charId)) return null;
+  return selectedCamino;
 }
 
 // ---------- Selección del bloque base ⏳ (acción de toda la escena) ----------
+export function charBaseSelection() { return baseSelectionId; }
+
 function selectBaseBlock(entry) {
-  const base = charFullRange[entry.id];
+  const base = entry && charFullRange[entry.id];
   if (!base) return;
+  if (blockSelectionBlocked('charbase', entry.id)) {
+    setStatus('Bloque fijado con 📌: soltalo (doble clic o 📌) para elegir otro.');
+    return;
+  }
   // Exclusividad total: un solo bloque a la vez (suelta el de acciones y
   // cierra el editor de recorrido).
   if (selectedBlock) clearCharBlockSelection();
@@ -191,9 +158,10 @@ function selectBaseBlock(entry) {
   renderCharBlocks();
   window.dispatchEvent(new CustomEvent('edit-mode-request', { detail: { mode: 'personajes' } }));
   editFullRange(entry);
+  if (blockBus.refreshBar) blockBus.refreshBar();
 }
 
-function clearBaseSelection() {
+export function clearBaseSelection() {
   if (baseSelectionId) {
     baseSelectionId = null;
     baseSnapshot = null;
@@ -202,6 +170,55 @@ function clearBaseSelection() {
     const panel = byId('charBlockEditPanel');
     if (panel) panel.style.display = 'none';
   }
+  if (blockBus.refreshBar) blockBus.refreshBar();
+}
+
+// Restaurar la base a su snapshot (↻: descarta cambios, sigue editando)
+export function resetCharBase() {
+  if (!baseSelectionId) return false;
+  if (baseSnapshot && charFullRange[baseSelectionId]) {
+    charFullRange[baseSelectionId] = JSON.parse(JSON.stringify(baseSnapshot));
+  }
+  renderCharBlocks();
+  const entry = interactiveRegistry.get(baseSelectionId);
+  if (entry) editFullRange(entry);
+  pushHistory();
+  setStatus('Acción base restablecida.');
+  return true;
+}
+
+// Quitar la acción base (🗑: el bloque desaparece de la lane)
+export function deleteCharBase() {
+  if (!baseSelectionId) return false;
+  delete charFullRange[baseSelectionId];
+  clearBaseSelection();
+  renderCharBlocks();
+  pushHistory();
+  if (blockPin.kind === 'charbase') { blockPin.kind = null; blockPin.ref = null; }
+  if (blockBus.refreshBar) blockBus.refreshBar();
+  setStatus('Acción base quitada.');
+  return true;
+}
+
+// Guardar lugar+acción base (lo que hacía el 💾 del bloque)
+export function commitCharBase() {
+  if (!baseSelectionId) return false;
+  const entry = interactiveRegistry.get(baseSelectionId);
+  const base = charFullRange[baseSelectionId];
+  if (!entry || !base) return false;
+  if (entry.initialState) {
+    entry.initialState.pos = [entry.group.position.x, entry.group.position.y, entry.group.position.z];
+    entry.initialState.rotY = entry.group.rotation.y;
+  } else {
+    entry.initialState = {
+      pos: [entry.group.position.x, entry.group.position.y, entry.group.position.z],
+      rotY: entry.group.rotation.y,
+      action: base.action
+    };
+  }
+  pushHistory();
+  setStatus(`Acción + lugar de ${entry.name} guardados.`);
+  return true;
 }
 
 // ---------- Consulta del motor ----------
@@ -297,12 +314,16 @@ function togglePathEditor(id) {
   try {
     const entry = interactiveRegistry.get(id);
     const name = entry ? entry.name : id;
+    if (blockSelectionBlocked('camino', id)) {
+      setStatus('Bloque fijado con 📌: soltalo (doble clic o 📌) para elegir otro.');
+      return;
+    }
     if (charLaneBus.isEditing(id)) {
-      setStatus(`Ya estás editando el recorrido de ${name}: 💾 guarda, ✕ descarta.`);
+      setStatus(`Ya estás editando el recorrido de ${name}: ↻ restablece, ✕ cierra.`);
       return;
     }
     charLaneBus.toggleEditor(id);
-    setStatus(`Editando recorrido de ${name}: clic en la línea suma puntos, arrastralos para moldear. 💾 guarda, ✕ descarta.`);
+    setStatus(`Editando recorrido de ${name}: clic en la línea suma puntos, arrastralos para moldear. ↻ restablece, ✕ cierra.`);
   } catch (err) {
     console.error(err);
     setStatus('No se pudo abrir el editor del camino: ' + (err && err.message ? err.message : err));
@@ -395,7 +416,7 @@ export function renderCharBlocks() {
       if (base) {
         const isSel = baseSelectionId === entry.id;
         const el = document.createElement('div');
-        el.className = 'tl-sub tl-charblock tl-charbase' + (isSel ? ' selected' : '');
+        el.className = 'tl-sub tl-charblock tl-charbase' + (isSel ? ' selected' : '') + (pinMatches('charbase', entry.id) ? ' pinned' : '');
         el.style.left = (LANE_LABEL_W + 0) + 'px';
         el.style.width = Math.max(18, Math.max(timeline.duration, 20) * pps) + 'px';
         const lab = document.createElement('span');
@@ -403,74 +424,16 @@ export function renderCharBlocks() {
         lab.textContent = '⏳ ' + actionLabel(base.action);
         el.appendChild(lab);
 
-        if (isSel) {
-          const save = document.createElement('div');
-          save.className = 'tl-shot-save';
-          save.textContent = '💾';
-          save.title = 'Guardar la acción de toda la escena';
-          save.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-          save.addEventListener('click', (ev) => {
-            ev.stopPropagation();
-            // Guardar también DÓNDE está el personaje ahora: su posición y
-            // rotación actuales pasan a ser su estado de toda la escena
-            // (initialState) — ej. el perro movido quedó junto a la heladera.
-            if (entry.initialState) {
-              entry.initialState.pos = [
-                entry.group.position.x,
-                entry.group.position.y,
-                entry.group.position.z
-              ];
-              entry.initialState.rotY = entry.group.rotation.y;
-            } else {
-              entry.initialState = {
-                pos: [entry.group.position.x, entry.group.position.y, entry.group.position.z],
-                rotY: entry.group.rotation.y,
-                action: base.action
-              };
-            }
-            clearBaseSelection();
-            pushHistory();
-            setStatus(`Acción + lugar de ${entry.name} guardados.`);
-          });
-          el.appendChild(save);
-
-          // 🗑 quitar la acción base (el bloque desaparece de la lane)
-          const trash = document.createElement('div');
-          trash.className = 'tl-shot-del';
-          trash.textContent = '🗑';
-          trash.title = `Quitar la acción de toda la escena de ${entry.name}`;
-          trash.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-          trash.addEventListener('click', (ev) => {
-            ev.stopPropagation();
-            delete charFullRange[entry.id];
-            clearBaseSelection();
-            renderCharBlocks();
-            pushHistory();
-            setStatus(`Acción base de ${entry.name} quitada.`);
-          });
-          el.appendChild(trash);
-
-          const close = document.createElement('div');
-          close.className = 'tl-shot-close';
-          close.textContent = '✕';
-          close.title = 'Descartar cambios de la acción base';
-          close.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-          close.addEventListener('click', (ev) => {
-            ev.stopPropagation();
-            // Restaurar al snapshot tomado al seleccionar
-            if (baseSnapshot && charFullRange[entry.id]) {
-              charFullRange[entry.id] = JSON.parse(JSON.stringify(baseSnapshot));
-            }
-            clearBaseSelection();
-            renderCharBlocks();
-            setStatus('Cambios de la acción base descartados.');
-          });
-          el.appendChild(close);
-        }
-
-        el.title = `${entry.name}: ${actionLabel(base.action)} durante TODA la escena (click para editar)`;
+        el.title = `${entry.name}: ${actionLabel(base.action)} durante TODA la escena (click para editar, doble clic para fijar)`;
         el.addEventListener('pointerdown', (e) => e.stopPropagation());
         el.addEventListener('click', (e) => { e.stopPropagation(); selectBaseBlock(entry); });
+        el.addEventListener('dblclick', (e) => {
+          e.stopPropagation();
+          selectBaseBlock(entry);
+          togglePinBlock('charbase', entry.id);
+          renderCharBlocks();
+          if (blockBus.refreshBar) blockBus.refreshBar();
+        });
         inner.appendChild(el);
       }
 
@@ -493,7 +456,10 @@ export function renderCharBlocks() {
           // Azul = viaja (desplazamiento o caminar/correr); verde = quieto
           const moves = !!(a && (a.move || a.action === 'walk' || a.action === 'run'));
           const el = document.createElement('div');
-          el.className = 'tl-sub tl-charblock' + (isSel ? ' selected' : '') + (moves ? ' tl-charmove' : '');
+          el.className = 'tl-sub tl-charblock'
+            + (isSel ? ' selected' : '')
+            + (moves ? ' tl-charmove' : '')
+            + (pinMatches('char', b) ? ' pinned' : '');
           el.style.left = (LANE_LABEL_W + b.start * pps) + 'px';
           el.style.width = Math.max(18, b.duration * pps) + 'px';
           const lab = document.createElement('span');
@@ -508,87 +474,19 @@ export function renderCharBlocks() {
           el.appendChild(left);
           el.appendChild(right);
 
-          if (isSel) {
-            const save = document.createElement('div');
-            save.className = 'tl-shot-save';
-            save.textContent = '💾';
-            save.title = 'Guardar las acciones del bloque';
-            save.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-            save.addEventListener('click', (ev) => {
-              ev.stopPropagation();
-              // Desplazamiento incompleto (falta animación o puntos): no guarda.
-              if (!moveBlockReady(b)) {
-                setStatus('Falta definir el movimiento: animación (caminar/correr) + inicio verde y fin rojo.');
-                return;
-              }
-              // Guardar también DÓNDE está cada personaje del bloque ahora:
-              // su posición y rotación actuales quedan en el cuadro — en
-              // reproducción aparece ahí (lugar + acción + ánimo).
-              captureBlockPose(b);
-              clearCharBlockSelection();
-              pushHistory();
-              setStatus('Bloque de personajes guardado (lugar + acción + ánimo).');
-            });
-            el.appendChild(save);
-
-            // 🗑 Eliminar el bloque entero (entre 💾 y ✕)
-            const trash = document.createElement('div');
-            trash.className = 'tl-shot-del';
-            trash.textContent = '🗑';
-            trash.title = `Eliminar este bloque de ${entry.name} (de ${b.start.toFixed(1)}s a ${(b.start + b.duration).toFixed(1)}s)`;
-            trash.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-            trash.addEventListener('click', (ev) => {
-              ev.stopPropagation();
-              const idx = charBlocks.indexOf(b);
-              if (idx >= 0) charBlocks.splice(idx, 1);
-              selectedBlock = null;
-              blockSnapshot = null;
-              blockEdit.set(null);
-              renderCharBlocks();
-              pushHistory();
-              if (timelineBus.refreshDuration) timelineBus.refreshDuration();
-              setStatus(`Bloque de ${entry.name} eliminado.`);
-            });
-            el.appendChild(trash);
-
-            // ⧉ Duplicar: copia idéntica al final de la lane (repetir un tramo)
-            const dup = document.createElement('div');
-            dup.className = 'tl-shot-dup';
-            dup.textContent = '⧉';
-            dup.title = `Duplicar este bloque de ${entry.name} al final (copia idéntica)`;
-            dup.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-            dup.addEventListener('click', (ev) => {
-              ev.stopPropagation();
-              const copy = duplicateCharBlock(b, entry.id);
-              if (!copy) return;
-              openCharBlockEditor(copy);
-              pushHistory();
-              if (timelineBus.refreshDuration) timelineBus.refreshDuration();
-              setStatus(`Bloque de ${entry.name} duplicado al final (${copy.start.toFixed(1)}s → ${(copy.start + copy.duration).toFixed(1)}s).`);
-            });
-            el.appendChild(dup);
-
-            const close = document.createElement('div');
-            close.className = 'tl-shot-close';
-            close.textContent = '✕';
-            close.title = 'Descartar cambios del bloque';
-            close.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-            close.addEventListener('click', (ev) => {
-              ev.stopPropagation();
-              if (blockSnapshot && selectedBlock) {
-                Object.assign(selectedBlock, JSON.parse(JSON.stringify(blockSnapshot)));
-              }
-              clearCharBlockSelection();
-              setStatus('Cambios del bloque descartados.');
-            });
-            el.appendChild(close);
-          }
-
-          el.title = `${entry.name}: ${charBlockLabel(b, entry.id)} · ${b.start.toFixed(1)}s → ${(b.start + b.duration).toFixed(1)}s`;
+          el.title = `${entry.name}: ${charBlockLabel(b, entry.id)} · ${b.start.toFixed(1)}s → ${(b.start + b.duration).toFixed(1)}s (click para editar, doble clic para fijar)`;
           el.addEventListener('pointerdown', (e) => beginCharBlockDrag(e, b, el));
           el.addEventListener('click', () => {
             if (el.dataset.dragged === '1') { el.dataset.dragged = ''; return; }
             openCharBlockEditor(b);
+          });
+          el.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            openCharBlockEditor(b);
+            togglePinBlock('char', b);
+            renderCharBlocks();
+            renderCharBlockEditor();
+            if (blockBus.refreshBar) blockBus.refreshBar();
           });
           inner.appendChild(el);
         });
@@ -732,8 +630,12 @@ function editFullRange(entry) {
   setStatus(`${entry.name}: acción de TODA la escena. Elegí qué hace durante toda la cinemática.`);
 }
 
-function openCharBlockEditor(b) {
+export function openCharBlockEditor(b) {
   if (!b || !charBlocks.includes(b)) return;
+  if (blockSelectionBlocked('char', b)) {
+    setStatus('Bloque fijado con 📌: soltalo (doble clic o 📌) para elegir otro.');
+    return;
+  }
   // Exclusividad total: un solo bloque a la vez. Soltar la selección de
   // base (bloque ⏳), cualquier otra pista (tomas/subtítulos/cartels por el
   // mismo evento) y cerrar el editor de recorrido si estaba abierto.
@@ -748,9 +650,54 @@ function openCharBlockEditor(b) {
   renderCharBlocks();
   const soloA = b.actions ? b.actions[Object.keys(b.actions)[0]] : null;
   setStatus(soloA && soloA.move
-    ? 'Bloque de movimiento: marcá inicio/fin y elegí caminar o correr (💾 guarda, ✕ descarta).'
-    : 'Editando el cuadro: acción, ánimo y lugar quedan guardados en él (💾 confirma, ✕ descarta).');
+    ? 'Bloque de movimiento: marcá inicio/fin y elegí caminar o correr.'
+    : 'Editando el cuadro: acción, ánimo y lugar quedan guardados en él.');
   window.dispatchEvent(new CustomEvent('edit-mode-request', { detail: { mode: 'personajes' } }));
+  if (blockBus.refreshBar) blockBus.refreshBar();
+}
+
+// Restaurar el bloque a su snapshot (↻: descarta cambios, sigue editando)
+export function resetCharBlock() {
+  if (!selectedBlock) return false;
+  if (blockSnapshot) {
+    Object.assign(selectedBlock, JSON.parse(JSON.stringify(blockSnapshot)));
+  }
+  renderCharBlocks();
+  renderCharBlockEditor();
+  pushHistory();
+  setStatus('Bloque restablecido.');
+  return true;
+}
+
+// Borrar el bloque seleccionado (🗑)
+export function deleteCharBlock() {
+  if (!selectedBlock) return false;
+  const idx = charBlocks.indexOf(selectedBlock);
+  if (idx >= 0) charBlocks.splice(idx, 1);
+  selectedBlock = null;
+  blockSnapshot = null;
+  blockEdit.set(null);
+  if (blockPin.kind === 'char') { blockPin.kind = null; blockPin.ref = null; }
+  renderCharBlocks();
+  renderCharBlockEditor();
+  pushHistory();
+  if (timelineBus.refreshDuration) timelineBus.refreshDuration();
+  if (blockBus.refreshBar) blockBus.refreshBar();
+  setStatus('Bloque eliminado.');
+  return true;
+}
+
+// Guardar lugar+acción del bloque (lo que hacía su 💾): captura la pose actual
+export function commitCharBlock() {
+  if (!selectedBlock) return false;
+  if (!moveBlockReady(selectedBlock)) {
+    setStatus('Falta definir el movimiento: animación (caminar/correr) + inicio verde y fin rojo.');
+    return false;
+  }
+  captureBlockPose(selectedBlock);
+  pushHistory();
+  setStatus('Bloque guardado (lugar + acción + ánimo).');
+  return true;
 }
 
 function renderCharBlockEditor() {
@@ -1226,6 +1173,10 @@ export function openBlockChooser(entry) {
     setStatus('Elegí un personaje primero (su lane o la lista): el bloque nuevo es de UN personaje.');
     return;
   }
+  if (blockPin.kind) {
+    setStatus('Bloque fijado con 📌: soltalo (doble clic o 📌) para crear otro.');
+    return;
+  }
   if (baseSelectionId) clearBaseSelection();
   clearCaminoSelection();
   charLaneBus.closeEditor();
@@ -1262,7 +1213,7 @@ function addStaticBlockFor(entry) {
   openCharBlockEditor(b);
   pushHistory();
   if (timelineBus.refreshDuration) timelineBus.refreshDuration();
-  setStatus(`Bloque nuevo de ${entry.name}: elegí qué hace y hasta cuándo. 💾 guarda, ✕ descarta.`);
+  setStatus(`Bloque nuevo de ${entry.name}: elegí qué hace y hasta cuándo.`);
 }
 
 // Crea un bloque NUEVO DE DESPLAZAMIENTO: arranca en modo de marcado

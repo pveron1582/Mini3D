@@ -77,6 +77,43 @@ export const blockEdit = {
   get: () => blockEdit.kind
 };
 
+// Bloque FIJADO con pin (doble clic o 📌): { kind, ref } o kind null.
+// kind: 'shot' | 'char' | 'charbase' | 'camino' | 'sub' | 'quiz'.
+// ref: el objeto del bloque (toma, bloque, cartel...) o el id/clave.
+// Mientras hay pin, no se puede seleccionar otro bloque ni cambiar de modo:
+// hay que soltarlo (doble clic o 📌 de nuevo).
+export const blockPin = { kind: null, ref: null };
+
+export function pinMatches(kind, ref) {
+  return blockPin.kind !== null && blockPin.kind === kind && blockPin.ref === ref;
+}
+
+// ¿Bloquea seleccionar (kind, ref)? Sí si hay pin de OTRO bloque.
+export function blockSelectionBlocked(kind, ref) {
+  return blockPin.kind !== null && !pinMatches(kind, ref);
+}
+
+// Fijar/soltar el pin (doble clic o botón 📌). Devuelve true si quedó fijado.
+export function togglePinBlock(kind, ref) {
+  if (pinMatches(kind, ref)) {
+    blockPin.kind = null;
+    blockPin.ref = null;
+    return false;
+  }
+  blockPin.kind = kind;
+  blockPin.ref = ref;
+  return true;
+}
+
+// Bus de la barra de bloques (toolbar de la timeline): blockBar.js registra
+// acá sus funciones para no crear ciclos de imports con las pistas.
+export const blockBus = {
+  // Deseleccionar todo (click afuera, respetando el pin)
+  deselectAll: null,
+  // Refrescar habilitado/deshabilitado de los botones
+  refreshBar: null
+};
+
 // Secuenciador de escenas: línea de tiempo de tomas de cámara
 export const timeline = {
   shots: [],     // { id, start, duration, camMode, subjectId, label, color }

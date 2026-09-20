@@ -52,7 +52,7 @@ globalThis.document = (() => {
   return doc;
 })();
 globalThis.window = {
-  addEventListener: noop, removeEventListener: noop,
+  addEventListener: noop, removeEventListener: noop, dispatchEvent: noop,
   showSaveFilePicker: undefined, prompt: () => null,
   location: { href: '' }, devicePixelRatio: 1,
 };
@@ -987,6 +987,86 @@ assert(interactiveRegistry.get('human2').rig.currentAction === 'idle', 'Carlos p
 assert(interactiveRegistry.get('human3').rig.currentAction === 'idle', 'Elena parada a los 40s');
 assert(interactiveRegistry.get('cat').rig.currentAction === 'lay', 'gato quieto a los 40s');
 console.log('✓ alarma: líneas completas y quietas hasta el fin del clip');
+
+// --- barra de bloques: selección, pin y acciones por pista ---
+const { selectShot, getSelectedShot, resetShotToSnapshot, duplicateShot, deleteShot, openSubEditor, resetSubToSnapshot, duplicateSub, deleteSub } = await import(pathToFileURL('./js/cinema/timeline.js'));
+const { openCharBlockEditor, charBlockSelection, resetCharBlock, deleteCharBlock } = await import(pathToFileURL('./js/cinema/charTrack.js'));
+const { openQuizEditor, quizSelection, resetQuizBlock, duplicateQuizBlock, deleteQuizBlock } = await import(pathToFileURL('./js/cinema/quizTrack.js'));
+const { subtitleTrack } = await import(pathToFileURL('./js/media/subtitles.js'));
+const { quizTrack, togglePinBlock, pinMatches, blockPin } = await import(pathToFileURL('./js/state.js'));
+const { getSelectedBlock, refreshBlockBar, deselectAllBlocks } = await import(pathToFileURL('./js/cinema/blockBar.js'));
+
+// pin: helpers puros
+const pinRef = { id: 'x' };
+assert(togglePinBlock('shot', pinRef) === true && pinMatches('shot', pinRef), 'pin fija');
+assert(togglePinBlock('shot', pinRef) === false && !pinMatches('shot', pinRef), 'pin suelta');
+
+// tomas: seleccionar, duplicar, restablecer, pin bloquea, borrar
+timeline.shots.length = 0;
+timeline.shots.push({ id: 'shotBar1', start: 0, duration: 2, camMode: 'free', subjectId: null, label: '', color: '#111' });
+selectShot('shotBar1');
+assert(getSelectedBlock()?.kind === 'shot', 'barra ve la toma');
+togglePinBlock('shot', getSelectedShot());
+timeline.shots.push({ id: 'shotBar2', start: 2, duration: 2, camMode: 'free', subjectId: null, label: '', color: '#111' });
+selectShot('shotBar2');
+assert(getSelectedShot()?.id === 'shotBar1', 'con pin no cambia la selección');
+togglePinBlock('shot', getSelectedShot());
+selectShot('shotBar2');
+assert(getSelectedShot()?.id === 'shotBar2', 'sin pin cambia');
+const shotsBefore = timeline.shots.length;
+assert(duplicateShot() === true && timeline.shots.length === shotsBefore + 1, 'duplica toma');
+const dupShotBar = timeline.shots[timeline.shots.length - 1];
+assert(dupShotBar.start === 4 && dupShotBar.camMode === 'free', 'copia idéntica al final');
+const dupShot = timeline.shots.find(s => s.id !== 'shotBar1' && s.id !== 'shotBar2');
+assert(!!dupShot && dupShot.start === 4 && dupShot.camMode === 'free', 'copia idéntica al final');
+selectShot('shotBar1');
+getSelectedShot().duration = 9;
+assert(resetShotToSnapshot() === true && getSelectedShot().duration === 2, 'reset restaura snapshot');
+assert(deleteShot() === true && !timeline.shots.find(s => s.id === 'shotBar1'), 'borra toma');
+assert(getSelectedBlock() === null, 'sin selección al borrar');
+timeline.shots.length = 0;
+timeline.shots.length = 0;
+
+// cuadros: seleccionar, restablecer, borrar (con pin bloquea)
+setCharBlocks([{ id: 'cbBar1', start: 0, duration: 2, actions: { poseTestChar: { action: 'idle' } } }], {});
+openCharBlockEditor(charBlocks.find(b => b.id === 'cbBar1'));
+assert(getSelectedBlock()?.kind === 'char', 'barra ve el cuadro');
+togglePinBlock('char', charBlockSelection());
+openSubEditor(null);
+assert(getSelectedBlock()?.kind === 'char', 'con pin no cambia ni a nulo');
+togglePinBlock('char', charBlockSelection());
+const cbBar = charBlockSelection();
+cbBar.actions.poseTestChar.action = 'talk';
+assert(resetCharBlock() === true && cbBar.actions.poseTestChar.action === 'idle', 'reset restaura cuadro');
+assert(deleteCharBlock() === true && charBlockSelection() === null, 'borra cuadro');
+setCharBlocks([], {});
+
+// subtítulos y carteles: seleccionar, duplicar, restablecer, borrar
+subtitleTrack.push({ start: 0, end: 2, text: 'Hola' });
+const myCue = subtitleTrack[subtitleTrack.length - 1];
+openSubEditor(myCue);
+assert(getSelectedBlock()?.kind === 'sub', 'barra ve el subtítulo');
+const subsBefore = subtitleTrack.length;
+assert(duplicateSub() === true && subtitleTrack.length === subsBefore + 1, 'duplica subtítulo');
+myCue.text = 'Cambiado';
+assert(resetSubToSnapshot() === true && myCue.text === 'Hola', 'reset restaura subtítulo');
+assert(deleteSub() === true && !subtitleTrack.includes(myCue), 'borra subtítulo');
+quizTrack.push({ id: 'quizBar1', question: 'Q?', options: ['A', 'B', 'C'], correct: 0, duration: 10, start: 0, end: 10 });
+const quizLenBefore = quizTrack.length;
+const myQuiz = quizTrack[quizTrack.length - 1];
+openQuizEditor(myQuiz);
+assert(getSelectedBlock()?.kind === 'quiz', 'barra ve el cartel');
+const quizBefore = quizTrack.length;
+assert(duplicateQuizBlock() === true && quizTrack.length === quizBefore + 1, 'duplica cartel');
+myQuiz.question = 'Cambiada';
+assert(resetQuizBlock() === true && myQuiz.question === 'Q?', 'reset restaura cartel');
+assert(deleteQuizBlock() === true && !quizTrack.includes(myQuiz), 'borra cartel');
+quizTrack.length = quizLenBefore - 1;
+subtitleTrack.length = 0;
+refreshBlockBar();
+deselectAllBlocks();
+assert(getSelectedBlock() === null && blockPin.kind === null, 'todo limpio');
+console.log('✓ barra de bloques: selección, pin y acciones por pista');
 
 console.log('\n✅ P7: todas las pruebas pasaron');
 process.exit(0);

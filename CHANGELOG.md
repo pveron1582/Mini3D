@@ -2,6 +2,13 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Barra de bloques: sin iconos, con pin rojo
+
+- Los bloques ya no llevan iconos: clic = borde blanco, afuera = suelta foco,
+  doble clic o 📌 = rojo fijo (no se sale hasta soltarlo). Sin selección los
+  botones se ven apagados. Barra junto a 🪄: 🎬 ir, ↻ restablecer, ⧉ duplicar,
+  🗑 borrar, ✕ cerrar, 📌 fijar. Vale para tomas, cuadros, caminos,
+  subtítulos y carteles.
 ## [2026-09-20] — Bloque expirado no pisa el caminar (fin del desliz)
 
 - Un cuadro terminado seguía mandando su acción aunque el camino siguiera

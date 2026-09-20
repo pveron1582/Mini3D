@@ -9,6 +9,8 @@ import './state.js';
 import './lights.js';
 import './park.js';
 import './office/index.js';
+import './office/packets.js'; // paquetes de datos por las canaletas (GLM #4)
+import './office/sceneCameras.js'; // cámaras colocables con FOV propio (GLM #3)
 import './terrain.js';
 import './construction.js';
 import './ui/selection.js';
@@ -23,6 +25,7 @@ import './characters/characters.js';
 import './characters/characterCreator.js';
 import './ui/viewport.js';
 import './cinema/timeline.js';
+import './cinema/blockBar.js';
 import './media/subtitles.js';
 import './cinema/quizTrack.js';
 import './cinema/charTrack.js';

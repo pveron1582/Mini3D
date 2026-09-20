@@ -1365,6 +1365,17 @@ body, html {
   z-index: 3;
 }
 
+/* Bloque FIJADO con pin (doble clic o 📌): marco rojo, no se suelta hasta
+   soltarlo. Vale para tomas, cuadros, caminos, subtítulos y carteles. */
+.tl-shot.pinned,
+.tl-sub.pinned {
+  outline: 2px solid #ff5252;
+  border-color: #ff5252;
+  box-shadow: 0 0 0 2px rgba(255,82,82,0.4), 0 0 12px rgba(255,82,82,0.35);
+  opacity: 1;
+  z-index: 3;
+}
+
 /* Pista 📋 QUIZ: mismos bloques que los subtítulos (clase .tl-sub), con color
    propio (violeta) para distinguir el cartel de pregunta del texto normal. */
 .tl-quiz {
