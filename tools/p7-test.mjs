@@ -935,5 +935,20 @@ tShots.filter(s => s.camMode === 'front').forEach(s => {
 
 console.log('✓ escena de diálogo: jefe y empleados mantienen posición, orientación y pose sin derivar');
 
+// --- alarma (escena vieja): cada línea llega quieta hasta el fin del clip ---
+const alarmaJson = JSON.parse(fs.readFileSync('scenes/alarma_en_la_red.json', 'utf8'));
+applyProject(alarmaJson);
+const laneEnd = (charId) => Math.max(...charBlocks.filter(b => b.actions[charId]).map(b => b.start + b.duration));
+assert(Math.abs(laneEnd('human1') - 45.8) < 0.05, 'Alex llega hasta el final');
+assert(Math.abs(laneEnd('human2') - 45.8) < 0.05, 'Carlos llega hasta el final');
+assert(Math.abs(laneEnd('dog') - 45.8) < 0.05, 'perro llega hasta el final');
+assert(Math.abs(laneEnd('cat') - 45.8) < 0.05, 'gato llega hasta el final');
+evaluateAllPathsAt(25);
+assert(interactiveRegistry.get('human1').rig.currentAction === 'walk', 'Alex caminando a los 25s (no desliza)');
+evaluateAllPathsAt(40);
+assert(interactiveRegistry.get('human2').rig.currentAction === 'idle', 'Carlos parado a los 40s');
+assert(interactiveRegistry.get('cat').rig.currentAction === 'lay', 'gato quieto a los 40s');
+console.log('✓ alarma: líneas completas y quietas hasta el fin del clip');
+
 console.log('\n✅ P7: todas las pruebas pasaron');
 process.exit(0);

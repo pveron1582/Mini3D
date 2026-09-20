@@ -2,6 +2,11 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Alarma: líneas completas y quietas hasta el fin
+
+- La escena trae sus bloques (antes solo migración): Alex camina su tramo
+  final y queda parado, Carlos parado frente al mini rack, mascotas
+  acostadas. Cada lane llega a los 45.8s. Nuevo `previewPathEnd`.
 ## [2026-09-20] — Botón ⤵ Hasta el final en el editor de bloques
 
 - El cuadro seleccionado se estira hasta que termina el clip (quieto ahí

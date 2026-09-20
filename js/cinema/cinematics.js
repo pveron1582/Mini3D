@@ -1200,6 +1200,13 @@ export function previewWaitRanges(stored) {
     .map(sg => ({ action: sg.action || 'idle', start: sg.t0, duration: sg.t1 - sg.t0 }));
 }
 
+// Fin del recorrido (para remates y tests): instante y acción final.
+export function previewPathEnd(stored) {
+  const pv = getPreviewPath(stored);
+  if (!pv) return null;
+  return { totalEnd: pv.totalEnd, endAction: pv.endAction || null, loop: !!pv.loop };
+}
+
 function samplePreviewPath(pv, t, entry) {
 
   const initialAction = (entry && entry.initialState && entry.initialState.action) || 'idle';

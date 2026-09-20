@@ -1800,6 +1800,20 @@
       "speed": 1
     }
   },
+  "charBlocks": [
+    { "id": "cb_human1_1", "start": 0, "duration": 2.95, "actions": { "human1": { "action": "talk" } } },
+    { "id": "cb_human1_2", "start": 8.48, "duration": 6.8, "actions": { "human1": { "action": "idle" } } },
+    { "id": "cb_human1_3", "start": 20.82, "duration": 1.5, "actions": { "human1": { "action": "shoulder_lift" } } },
+    { "id": "cb_human1_4", "start": 22.32, "duration": 6.88, "actions": { "human1": { "action": "walk" } } },
+    { "id": "cb_human1_5", "start": 29.2, "duration": 16.6, "actions": { "human1": { "action": "idle" } } },
+    { "id": "cb_human3_1", "start": 0, "duration": 2.95, "actions": { "human3": { "action": "talk" } } },
+    { "id": "cb_human2_1", "start": 0.04, "duration": 6.5, "actions": { "human2": { "action": "idle" } } },
+    { "id": "cb_human2_2", "start": 6.84, "duration": 38.96, "actions": { "human2": { "action": "idle" } } },
+    { "id": "cb_dog_1", "start": 4.65, "duration": 6, "actions": { "dog": { "action": "sit" } } },
+    { "id": "cb_dog_2", "start": 10.94, "duration": 34.86, "actions": { "dog": { "action": "lay" } } },
+    { "id": "cb_cat_1", "start": 3.86, "duration": 6, "actions": { "cat": { "action": "sit" } } },
+    { "id": "cb_cat_2", "start": 10.25, "duration": 35.55, "actions": { "cat": { "action": "lay" } } }
+  ],
   "subtitles": [
     {
       "start": 0.2,
