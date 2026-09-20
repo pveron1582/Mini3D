@@ -2,6 +2,10 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Camino: clic con reporte (nada silencioso)
+
+- Abrir/cerrar el editor del recorrido avisa en la barra de estado; si algo
+  falla muestra el error en vez de parecer que el clic no hizo nada.
 ## [2026-09-20] — Camino con 💾/✕/⧉ (guardar, descartar, repetir)
 
 - Editando el recorrido: 💾 guarda y cierra, ✕ descarta lo dibujado.

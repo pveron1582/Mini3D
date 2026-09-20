@@ -165,6 +165,23 @@ function charIdsWithContent() {
 
 // ---------- Render de las pistas ----------
 
+// Abrir/cerrar el editor del camino con reporte: si algo falla se ve en la
+// barra de estado en vez de parecer que el clic no hizo nada.
+function togglePathEditor(id) {
+  try {
+    const wasEditing = charLaneBus.isEditing(id);
+    charLaneBus.toggleEditor(id);
+    const entry = interactiveRegistry.get(id);
+    const name = entry ? entry.name : id;
+    setStatus(wasEditing
+      ? `Recorrido de ${name} cerrado.`
+      : `Editando recorrido de ${name}: clic en la línea suma puntos, arrastralos para moldear.`);
+  } catch (err) {
+    console.error(err);
+    setStatus('No se pudo abrir el editor del camino: ' + (err && err.message ? err.message : err));
+  }
+}
+
 function blockLabel(b) {
   const names = Object.keys(b.actions || {}).map(id => {
     const e = interactiveRegistry.get(id);
@@ -354,7 +371,7 @@ export function renderCharBlocks() {
         editBtn.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
         editBtn.addEventListener('click', (ev) => {
           ev.stopPropagation();
-          charLaneBus.toggleEditor(entry.id);
+          togglePathEditor(entry.id, 'botón');
         });
         el.appendChild(editBtn);
 
@@ -406,7 +423,7 @@ export function renderCharBlocks() {
         el.addEventListener('pointerdown', (e) => e.stopPropagation());
         el.addEventListener('click', (e) => {
           e.stopPropagation();
-          charLaneBus.toggleEditor(entry.id);
+          togglePathEditor(entry.id, 'bloque');
         });
         inner.appendChild(el);
       }
