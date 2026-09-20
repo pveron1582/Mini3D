@@ -2,6 +2,11 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Camino: clic siempre abre y se marca seleccionado
+
+- El clic en el cuadro azul ya no alterna cerrar (eso confundía): siempre
+  abre el editor y el cuadro queda en blanco con 💾/⧉/✕, igual que los
+  cuadros de acción. Cerrar con 💾/✕ o eligiendo otro bloque.
 ## [2026-09-20] — Camino: clic con reporte (nada silencioso)
 
 - Abrir/cerrar el editor del recorrido avisa en la barra de estado; si algo

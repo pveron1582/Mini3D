@@ -165,17 +165,19 @@ function charIdsWithContent() {
 
 // ---------- Render de las pistas ----------
 
-// Abrir/cerrar el editor del camino con reporte: si algo falla se ve en la
-// barra de estado en vez de parecer que el clic no hizo nada.
+// Abrir el editor del camino con reporte: si algo falla se ve en la barra
+// de estado en vez de parecer que el clic no hizo nada. Si ya se está
+// editando, no se cierra (para eso están 💾/✕): se avisa dónde terminar.
 function togglePathEditor(id) {
   try {
-    const wasEditing = charLaneBus.isEditing(id);
-    charLaneBus.toggleEditor(id);
     const entry = interactiveRegistry.get(id);
     const name = entry ? entry.name : id;
-    setStatus(wasEditing
-      ? `Recorrido de ${name} cerrado.`
-      : `Editando recorrido de ${name}: clic en la línea suma puntos, arrastralos para moldear.`);
+    if (charLaneBus.isEditing(id)) {
+      setStatus(`Ya estás editando el recorrido de ${name}: 💾 guarda, ✕ descarta.`);
+      return;
+    }
+    charLaneBus.toggleEditor(id);
+    setStatus(`Editando recorrido de ${name}: clic en la línea suma puntos, arrastralos para moldear. 💾 guarda, ✕ descarta.`);
   } catch (err) {
     console.error(err);
     setStatus('No se pudo abrir el editor del camino: ' + (err && err.message ? err.message : err));
@@ -351,7 +353,8 @@ export function renderCharBlocks() {
       const info = charLaneBus.pathInfo(entry.id);
       if (info) {
         const el = document.createElement('div');
-        el.className = 'tl-sub tl-charblock tl-charpath';
+        const editing = charLaneBus.isEditing(entry.id);
+        el.className = 'tl-sub tl-charblock tl-charpath' + (editing ? ' selected' : '');
         el.style.left = (LANE_LABEL_W + 0) + 'px';
         const wSec = Math.min(info.duration > 0 ? info.duration : 1, Math.max(timeline.duration, 20));
         el.style.width = Math.max(24, wSec * pps) + 'px';
@@ -364,9 +367,9 @@ export function renderCharBlocks() {
         // desde acá: se borra vaciando sus waypoints en el editor.
         const editBtn = document.createElement('div');
         editBtn.className = 'tl-shot-save';
-        editBtn.textContent = charLaneBus.isEditing(entry.id) ? '🎥' : '🎬';
-        editBtn.title = charLaneBus.isEditing(entry.id)
-          ? `Terminar la edición del recorrido de ${entry.name}`
+        editBtn.textContent = editing ? '🎥' : '🎬';
+        editBtn.title = editing
+          ? `Editando el recorrido de ${entry.name} (💾 guarda, ✕ descarta)`
           : `Editar el recorrido de ${entry.name} (waypoints sobre el piso)`;
         editBtn.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
         editBtn.addEventListener('click', (ev) => {
