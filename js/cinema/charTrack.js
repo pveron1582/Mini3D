@@ -71,7 +71,10 @@ function renderCaminoSegments(inner, entry, info, pps) {
   const editing = charLaneBus.isEditing(entry.id);
   gaps.forEach(([s, e], idx) => {
     const el = document.createElement('div');
-    const sel = selectedCamino && selectedCamino.charId === entry.id && selectedCamino.seg === idx;
+    // El tramo se marca SOLO si está elegido Y editándose: si el editor se
+    // cerró por otro lado (💾 de toma, otro bloque...), no queda un blanco
+    // huérfano con dos iconos sueltos.
+    const sel = selectedCamino && selectedCamino.charId === entry.id && selectedCamino.seg === idx && charLaneBus.isEditing(entry.id);
     el.className = 'tl-sub tl-charblock tl-charpath' + (sel ? ' selected' : '');
     el.style.left = (LANE_LABEL_W + s * pps) + 'px';
     el.style.width = Math.max(18, (e - s) * pps) + 'px';

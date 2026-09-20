@@ -2,6 +2,10 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Tramo marcado solo si se está editando
+
+- El blanco quedaba huérfano (con dos iconos sueltos) cuando el editor se
+  cerraba por otro lado: ahora va atado a la edición real.
 ## [2026-09-20] — Elegir tramo no se pierde + sentados continuos en alarma
 
 - Marcar el tramo DESPUÉS de abrir (antes el toggle lo borraba cuando había
