@@ -440,8 +440,7 @@ captureBlockPose(capBlock);
 assert(Math.abs(capBlock.actions.poseTestChar.pos[0] - 11) < 1e-6 && Math.abs(capBlock.actions.poseTestChar.rotY - 0.7) < 1e-6, 'definir en el cuadro captura el lugar');
 
 // --- migración de proyectos viejos: bloques sobre esperas reales, walk libre ---
-const { previewWaitRanges } = await import(pathToFileURL('./js/cinema/cinematics.js'));
-const { migrateEventsToCharBlocks } = await import(pathToFileURL('./js/projectFiles.js'));
+const { previewWaitRanges, previewPathEnd, duplicatePathFor } = await import(pathToFileURL('./js/cinema/cinematics.js'));const { migrateEventsToCharBlocks } = await import(pathToFileURL('./js/projectFiles.js'));
 cinemaPaths.set('poseTestChar', { waypoints: [new V(0, 0, 0), new V(10, 0, 0)], planeY: 0, speed: 2, events: { 1: { action: 'talk', wait: 2 } } });
 const migRanges = previewWaitRanges(cinemaPaths.get('poseTestChar'));
 assert(migRanges.length === 1 && migRanges[0].action === 'talk', 'migración: solo la espera genera bloque');
@@ -456,6 +455,16 @@ evaluateAllPathsAt(6);
 assert(poseRig.currentAction === 'talk', 'migración: en la espera habla');
 cinemaPaths.delete('poseTestChar');
 setCharBlocks([], {});
+
+// --- camino: ⧉ duplica waypoints + eventos (lo camina dos veces) ---
+cinemaPaths.set('dupPathChar', { waypoints: [new V(0, 0, 0), new V(4, 0, 0)], planeY: 0, speed: 2, events: { 1: { action: 'talk', wait: 1 } } });
+assert(duplicatePathFor('dupPathChar') === true, 'duplica el recorrido');
+const dupSt = cinemaPaths.get('dupPathChar');
+assert(dupSt.waypoints.length === 3, 'waypoints repetidos (2 + 1)');
+assert(dupSt.events['1'] && dupSt.events['2'] && dupSt.events['2'].action === 'talk', 'eventos repetidos con offset');
+assert(previewPathEnd(dupSt).totalEnd > 3, 'el recorrido duplicado dura más');
+assert(duplicatePathFor('sinCamino') === false, 'sin recorrido no duplica');
+cinemaPaths.delete('dupPathChar');
 
 // --- bloques de desplazamiento: duración auto + interpolación ---
 const mvTest = { from: { x: 0, z: 0 }, to: { x: 3, z: 4 }, speed: 2 };

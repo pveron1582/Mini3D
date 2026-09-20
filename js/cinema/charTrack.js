@@ -358,6 +358,50 @@ export function renderCharBlocks() {
         });
         el.appendChild(editBtn);
 
+        // ⧉ Repetir recorrido: lo camina dos veces (waypoints + eventos).
+        const dupPath = document.createElement('div');
+        dupPath.className = 'tl-shot-del';
+        dupPath.textContent = '⧉';
+        dupPath.title = `Repetir el recorrido de ${entry.name} (lo camina dos veces)`;
+        dupPath.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
+        dupPath.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          if (charLaneBus.duplicatePath(entry.id)) {
+            setStatus(`Recorrido de ${entry.name} duplicado: lo camina dos veces.`);
+          } else {
+            setStatus(`${entry.name} no tiene recorrido para duplicar.`);
+          }
+        });
+        el.appendChild(dupPath);
+
+        // Mientras se edita: 💾 guarda y cierra, ✕ descarta lo dibujado.
+        if (charLaneBus.isEditing(entry.id)) {
+          const savePath = document.createElement('div');
+          savePath.className = 'tl-shot-save';
+          savePath.textContent = '💾';
+          savePath.title = `Guardar el recorrido de ${entry.name} y cerrar`;
+          savePath.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
+          savePath.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            charLaneBus.toggleEditor(entry.id);
+            pushHistory();
+            setStatus(`Recorrido de ${entry.name} guardado.`);
+          });
+          el.appendChild(savePath);
+
+          const closePath = document.createElement('div');
+          closePath.className = 'tl-shot-close';
+          closePath.textContent = '✕';
+          closePath.title = `Descartar lo dibujado (vuelve al recorrido guardado)`;
+          closePath.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
+          closePath.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            charLaneBus.discardPathDraft();
+            renderCharBlocks();
+          });
+          el.appendChild(closePath);
+        }
+
         el.title = `Recorrido de ${entry.name}: ${info.duration.toFixed(1)}s · ${info.speed} m/s${info.loop ? ' · en bucle' : ''} — 🎬 edita los waypoints sobre el piso`;
         el.addEventListener('pointerdown', (e) => e.stopPropagation());
         el.addEventListener('click', (e) => {

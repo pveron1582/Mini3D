@@ -129,6 +129,10 @@ export const charLaneBus = {
   toggleEditor: (id) => {},
   // Borrar el recorrido del personaje
   deletePath: (id) => {},
+  // Duplicar el recorrido guardado (lo camina dos veces)
+  duplicatePath: (id) => false,
+  // Descartar el borrador del editor (vuelve al recorrido guardado)
+  discardPathDraft: () => false,
   // Cerrar el editor de recorrido si está abierto (exclusividad de edición:
   // un solo bloque a la vez — camino O bloque de acciones, nunca ambos)
   closeEditor: () => {},

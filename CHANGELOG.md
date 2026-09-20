@@ -2,6 +2,10 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Camino con 💾/✕/⧉ (guardar, descartar, repetir)
+
+- Editando el recorrido: 💾 guarda y cierra, ✕ descarta lo dibujado.
+- ⧉ duplica el recorrido guardado (lo camina dos veces, eventos incluidos).
 ## [2026-09-20] — Bloques de movimiento en azul + fix selector de animación
 
 - Lo que viaja se ve azul (desplazamientos y caminar/correr), lo quieto

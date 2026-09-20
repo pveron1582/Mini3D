@@ -205,6 +205,15 @@ function cinemaActivate() {
   cinema.active = true;
   cinema.dragging = -1;
   cinemaLoadTarget(getActiveEntry() ? getActiveEntry().id : '');
+  // Foto del recorrido guardado (para ✕ descartar lo dibujado sin guardar)
+  const prev = cinema.targetId ? cinemaPaths.get(cinema.targetId) : null;
+  cinemaPreEdit = prev
+    ? {
+        waypoints: prev.waypoints.map(v => v.clone()),
+        events: JSON.parse(JSON.stringify(prev.events || {})),
+        planeY: prev.planeY, loop: prev.loop, speed: prev.speed
+      }
+    : null;
   setStatus('Cinemática activada para ' + (getActiveEntry() ? getActiveEntry().name : 'objeto') + '.');
 }
 // (getActiveEntry().id es equivalente a store.activeTarget)
@@ -223,6 +232,63 @@ function cinemaDeactivate() {
   canvas.style.cursor = 'default';
   cinemaSetMode('off');
   setStatus('Cinemática desactivada (recorridos guardados por objeto).');
+}
+
+// Foto del recorrido guardado al abrir el editor (✕ descarta el borrador).
+let cinemaPreEdit = null;
+
+// Cierra el editor del recorrido SIN guardar lo dibujado: restaura la foto
+// previa (o borra el borrador si el camino es nuevo).
+export function cinemaDiscardDraft() {
+  if (!cinema.active) return false;
+  const id = cinema.targetId;
+  if (id && cinemaPreEdit) {
+    cinemaPaths.set(id, {
+      waypoints: cinemaPreEdit.waypoints.map(v => v.clone()),
+      planeY: cinemaPreEdit.planeY,
+      events: JSON.parse(JSON.stringify(cinemaPreEdit.events || {})),
+      loop: cinemaPreEdit.loop,
+      speed: cinemaPreEdit.speed
+    });
+    previewCache.delete(cinemaPaths.get(id));
+  } else if (id && cinemaPaths.get(id) && cinemaPreEdit === null) {
+    // Era un camino nuevo sin nada guardado: se elimina el borrador
+    cinemaPaths.delete(id);
+  }
+  cinemaPreEdit = null;
+  cinema.active = false;
+  cinema.playing = false;
+  cinema.dragging = -1;
+  cinema.waypoints = [];
+  cinema.curve = null;
+  cinema.length = 0;
+  cinemaClearVisuals();
+  cinemaClearAllVisuals();
+  controls.enabled = true;
+  canvas.style.cursor = 'default';
+  cinemaSetMode('off');
+  refreshCharLanes();
+  setStatus('Recorrido descartado (sin guardar).');
+  return true;
+}
+
+// Duplica el recorrido guardado: el personaje lo camina dos veces seguidas
+// (waypoints + eventos repetidos). Para extender loops cortos.
+export function duplicatePathFor(charId) {
+  if (cinema.active && cinema.targetId === charId) cinemaDeactivate();
+  const stored = cinemaPaths.get(charId);
+  if (!stored || !stored.waypoints || stored.waypoints.length < 2) return false;
+  const n = stored.waypoints.length;
+  for (let i = 1; i < n; i++) stored.waypoints.push(stored.waypoints[i].clone());
+  const ev = stored.events || {};
+  Object.keys(ev).forEach(k => {
+    const ki = parseInt(k, 10);
+    ev[String(ki + n - 1)] = JSON.parse(JSON.stringify(ev[k]));
+  });
+  previewCache.delete(stored);
+  refreshCharLanes();
+  pushHistory();
+  return true;
 }
 
 function cinemaInsertWaypoint(v) {
@@ -823,7 +889,8 @@ charLaneBus.toggleEditor = (id) => {
   else cinemaActivate();
 };
 charLaneBus.deletePath = (id) => cinemaDeletePathFor(id);
-
+charLaneBus.duplicatePath = (id) => duplicatePathFor(id);
+charLaneBus.discardPathDraft = () => cinemaDiscardDraft();
 // Duración del recorrido (para el bloque 🚶 de la pista): se recalcula con
 // la misma previsión determinista del playback. Se expone como helper para
 // refrescar la pista cuando cambia un recorrido.
