@@ -2,6 +2,10 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — El ＋ vuelve a ofrecer estático o movimiento
+
+- El panel se ocultaba antes de mostrar el chooser (el ＋ parecía no hacer
+  nada) y encima rompía al titular sin bloque. Ahora elige ahí mismo.
 ## [2026-09-20] — Anillo azul sigue al personaje cada frame
 
 - Solo se sincronizaba en eventos (arrastrar, seleccionar): si algo movía

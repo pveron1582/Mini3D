@@ -703,8 +703,19 @@ export function commitCharBlock() {
 function renderCharBlockEditor() {
   const panel = byId('charBlockEditPanel');
   if (!panel) return;
-  if (!selectedBlock) { panel.style.display = 'none'; return; }
+  // Sin bloque ni chooser no hay nada que mostrar
+  if (!selectedBlock && !chooserFor) { panel.style.display = 'none'; return; }
   panel.style.display = 'block';
+  const list = byId('charBlockList');
+  if (!list) return;
+  list.innerHTML = '';
+
+  // Chooser de tipo (tras el ＋): estático o desplazamiento.
+  if (chooserFor && !selectedBlock) {
+    renderBlockChooser(list, chooserFor);
+    return;
+  }
+
   // El bloque es de UN SOLO personaje: el título lo nombra.
   const solo = Object.keys(selectedBlock.actions || {})[0];
   const soloEntry = solo ? interactiveRegistry.get(solo) : null;
@@ -714,8 +725,6 @@ function renderCharBlockEditor() {
       ? `${soloEntry.name} (${selectedBlock.start.toFixed(1)}s → ${(selectedBlock.start + selectedBlock.duration).toFixed(1)}s)`
       : `(bloque vacío — eliminalo con 🗑)`;
   }
-  const list = byId('charBlockList');
-  if (!list) return;
   list.innerHTML = '';
 
   // Chooser de tipo (tras el ＋): estático o desplazamiento.
