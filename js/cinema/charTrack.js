@@ -97,9 +97,9 @@ function renderCaminoSegments(inner, entry, info, pps) {
     });
     el.appendChild(editBtn);
 
-    // ⧉ Repetir recorrido: lo camina dos veces (waypoints + eventos).
-    const dupPath = document.createElement('div');
-    dupPath.className = 'tl-shot-del';
+        // ⧉ Repetir recorrido: lo camina dos veces (waypoints + eventos).
+        const dupPath = document.createElement('div');
+        dupPath.className = 'tl-shot-dup';
     dupPath.textContent = '⧉';
     dupPath.title = `Repetir el recorrido de ${entry.name} (lo camina dos veces)`;
     dupPath.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
@@ -113,10 +113,10 @@ function renderCaminoSegments(inner, entry, info, pps) {
     });
     el.appendChild(dupPath);
 
-    // Mientras se edita: 💾 guarda y cierra, ✕ descarta lo dibujado.
-    if (editing) {
-      const savePath = document.createElement('div');
-      savePath.className = 'tl-shot-save';
+        // Mientras se edita: 💾 guarda y cierra, ✕ descarta lo dibujado.
+        if (editing) {
+          const savePath = document.createElement('div');
+          savePath.className = 'tl-shot-save tl-path-save';
       savePath.textContent = '💾';
       savePath.title = `Guardar el recorrido de ${entry.name} y cerrar`;
       savePath.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
@@ -550,7 +550,7 @@ export function renderCharBlocks() {
 
             // ⧉ Duplicar: copia idéntica al final de la lane (repetir un tramo)
             const dup = document.createElement('div');
-            dup.className = 'tl-shot-del';
+            dup.className = 'tl-shot-dup';
             dup.textContent = '⧉';
             dup.title = `Duplicar este bloque de ${entry.name} al final (copia idéntica)`;
             dup.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });

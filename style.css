@@ -1433,8 +1433,30 @@ body, html {
 .tl-charpath .tl-shot-close {
   display: block;   /* siempre visibles sobre el bloque del camino */
 }
-/* 🎬/🎥 del camino: agrupado a la izquierda de 💾⧉✕ (los cuatro juntos a la
-   derecha del tramo). */
+/* Lane 🧍 PERSONAJES: cuatro pastillas 💾 🗑 ⧉ ✕ (el camino usa 🎬 en vez
+   de 🗑). Sin esto, ⧉ y 🗑 compartían posición y se pisaban. */
+.tl-charblock .tl-shot-save { right: 68px; }
+.tl-charblock .tl-shot-del { right: 46px; }
+.tl-shot-dup {
+  position: absolute;
+  top: 2px;
+  right: 24px;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 10px;
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+  display: none;
+  z-index: 4;
+  user-select: none;
+}
+.tl-charblock.selected .tl-shot-dup { display: block; }
+.tl-shot-dup:hover { background: var(--accent-primary); }
+/* Camino: 🎬 ocupa el lugar de 🗑 y su 💾 va en 46px (no en 68px). */
 .tl-charpath .tl-path-edit {
   position: absolute;
   top: 2px;
@@ -1451,6 +1473,7 @@ body, html {
   z-index: 4;
   user-select: none;
 }
+.tl-charpath .tl-shot-save.tl-path-save { right: 46px; }
 
 /* Nombre de la pista, adelante de todo */
 .tl-lane-name {

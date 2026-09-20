@@ -2,6 +2,10 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Pastillas sin pisarse (💾🗑⧉✕ cada una en su lugar)
+
+- ⧉ compartía posición con 🗑 y se tapaban: ahora cada pastilla tiene la
+  suya en la lane de personajes (camino: 🎬💾⧉✕).
 ## [2026-09-20] — Pastillas del camino agrupadas (🎬💾⧉✕)
 
 - El 🎬/🎥 va pegado a la izquierda de 💾: las cuatro siempre juntas a la
