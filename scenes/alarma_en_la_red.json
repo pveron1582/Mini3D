@@ -1807,6 +1807,7 @@
     { "id": "cb_human1_4", "start": 22.32, "duration": 6.88, "actions": { "human1": { "action": "walk" } } },
     { "id": "cb_human1_5", "start": 29.2, "duration": 16.6, "actions": { "human1": { "action": "idle" } } },
     { "id": "cb_human3_1", "start": 0, "duration": 2.95, "actions": { "human3": { "action": "talk" } } },
+    { "id": "cb_human3_2", "start": 8.82, "duration": 36.98, "actions": { "human3": { "action": "idle" } } },
     { "id": "cb_human2_1", "start": 0.04, "duration": 6.5, "actions": { "human2": { "action": "idle" } } },
     { "id": "cb_human2_2", "start": 6.84, "duration": 38.96, "actions": { "human2": { "action": "idle" } } },
     { "id": "cb_dog_1", "start": 4.65, "duration": 6, "actions": { "dog": { "action": "sit" } } },
