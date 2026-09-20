@@ -2,6 +2,12 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Bloques de movimiento en azul + fix selector de animación
+
+- Lo que viaja se ve azul (desplazamientos y caminar/correr), lo quieto
+  verde; los azules ya traían 💾/🗑/⧉/✕ como los verdes.
+- El selector de animación del bloque de movimiento guardaba "undefined":
+  ahora caminar/correr se eligen bien.
 ## [2026-09-20] — Alarma: líneas completas y quietas hasta el fin
 
 - La escena trae sus bloques (antes solo migración): Alex camina su tramo

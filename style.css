@@ -1417,6 +1417,11 @@ body, html {
 .tl-charpath {
   background: linear-gradient(180deg, #3d6b8a, #2f5570);
 }
+/* Bloque de movimiento (desplazamiento verde→rojo, o caminar/correr):
+   mismo azul — lo que viaja se ve azul, lo quieto verde oliva */
+.tl-charmove {
+  background: linear-gradient(180deg, #3d6b8a, #2f5570);
+}
 .tl-charpath .tl-shot-save,
 .tl-charpath .tl-shot-close {
   display: block;   /* siempre visibles sobre el bloque del camino */

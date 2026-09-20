@@ -374,8 +374,10 @@ export function renderCharBlocks() {
         .forEach(b => {
           const a = b.actions[entry.id];
           const isSel = b === selectedBlock;
+          // Azul = viaja (desplazamiento o caminar/correr); verde = quieto
+          const moves = !!(a && (a.move || a.action === 'walk' || a.action === 'run'));
           const el = document.createElement('div');
-          el.className = 'tl-sub tl-charblock' + (isSel ? ' selected' : '');
+          el.className = 'tl-sub tl-charblock' + (isSel ? ' selected' : '') + (moves ? ' tl-charmove' : '');
           el.style.left = (LANE_LABEL_W + b.start * pps) + 'px';
           el.style.width = Math.max(18, b.duration * pps) + 'px';
           const lab = document.createElement('span');
@@ -771,7 +773,7 @@ function renderMoveEditorRow(list, entry, charId, a) {
   const animSel = document.createElement('select');
   animSel.className = 'tl-input';
   animSel.style.cssText = 'flex:1; min-width:110px;';
-  [['', '—elegir: caminar/correr—'], ...MOVE_ACTIONS].forEach(([v, label]) => {
+  [['', '—elegir: caminar/correr—'], ...MOVE_ACTIONS.map(m => [m.id, m.label])].forEach(([v, label]) => {
     const o = document.createElement('option');
     o.value = v; o.textContent = label;
     animSel.appendChild(o);
