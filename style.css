@@ -1433,6 +1433,24 @@ body, html {
 .tl-charpath .tl-shot-close {
   display: block;   /* siempre visibles sobre el bloque del camino */
 }
+/* 🎬/🎥 del camino: agrupado a la izquierda de 💾⧉✕ (los cuatro juntos a la
+   derecha del tramo). */
+.tl-charpath .tl-path-edit {
+  position: absolute;
+  top: 2px;
+  right: 68px;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 10px;
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+  z-index: 4;
+  user-select: none;
+}
 
 /* Nombre de la pista, adelante de todo */
 .tl-lane-name {

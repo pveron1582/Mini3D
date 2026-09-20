@@ -2,6 +2,10 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Pastillas del camino agrupadas (🎬💾⧉✕)
+
+- El 🎬/🎥 va pegado a la izquierda de 💾: las cuatro siempre juntas a la
+  derecha del tramo.
 ## [2026-09-20] — Camino por tramos: la selección abraza el pedazo
 
 - La tira larga pasaba por debajo de los cuadros y al elegirla se enmarcaba

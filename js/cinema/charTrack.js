@@ -80,10 +80,10 @@ function renderCaminoSegments(inner, entry, info, pps) {
     lab.textContent = `🚶 camino${info.loop ? ' 🔁' : ''}`;
     el.appendChild(lab);
 
-    // Editar los waypoints sobre el piso (🎬/🎥). El camino NO se borra
-    // desde acá: se borra vaciando sus waypoints en el editor.
+    // Editar los waypoints sobre el piso (🎬/🎥). Va junto a 💾⧉✕ a la
+    // derecha del tramo: las cuatro pastillas siempre juntas.
     const editBtn = document.createElement('div');
-    editBtn.className = 'tl-shot-save';
+    editBtn.className = 'tl-shot-save tl-path-edit';
     editBtn.textContent = editing ? '🎥' : '🎬';
     editBtn.title = editing
       ? `Editando el recorrido de ${entry.name} (💾 guarda, ✕ descarta)`
