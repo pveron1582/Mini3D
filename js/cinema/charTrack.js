@@ -433,6 +433,23 @@ export function renderCharBlocks() {
             });
             el.appendChild(trash);
 
+            // ⧉ Duplicar: copia idéntica al final de la lane (repetir un tramo)
+            const dup = document.createElement('div');
+            dup.className = 'tl-shot-del';
+            dup.textContent = '⧉';
+            dup.title = `Duplicar este bloque de ${entry.name} al final (copia idéntica)`;
+            dup.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
+            dup.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              const copy = duplicateCharBlock(b, entry.id);
+              if (!copy) return;
+              openCharBlockEditor(copy);
+              pushHistory();
+              if (timelineBus.refreshDuration) timelineBus.refreshDuration();
+              setStatus(`Bloque de ${entry.name} duplicado al final (${copy.start.toFixed(1)}s → ${(copy.start + copy.duration).toFixed(1)}s).`);
+            });
+            el.appendChild(dup);
+
             const close = document.createElement('div');
             close.className = 'tl-shot-close';
             close.textContent = '✕';
@@ -464,6 +481,24 @@ export function renderCharBlocks() {
   });
   renderCharBlockEditor();
   updateMoveMarkers();
+}
+
+// Duplica un bloque al FINAL de su lane: copia idéntica (acción, ánimo,
+// lugar, movimiento) ubicada donde termina el último bloque del personaje.
+// Vale esté el original último o más adelante; nunca se superpone.
+export function duplicateCharBlock(b, charId) {
+  if (!b || !charBlocks.includes(b)) return null;
+  const endOfLast = charBlocks
+    .filter(o => o.actions && charId && o.actions[charId])
+    .reduce((m, o) => Math.max(m, o.start + o.duration), 0);
+  const copy = {
+    id: 'cb' + (++blockCounter),
+    start: Math.round(Math.max(endOfLast, 0) * 10) / 10,
+    duration: b.duration,
+    actions: JSON.parse(JSON.stringify(b.actions || {}))
+  };
+  charBlocks.push(copy);
+  return copy;
 }
 
 function laneContentCount(charId) {

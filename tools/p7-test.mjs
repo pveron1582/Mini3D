@@ -487,6 +487,21 @@ const serM = serializeProject().charBlocks.find(b => b.id === 'cbM1');
 assert(!!serM && serM.actions.poseTestChar.move.to.x === 6, 'move persiste en el JSON');
 setCharBlocks([], {});
 
+// --- duplicar bloque: copia idéntica al final de la lane ---
+const { duplicateCharBlock } = await import(pathToFileURL('./js/cinema/charTrack.js'));
+const { charBlocks } = await import(pathToFileURL('./js/state.js'));
+setCharBlocks([
+  { id: 'cbD1', start: 0, duration: 2, actions: { poseTestChar: { action: 'idle', pos: [1, 0, 2], rotY: 0 } } },
+  { id: 'cbD2', start: 2, duration: 3, actions: { poseTestChar: { action: 'talk', pos: [5, 0, 6], rotY: 1 } } }
+], {});
+const srcD = charBlocks.find(b => b.id === 'cbD1');
+const dupD = duplicateCharBlock(srcD, 'poseTestChar');
+assert(!!dupD && dupD.id !== 'cbD1', 'duplicado con id nuevo');
+assert(dupD.start === 5 && dupD.duration === 2, 'copia al final aunque el original esté antes');
+assert(dupD.actions.poseTestChar.action === 'idle' && dupD.actions.poseTestChar.pos[0] === 1, 'copia idéntica (acción + lugar)');
+assert(duplicateCharBlock({ id: 'cbX' }, 'poseTestChar') === null, 'fuera de la pista no duplica');
+setCharBlocks([], {});
+
 // --- reproducción con solo bloques (sin tomas): siempre funciona ---
 // La duración cubre los bloques y el play no se niega aunque no haya tomas.
 const { playScene, stopScene, sceneDuration } = await import(pathToFileURL('./js/cinema/timeline.js'));

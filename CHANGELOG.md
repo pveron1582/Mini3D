@@ -2,6 +2,11 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Botón ⧉ Duplicar en bloques de personajes
+
+- Cada cuadro seleccionado ofrece ⧉: copia idéntica (acción, ánimo, lugar,
+  movimiento) ubicada al final de su lane, esté el original último o antes.
+  Sirve para repetir tramos (mascotas en loop) o extender quietos.
 ## [2026-09-20] — Cabezal más chico y sin línea sobre la botonera
 
 - El cuadradito rojo baja de 27 a 22 px y la línea arranca en la regla
