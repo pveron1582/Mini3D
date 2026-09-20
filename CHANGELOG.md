@@ -2,6 +2,10 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Camino seleccionado sin halo (borde blanco finito)
+
+- El resplandor agrandaba visualmente el recuadro blanco del camino largo:
+  ahora solo marca el borde.
 ## [2026-09-20] — Camino seleccionado no tapa a los vecinos
 
 - El blanco de seleccionado levantaba el camino por encima de los cuadros
