@@ -1474,6 +1474,9 @@ body, html {
   user-select: none;
 }
 .tl-charpath .tl-shot-save.tl-path-save { right: 46px; }
+/* 🎬 solo en el tramo elegido (en los demás ni se muestra). */
+.tl-charpath .tl-shot-save.tl-path-edit { display: none; }
+.tl-charpath.selected .tl-shot-save.tl-path-edit { display: block; }
 
 /* Nombre de la pista, adelante de todo */
 .tl-lane-name {

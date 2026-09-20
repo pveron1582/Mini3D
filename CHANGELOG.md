@@ -2,6 +2,10 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — 🎬 solo en el tramo de camino elegido
+
+- El icono de cinemática ya no se muestra apagado en todos los bloques
+  azules: aparece solo al seleccionar el tramo.
 ## [2026-09-20] — Pastillas sin pisarse (💾🗑⧉✕ cada una en su lugar)
 
 - ⧉ compartía posición con 🗑 y se tapaban: ahora cada pastilla tiene la
