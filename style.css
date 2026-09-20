@@ -1417,6 +1417,11 @@ body, html {
 .tl-charpath {
   background: linear-gradient(180deg, #3d6b8a, #2f5570);
 }
+/* Seleccionado: blanco como los demás, pero SIN z-index (es largo y va
+   debajo de los cuadros de acción: con pop-up los taparía). */
+.tl-charpath.selected {
+  z-index: auto;
+}
 /* Bloque de movimiento (desplazamiento verde→rojo, o caminar/correr):
    mismo azul — lo que viaja se ve azul, lo quieto verde oliva */
 .tl-charmove {

@@ -2,6 +2,10 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Camino seleccionado no tapa a los vecinos
+
+- El blanco de seleccionado levantaba el camino por encima de los cuadros
+  (z-index): ahora marca sin montarse.
 ## [2026-09-20] — Camino: clic siempre abre y se marca seleccionado
 
 - El clic en el cuadro azul ya no alterna cerrar (eso confundía): siempre
