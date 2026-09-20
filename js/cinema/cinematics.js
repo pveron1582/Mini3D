@@ -1277,14 +1277,14 @@ export function previewPathEnd(stored) {
 function samplePreviewPath(pv, t, entry) {
 
   const initialAction = (entry && entry.initialState && entry.initialState.action) || 'idle';
-  if (!pv) return { u: 0, action: initialAction };
-  if (t < pv.delay) return { u: 0, action: initialAction };
+  if (!pv) return { u: 0, action: initialAction, moving: false };
+  if (t < pv.delay) return { u: 0, action: initialAction, moving: false };
   let tAbs = t;
   if (pv.loop) {
     const cycle = Math.max(0.001, pv.totalEnd - pv.delay);
     tAbs = pv.delay + ((t - pv.delay) % cycle);
   } else if (t >= pv.totalEnd) {
-    return { u: 1, action: pv.endAction || initialAction };
+    return { u: 1, action: pv.endAction || initialAction, moving: false };
   }
   for (const seg of pv.segments) {
     if (tAbs >= seg.t0 && tAbs < seg.t1) {
@@ -1294,15 +1294,15 @@ function samplePreviewPath(pv, t, entry) {
         if (seg.sitAt) {
           const seats = anchorSeats('seat_' + seg.sitAt);
           const spot = seats[0] || null;
-          if (spot) return { u: seg.u, action: 'sit', seatPose: spot };
+          if (spot) return { u: seg.u, action: 'sit', seatPose: spot, moving: false };
         }
-        return { u: seg.u, action: seg.action };
+        return { u: seg.u, action: seg.action, moving: false };
       }
       const f = (tAbs - seg.t0) / Math.max(0.0001, seg.t1 - seg.t0);
-      return { u: seg.u0 + (seg.u1 - seg.u0) * f, action: seg.action };
+      return { u: seg.u0 + (seg.u1 - seg.u0) * f, action: seg.action, moving: true };
     }
   }
-  return { u: 1, action: pv.endAction || initialAction };
+  return { u: 1, action: pv.endAction || initialAction, moving: false };
 }
 
 // Ley del suelo sólido para la evaluación determinista: el origen del rig
@@ -1421,9 +1421,13 @@ export function evaluateAllPathsAt(t) {
     }
     if (entry.rig) {
       // La acción de un bloque de 🧍 PERSONAJES pisa la del recorrido: la
-      // pista de bloques es la fuente de verdad de las acciones.
+      // pista de bloques es la fuente de verdad de las acciones. SALVO un
+      // bloque ya expirado mientras el camino SIGUE en movimiento: esa es
+      // una orden vieja (ej. idle de un cuadro anterior) y el personaje
+      // deslizaría sin animar — manda el walk/run del recorrido.
       const ba = blockActions.get(id);
-      const act = (ba && ba.action) ? ba.action : (s.action || 'idle');
+      const stale = !!(ba && ba.expired && s.moving);
+      const act = (ba && ba.action && !stale) ? ba.action : (s.action || 'idle');
       entry.rig.setAction(act);
       const natural = act === 'run' ? (entry.rig.naturalRun || 4.5) : (entry.rig.naturalWalk || 1.8);
       entry.rig.cadence = THREE.MathUtils.clamp(pv.speedUsed / natural, 0.6, 2.0);

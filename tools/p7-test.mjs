@@ -456,6 +456,19 @@ assert(poseRig.currentAction === 'talk', 'migración: en la espera habla');
 cinemaPaths.delete('poseTestChar');
 setCharBlocks([], {});
 
+// --- bloque expirado no pisa el caminar (no desliza) ---
+cinemaPaths.set('poseTestChar', { waypoints: [new V(0, 0, 0), new V(20, 0, 0)], planeY: 0, speed: 2, events: {} });
+setCharBlocks([{ id: 'cbOld', start: 0, duration: 2, actions: { poseTestChar: { action: 'idle' } } }], {});
+evaluateAllPathsAt(5);
+assert(poseRig.currentAction === 'walk', 'bloque expirado no pisa el caminar');
+setCharBlocks([{ id: 'cbNow', start: 4, duration: 4, actions: { poseTestChar: { action: 'idle' } } }], {});
+evaluateAllPathsAt(5);
+assert(poseRig.currentAction === 'idle', 'bloque vigente sí manda aunque camine');
+evaluateAllPathsAt(12);
+assert(poseRig.currentAction === 'idle', 'al terminar el camino conserva');
+cinemaPaths.delete('poseTestChar');
+setCharBlocks([], {});
+
 // --- camino: ⧉ duplica waypoints + eventos (lo camina dos veces) ---
 cinemaPaths.set('dupPathChar', { waypoints: [new V(0, 0, 0), new V(4, 0, 0)], planeY: 0, speed: 2, events: { 1: { action: 'talk', wait: 1 } } });
 assert(duplicatePathFor('dupPathChar') === true, 'duplica el recorrido');

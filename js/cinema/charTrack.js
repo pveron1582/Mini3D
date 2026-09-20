@@ -218,7 +218,7 @@ export function charActionsAt(t) {
   // 1. charFullRange (base de toda la escena)
   Object.keys(charFullRange).forEach(charId => {
     const a = charFullRange[charId];
-    if (a) state.set(charId, { action: a.action, mood: a.mood || null, t0: 0 });
+    if (a) state.set(charId, { action: a.action, mood: a.mood || null, t0: 0, expired: false });
   });
   // 2. Bloques por tramo
   charBlocks
@@ -234,7 +234,7 @@ export function charActionsAt(t) {
         // HABLAR y DESPLAZARSE son acciones de tramo: al TERMINAR el bloque
         // expiran y el personaje vuelve a su acción base.
         if (expired && (TALK_ACTIONS.has(a.action) || a.move)) return;
-        state.set(charId, { action: a.action, mood: a.mood || null, t0: b.start });
+        state.set(charId, { action: a.action, mood: a.mood || null, t0: b.start, expired });
       });
     });
   return state;

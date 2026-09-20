@@ -2,6 +2,11 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Bloque expirado no pisa el caminar (fin del desliz)
+
+- Un cuadro terminado seguía mandando su acción aunque el camino siguiera
+  en movimiento (Alex patinaba en idle 5 segundos). Ahora: cuadro vigente
+  manda (incluso hablar caminando); expirado + camino en marcha = walk/run.
 ## [2026-09-20] — Tramo marcado solo si se está editando
 
 - El blanco quedaba huérfano (con dos iconos sueltos) cuando el editor se
