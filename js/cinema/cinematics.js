@@ -1189,7 +1189,19 @@ function getPreviewPath(stored) {
   return pv;
 }
 
+// Tramos de espera de un recorrido con sus tiempos REALES (para migrar
+// proyectos viejos a la pista 🧍: el bloque cubre exactamente la espera, y
+// las caminatas quedan libres para la acción walk/run del recorrido).
+export function previewWaitRanges(stored) {
+  const pv = getPreviewPath(stored);
+  if (!pv || !pv.segments) return [];
+  return pv.segments
+    .filter(sg => sg.type === 'wait' && sg.t1 > sg.t0)
+    .map(sg => ({ action: sg.action || 'idle', start: sg.t0, duration: sg.t1 - sg.t0 }));
+}
+
 function samplePreviewPath(pv, t, entry) {
+
   const initialAction = (entry && entry.initialState && entry.initialState.action) || 'idle';
   if (!pv) return { u: 0, action: initialAction };
   if (t < pv.delay) return { u: 0, action: initialAction };

@@ -2,6 +2,11 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Escenas viejas: caminar vuelve a animarse (migración real)
+
+- Alarma/ransomware/incidente no traían bloques: se migraban con tiempos
+  ficticios que pisaban el caminar (deslizaban en idle). Ahora los bloques
+  cubren las esperas reales del recorrido y el walk/run lo pone el camino.
 ## [2026-09-20] — Bloques de desplazamiento: verde→rojo con duración auto
 
 - El ＋ de personajes ofrece **estático** (lo de siempre) o

@@ -4,7 +4,7 @@ import { store, cinema, cinemaPaths, interactiveRegistry, timeline, recorderStat
 import { controls } from './core.js';
 import { getMinGroundY } from './collision.js';
 import { setEnvironment } from './environment.js';
-import { updateCinemaCharList, cinemaDeactivate, cutCameraToShot, stopAllPlaybacks, cinemaStorePath } from './cinema/cinematics.js';
+import { updateCinemaCharList, cinemaDeactivate, cutCameraToShot, stopAllPlaybacks, cinemaStorePath, previewWaitRanges } from './cinema/cinematics.js';
 import { getWallTexture, wallTextureNames } from './office/walls.js';
 import { windowGroups, syncWindows } from './office/walls.js';
 import { getFloorTextureName, applyFloorTexture } from './office/floor.js';
@@ -698,30 +698,24 @@ function SHOT_COLORS_FOR_LOAD(i) {
   return colors[i % colors.length];
 }
 
-// MIGRACIÓN (formato viejo → pista 🧍 PERSONAJES): los eventos de waypoint
-// de cada recorrido ({ índice: { action, wait } }) se convierten en bloques
-// secuenciales: un bloque por acción, cuya duración es la espera del evento.
+// MIGRACIÓN (formato viejo → pista 🧍 PERSONAJES): cada espera del recorrido
+// se convierte en un bloque con sus TIEMPOS REALES (los de la previsión, no
+// un cursor ficticio). Las caminatas quedan SIN bloque: la acción walk/run
+// la pone el propio recorrido (si no, los personajes deslizan en idle).
 // Los recorridos quedan solo para el MOVIMIENTO; las acciones viven en la pista.
-function migrateEventsToCharBlocks(paths) {
-  const blocks = [];
+export function migrateEventsToCharBlocks(paths) {  const blocks = [];
   Object.keys(paths).forEach(charId => {
-    const p = paths[charId];
-    if (!p || !p.events) return;
-    const events = p.events;
-    let cursor = 0;
-    let n = 0;
-    Object.keys(events).map(k => parseInt(k, 10)).sort((a, b) => a - b).forEach(k => {
-      const ev = events[k];
-      if (!ev) return;
-      const wait = ev.wait > 0 ? ev.wait : 0.5;
-      const action = ev.action || (ev.sitAt ? 'sit' : 'idle');
+    // cinemaPaths ya está cargado (misma forma que en vivo): la previsión
+    // calcula llegadas con velocidad, delay y esperas reales.
+    const stored = paths[charId] && cinemaPaths.get(charId);
+    if (!stored) return;
+    previewWaitRanges(stored).forEach((w, n) => {
       blocks.push({
-        id: 'cb_' + charId + '_' + (++n),
-        start: round2(cursor),
-        duration: round2(wait),
-        actions: { [charId]: { action } }
+        id: 'cb_' + charId + '_' + (n + 1),
+        start: round2(w.start),
+        duration: round2(Math.max(0.5, w.duration)),
+        actions: { [charId]: { action: w.action } }
       });
-      cursor += wait;
     });
   });
   // Ordenar por inicio para que el editor los muestre en secuencia

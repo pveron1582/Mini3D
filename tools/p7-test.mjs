@@ -439,6 +439,24 @@ poseEntry.group.rotation.y = 0.7;
 captureBlockPose(capBlock);
 assert(Math.abs(capBlock.actions.poseTestChar.pos[0] - 11) < 1e-6 && Math.abs(capBlock.actions.poseTestChar.rotY - 0.7) < 1e-6, 'definir en el cuadro captura el lugar');
 
+// --- migración de proyectos viejos: bloques sobre esperas reales, walk libre ---
+const { previewWaitRanges } = await import(pathToFileURL('./js/cinema/cinematics.js'));
+const { migrateEventsToCharBlocks } = await import(pathToFileURL('./js/projectFiles.js'));
+cinemaPaths.set('poseTestChar', { waypoints: [new V(0, 0, 0), new V(10, 0, 0)], planeY: 0, speed: 2, events: { 1: { action: 'talk', wait: 2 } } });
+const migRanges = previewWaitRanges(cinemaPaths.get('poseTestChar'));
+assert(migRanges.length === 1 && migRanges[0].action === 'talk', 'migración: solo la espera genera bloque');
+assert(Math.abs(migRanges[0].start - 5) < 1e-9 && Math.abs(migRanges[0].duration - 2) < 1e-9, 'migración: tiempos reales del recorrido');
+const migBlocks = migrateEventsToCharBlocks({ poseTestChar: {} });
+assert(migBlocks.length === 1 && migBlocks[0].actions.poseTestChar.action === 'talk', 'migración: bloque de habla');
+assert(Math.abs(migBlocks[0].start - 5) < 1e-9, 'migración: el bloque arranca al llegar (no en 0)');
+setCharBlocks(migBlocks, {});
+evaluateAllPathsAt(1);
+assert(poseRig.currentAction === 'walk', 'migración: caminando no hay bloque que pise (no desliza)');
+evaluateAllPathsAt(6);
+assert(poseRig.currentAction === 'talk', 'migración: en la espera habla');
+cinemaPaths.delete('poseTestChar');
+setCharBlocks([], {});
+
 // --- bloques de desplazamiento: duración auto + interpolación ---
 const mvTest = { from: { x: 0, z: 0 }, to: { x: 3, z: 4 }, speed: 2 };
 assert(moveDist(mvTest) === 5, 'distancia del recorrido');
