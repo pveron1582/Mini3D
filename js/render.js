@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { byId, qs, qsa } from './dom.js';
-import { scene, camera, renderer, controls } from './core.js';
+import { scene, camera, controls, output } from './core.js';
 import { cinema, playbackInstances, view, interactiveRegistry, store, recorderState, timeline, playback } from './state.js';
 import { updateSelectionRing } from './ui/selection.js';
 import { updateGizmoPosition } from './ui/gizmo.js';
@@ -165,8 +165,11 @@ function animate(timestamp) {
     // Vuelo suave de cámara al objetivo (flyToTarget, js/viewport.js)
     updateFlyTo(performance.now());
 
-    // Mantener gizmo sincronizado con el objeto activo
+    // Mantener gizmo y anillo sincronizados con el objeto activo (cada
+    // frame: si algo mueve al personaje —reproducción, scrub, undo, drop con
+    // acomodo—, el anillo lo sigue y nunca se separan).
     updateGizmoPosition();
+    updateSelectionRing();
 
     if (recorderState.isRecording) {
       // recordDuration está en segundos REALES (duración/rate): el reloj de
@@ -185,7 +188,9 @@ function animate(timestamp) {
     } else {
       updateCinematicCamera();
     }
-    renderer.render(scene, camera);
+    // Renderer de SALIDA: el de la ventana en edición; el offscreen 1080p
+    // durante la exportación (#2). Los overlays de abajo usan el mismo.
+    output.renderer.render(scene, camera);
 
     // Subtítulos dibujados dentro del canvas: se ven mientras la escena
     // corre Y también al mover la cabeza manualmente (scrub/pausa)

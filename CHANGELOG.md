@@ -2,6 +2,11 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Anillo azul sigue al personaje cada frame
+
+- Solo se sincronizaba en eventos (arrastrar, seleccionar): si algo movía
+  al personaje por otro lado (reproducción, scrub, acomodo al soltar), anillo
+  y personaje se separaban. Ahora va con el gizmo, todos los frames.
 ## [2026-09-20] — Barra de bloques: sin iconos, con pin rojo
 
 - Los bloques ya no llevan iconos: clic = borde blanco, afuera = suelta foco,

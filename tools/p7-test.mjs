@@ -988,6 +988,17 @@ assert(interactiveRegistry.get('human3').rig.currentAction === 'idle', 'Elena pa
 assert(interactiveRegistry.get('cat').rig.currentAction === 'lay', 'gato quieto a los 40s');
 console.log('✓ alarma: líneas completas y quietas hasta el fin del clip');
 
+// --- anillo de selección: sigue al objetivo tras cualquier movimiento ---
+const { updateSelectionRing, selectionRing, setActiveTarget } = await import(pathToFileURL('./js/ui/selection.js'));
+addHumanCharacter('ringTestChar', 'Ring Test', 0, 0, 0, {});
+setActiveTarget('ringTestChar');
+const ringEntry = interactiveRegistry.get('ringTestChar');
+ringEntry.group.position.set(7, 0.17, -3);
+updateSelectionRing();
+assert(selectionRing.visible === true, 'anillo visible con objetivo');
+assert(Math.abs(selectionRing.position.x - 7) < 1e-9 && Math.abs(selectionRing.position.z + 3) < 1e-9, 'anillo sigue al grupo en XZ');
+assert(Math.abs(selectionRing.position.y - 0.19) < 1e-9, 'anillo apoyado sobre el grupo');
+
 // --- barra de bloques: selección, pin y acciones por pista ---
 const { selectShot, getSelectedShot, resetShotToSnapshot, duplicateShot, deleteShot, openSubEditor, resetSubToSnapshot, duplicateSub, deleteSub } = await import(pathToFileURL('./js/cinema/timeline.js'));
 const { openCharBlockEditor, charBlockSelection, resetCharBlock, deleteCharBlock } = await import(pathToFileURL('./js/cinema/charTrack.js'));
