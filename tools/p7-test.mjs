@@ -510,6 +510,20 @@ assert(dupD.actions.poseTestChar.action === 'idle' && dupD.actions.poseTestChar.
 assert(duplicateCharBlock({ id: 'cbX' }, 'poseTestChar') === null, 'fuera de la pista no duplica');
 setCharBlocks([], {});
 
+// --- camino por tramos: la selección abraza el pedazo visible ---
+const { caminoGaps } = await import(pathToFileURL('./js/cinema/charTrack.js'));
+setCharBlocks([
+  { id: 'cbG1', start: 0, duration: 4, actions: { poseTestChar: { action: 'idle' } } },
+  { id: 'cbG2', start: 8, duration: 2, actions: { poseTestChar: { action: 'talk' } } }
+], {});
+assert(JSON.stringify(caminoGaps('poseTestChar', 30)) === JSON.stringify([[4, 8], [10, 30]]), 'tramos = huecos entre cuadros');
+assert(JSON.stringify(caminoGaps('poseTestChar', 9)) === JSON.stringify([[4, 8]]), 'tramo final cortado si no llega');
+setCharFullAction('poseTestChar', 'idle');
+assert(JSON.stringify(caminoGaps('poseTestChar', 30)) === JSON.stringify([[0, 30]]), 'con base cubre todo (una tira)');
+setCharFullAction('poseTestChar', null);
+assert(JSON.stringify(caminoGaps('otro', 30)) === JSON.stringify([[0, 30]]), 'sin cuadros: tira entera');
+setCharBlocks([], {});
+
 // --- extender bloque hasta el final del clip ---
 const { extendBlockDataTo } = await import(pathToFileURL('./js/cinema/charTrack.js'));
 const extB = { id: 'cbE', start: 8, duration: 4, actions: { poseTestChar: { action: 'idle' } } };

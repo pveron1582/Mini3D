@@ -2,6 +2,11 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Camino por tramos: la selección abraza el pedazo
+
+- La tira larga pasaba por debajo de los cuadros y al elegirla se enmarcaba
+  entera: ahora se dibuja por tramos visibles y el blanco va solo sobre el
+  pedazo clickeado (elige el camino completo igual que antes).
 ## [2026-09-20] — Camino seleccionado sin halo (borde blanco finito)
 
 - El resplandor agrandaba visualmente el recuadro blanco del camino largo:

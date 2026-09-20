@@ -35,9 +35,130 @@ const collapsedLanes = new Set(); // ids de lanes colapsadas (rótulo click)
 
 export function charBlockSelection() { return selectedBlock; }
 
+// Tramo de camino elegido (el pedazo azul visible): { charId, seg } o null.
+// El camino es una tira larga bajo los cuadros; la selección abraza SOLO el
+// tramo clickeado, no la tira entera.
+let selectedCamino = null;
+
+export function clearCaminoSelection() {
+  if (!selectedCamino) return;
+  selectedCamino = null;
+  renderCharBlocks();
+}
+
+// Tramos visibles del camino: la tira [0, totalEnd] menos lo tapado por la
+// base (toda la escena) y los cuadros. Exportado para tests.
+export function caminoGaps(charId, totalEnd) {
+  if (!(totalEnd > 0)) return [];
+  if (charFullRange[charId]) return [[0, totalEnd]];
+  const ivals = charBlocks
+    .filter(b => b.actions && b.actions[charId])
+    .map(b => [b.start, b.start + b.duration])
+    .sort((x, y) => x[0] - y[0]);
+  const gaps = [];
+  let cur = 0;
+  for (const [s, e] of ivals) {
+    if (s - cur >= 0.3) gaps.push([cur, s]);
+    cur = Math.max(cur, e);
+  }
+  if (totalEnd - cur >= 0.3) gaps.push([cur, totalEnd]);
+  return gaps;
+}
+
+function renderCaminoSegments(inner, entry, info, pps) {
+  const totalEnd = Math.min(info.duration > 0 ? info.duration : 1, Math.max(timeline.duration, 20));
+  const gaps = caminoGaps(entry.id, totalEnd);
+  const editing = charLaneBus.isEditing(entry.id);
+  gaps.forEach(([s, e], idx) => {
+    const el = document.createElement('div');
+    const sel = selectedCamino && selectedCamino.charId === entry.id && selectedCamino.seg === idx;
+    el.className = 'tl-sub tl-charblock tl-charpath' + (sel ? ' selected' : '');
+    el.style.left = (LANE_LABEL_W + s * pps) + 'px';
+    el.style.width = Math.max(18, (e - s) * pps) + 'px';
+    const lab = document.createElement('span');
+    lab.className = 'tl-shot-label';
+    lab.textContent = `🚶 camino${info.loop ? ' 🔁' : ''}`;
+    el.appendChild(lab);
+
+    // Editar los waypoints sobre el piso (🎬/🎥). El camino NO se borra
+    // desde acá: se borra vaciando sus waypoints en el editor.
+    const editBtn = document.createElement('div');
+    editBtn.className = 'tl-shot-save';
+    editBtn.textContent = editing ? '🎥' : '🎬';
+    editBtn.title = editing
+      ? `Editando el recorrido de ${entry.name} (💾 guarda, ✕ descarta)`
+      : `Editar el recorrido de ${entry.name} (waypoints sobre el piso)`;
+    editBtn.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
+    editBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      selectedCamino = { charId: entry.id, seg: idx };
+      togglePathEditor(entry.id);
+      renderCharBlocks();
+    });
+    el.appendChild(editBtn);
+
+    // ⧉ Repetir recorrido: lo camina dos veces (waypoints + eventos).
+    const dupPath = document.createElement('div');
+    dupPath.className = 'tl-shot-del';
+    dupPath.textContent = '⧉';
+    dupPath.title = `Repetir el recorrido de ${entry.name} (lo camina dos veces)`;
+    dupPath.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
+    dupPath.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      if (charLaneBus.duplicatePath(entry.id)) {
+        setStatus(`Recorrido de ${entry.name} duplicado: lo camina dos veces.`);
+      } else {
+        setStatus(`${entry.name} no tiene recorrido para duplicar.`);
+      }
+    });
+    el.appendChild(dupPath);
+
+    // Mientras se edita: 💾 guarda y cierra, ✕ descarta lo dibujado.
+    if (editing) {
+      const savePath = document.createElement('div');
+      savePath.className = 'tl-shot-save';
+      savePath.textContent = '💾';
+      savePath.title = `Guardar el recorrido de ${entry.name} y cerrar`;
+      savePath.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
+          savePath.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            charLaneBus.toggleEditor(entry.id);
+            clearCaminoSelection();
+            pushHistory();
+            setStatus(`Recorrido de ${entry.name} guardado.`);
+          });
+      el.appendChild(savePath);
+
+      const closePath = document.createElement('div');
+      closePath.className = 'tl-shot-close';
+      closePath.textContent = '✕';
+      closePath.title = `Descartar lo dibujado (vuelve al recorrido guardado)`;
+      closePath.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
+      closePath.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        charLaneBus.discardPathDraft();
+        clearCaminoSelection();
+        renderCharBlocks();
+      });
+      el.appendChild(closePath);
+    }
+
+    el.title = `Recorrido de ${entry.name}: tramo ${s.toFixed(1)}s → ${e.toFixed(1)}s (de ${info.duration.toFixed(1)}s) · ${info.speed} m/s${info.loop ? ' · en bucle' : ''} — 🎬 edita los waypoints sobre el piso`;
+    el.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
+    el.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      selectedCamino = { charId: entry.id, seg: idx };
+      togglePathEditor(entry.id);
+      renderCharBlocks();
+    });
+    inner.appendChild(el);
+  });
+}
+
 export function clearCharBlockSelection() {
   if (chooserFor) closeBlockChooser();
   if (movePick) cancelMovePick();
+  clearCaminoSelection();
   if (selectedBlock) {
     selectedBlock = null;
     blockSnapshot = null;
@@ -55,6 +176,7 @@ function selectBaseBlock(entry) {
   // Exclusividad total: un solo bloque a la vez (suelta el de acciones y
   // cierra el editor de recorrido).
   if (selectedBlock) clearCharBlockSelection();
+  clearCaminoSelection();
   charLaneBus.closeEditor();
   window.dispatchEvent(new CustomEvent('char-block-selected'));
   baseSelectionId = entry.id;
@@ -350,85 +472,12 @@ export function renderCharBlocks() {
       }
 
       // --- BLOQUE 🚶 CAMINO (recorrido con waypoints) ---
+      // El camino es UNA tira larga que pasa POR DEBAJO de los cuadros: para
+      // elegirla por pedazos visibles (y no enmarcarla entera), se dibuja por
+      // TRAMOS (huecos entre cuadros). Cada tramo elige el camino completo.
       const info = charLaneBus.pathInfo(entry.id);
       if (info) {
-        const el = document.createElement('div');
-        const editing = charLaneBus.isEditing(entry.id);
-        el.className = 'tl-sub tl-charblock tl-charpath' + (editing ? ' selected' : '');
-        el.style.left = (LANE_LABEL_W + 0) + 'px';
-        const wSec = Math.min(info.duration > 0 ? info.duration : 1, Math.max(timeline.duration, 20));
-        el.style.width = Math.max(24, wSec * pps) + 'px';
-        const lab = document.createElement('span');
-        lab.className = 'tl-shot-label';
-        lab.textContent = `🚶 camino${info.loop ? ' 🔁' : ''}`;
-        el.appendChild(lab);
-
-        // Editar los waypoints sobre el piso (🎬/🎥). El camino NO se borra
-        // desde acá: se borra vaciando sus waypoints en el editor.
-        const editBtn = document.createElement('div');
-        editBtn.className = 'tl-shot-save';
-        editBtn.textContent = editing ? '🎥' : '🎬';
-        editBtn.title = editing
-          ? `Editando el recorrido de ${entry.name} (💾 guarda, ✕ descarta)`
-          : `Editar el recorrido de ${entry.name} (waypoints sobre el piso)`;
-        editBtn.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-        editBtn.addEventListener('click', (ev) => {
-          ev.stopPropagation();
-          togglePathEditor(entry.id, 'botón');
-        });
-        el.appendChild(editBtn);
-
-        // ⧉ Repetir recorrido: lo camina dos veces (waypoints + eventos).
-        const dupPath = document.createElement('div');
-        dupPath.className = 'tl-shot-del';
-        dupPath.textContent = '⧉';
-        dupPath.title = `Repetir el recorrido de ${entry.name} (lo camina dos veces)`;
-        dupPath.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-        dupPath.addEventListener('click', (ev) => {
-          ev.stopPropagation();
-          if (charLaneBus.duplicatePath(entry.id)) {
-            setStatus(`Recorrido de ${entry.name} duplicado: lo camina dos veces.`);
-          } else {
-            setStatus(`${entry.name} no tiene recorrido para duplicar.`);
-          }
-        });
-        el.appendChild(dupPath);
-
-        // Mientras se edita: 💾 guarda y cierra, ✕ descarta lo dibujado.
-        if (charLaneBus.isEditing(entry.id)) {
-          const savePath = document.createElement('div');
-          savePath.className = 'tl-shot-save';
-          savePath.textContent = '💾';
-          savePath.title = `Guardar el recorrido de ${entry.name} y cerrar`;
-          savePath.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-          savePath.addEventListener('click', (ev) => {
-            ev.stopPropagation();
-            charLaneBus.toggleEditor(entry.id);
-            pushHistory();
-            setStatus(`Recorrido de ${entry.name} guardado.`);
-          });
-          el.appendChild(savePath);
-
-          const closePath = document.createElement('div');
-          closePath.className = 'tl-shot-close';
-          closePath.textContent = '✕';
-          closePath.title = `Descartar lo dibujado (vuelve al recorrido guardado)`;
-          closePath.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
-          closePath.addEventListener('click', (ev) => {
-            ev.stopPropagation();
-            charLaneBus.discardPathDraft();
-            renderCharBlocks();
-          });
-          el.appendChild(closePath);
-        }
-
-        el.title = `Recorrido de ${entry.name}: ${info.duration.toFixed(1)}s · ${info.speed} m/s${info.loop ? ' · en bucle' : ''} — 🎬 edita los waypoints sobre el piso`;
-        el.addEventListener('pointerdown', (e) => e.stopPropagation());
-        el.addEventListener('click', (e) => {
-          e.stopPropagation();
-          togglePathEditor(entry.id, 'bloque');
-        });
-        inner.appendChild(el);
+        renderCaminoSegments(inner, entry, info, pps);
       }
 
       // --- BLOQUES de acciones del personaje ---
@@ -687,6 +736,7 @@ function openCharBlockEditor(b) {
   // mismo evento) y cerrar el editor de recorrido si estaba abierto.
   if (baseSelectionId) clearBaseSelection();
   chooserFor = null;
+  clearCaminoSelection();
   charLaneBus.closeEditor();
   window.dispatchEvent(new CustomEvent('char-block-selected'));
   selectedBlock = b;
@@ -1174,6 +1224,7 @@ export function openBlockChooser(entry) {
     return;
   }
   if (baseSelectionId) clearBaseSelection();
+  clearCaminoSelection();
   charLaneBus.closeEditor();
   window.dispatchEvent(new CustomEvent('char-block-selected'));
   chooserFor = entry;
