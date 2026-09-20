@@ -247,6 +247,73 @@ assert(Math.abs(n1.x - 2) < 1e-6 && Math.abs(n1.z) < 1e-6 && n1.t > 0 && n1.t < 
 const n2 = nearestOnSegment({ x: -1, z: 0 }, { x: 0, z: 0 }, { x: 5, z: 0 });
 assert(n2.t === 0 && Math.abs(n2.x) < 1e-6, 'nearestOnSegment se limita al extremo (imán a punta)');
 
+// --- paquetes de datos por las canaletas (GLM #4) ---
+// El grafo se construye con la red fija + los runs dibujados, y se reconecta
+// solo al detectar cambios (agregar/mover/borrar un tramo).
+const { tickers } = await import(pathToFileURL('./js/tickers.js'));
+const tickersAntes = tickers.length;
+await import(pathToFileURL('./js/office/packets.js'));
+assert(interactiveRegistry.has('cableTray_run1'), 'run de canaleta de prueba registrado');
+assert(tickers.length >= tickersAntes, 'packets.js cargó sin romper el registro de tickers');
+
+// --- cámaras colocables (#3): prop con FOV propio usado por las tomas ---
+const { CATALOG: CAT3, spawnCatalogItem: spawn3 } = await import(pathToFileURL('./js/catalog.js'));
+const { createSceneCamera, sceneCameraFov, setSceneCameraFov } =
+  await import(pathToFileURL('./js/office/sceneCameras.js'));
+const catCam = CAT3.find(c => c.id === 'sceneCamera');
+assert(!!catCam && catCam.cat === '📡 Red', 'catálogo: la cámara colocable está en 📡 Red');
+const camProp = spawn3('sceneCamera', { silent: true, pos: [6, 0, 6], rotY: 0 });
+assert(!!camProp && camProp.userData.catalogId === 'sceneCamera', 'la cámara se spawnea como prop');
+assert(sceneCameraFov(camProp) === 50, 'FOV por defecto 50°');
+setSceneCameraFov(camProp, 72);
+assert(sceneCameraFov(camProp) === 72, 'el FOV se guarda en el prop');
+setSceneCameraFov(camProp, 5);
+assert(sceneCameraFov(camProp) === 20, 'el FOV se acota al mínimo (20°)');
+setSceneCameraFov(camProp, 999);
+assert(sceneCameraFov(camProp) === 100, 'el FOV se acota al máximo (100°)');
+setSceneCameraFov(camProp, 65);
+// Persistencia: `rebuild` del catálogo restaura el FOV guardado en el JSON
+const rebuiltCam = catCam.rebuild({ id: 'sceneCamera_spawnX', name: 'Cámara X', pos: [2, 0, 3], rotY: 1, data: { fov: 35 } });
+assert(sceneCameraFov(rebuiltCam) === 35, 'rebuild restaura el FOV del proyecto');
+// La toma "📷 Cámara puesta" mira con la posición y el FOV del prop
+const { cutCameraToShot: cutCam, camera: camCore, controls: ctrlCore } =
+  { ...(await import(pathToFileURL('./js/cinema/cinematics.js'))), ...(await import(pathToFileURL('./js/core.js'))) };
+const { view: viewState } = await import(pathToFileURL('./js/state.js'));
+const camPropB = spawn3('sceneCamera', { silent: true, pos: [4, 0, -2], rotY: 0 });
+setSceneCameraFov(camPropB, 68);
+let camIdB = null;
+interactiveRegistry.forEach((e, id) => { if (e.group === camPropB) camIdB = id; });
+assert(!!camIdB, 'la cámara spawneada queda registrada con su id');
+const fovBefore = camCore.fov;
+cutCam('sceneCam', camIdB);
+assert(viewState.mode === 'sceneCam', 'corte a cámara puesta: la vista es sceneCam');
+assert(Math.abs(camCore.fov - 68) < 1e-6, 'la toma toma el FOV del prop (68°)');
+assert(Math.abs(camCore.position.z - (-2)) < 1e-6 && Math.abs(camCore.position.x - 4) < 1e-6,
+  'la toma se para en la posición del prop');
+assert(Math.abs(camCore.position.y - 1.5) < 1e-6, 'la óptica queda a la altura del prop (1.5 m)');
+assert(Math.abs(ctrlCore.target.z - (-1)) < 1e-6, 'rotY=0 apunta al SUR (+z) como los personajes');
+// Restaurar el estado del editor para las pruebas siguientes
+camCore.fov = fovBefore;
+camCore.updateProjectionMatrix();
+viewState.mode = 'orbit';
+viewState.subjectId = null;
+
+// --- exportación 1080p fija y contenedor MP4/WebM (#1 y #2) ---
+const { output } = await import(pathToFileURL('./js/core.js'));
+assert(!!output && !!output.renderer, '#2: existe el renderer de SALIDA (indirección)');
+assert(output.renderer === (await import(pathToFileURL('./js/core.js'))).renderer,
+  '#2: sin exportar, la salida es el renderer de la ventana');
+const { pickExportMime, exportFormatOptions: efOptions } = await import(pathToFileURL('./js/media/recorder.js'));
+const mp4Only = pickExportMime('auto', t => t.startsWith('video/mp4'));
+assert(mp4Only.ext === 'mp4' && mp4Only.mime.startsWith('video/mp4'), '#1: con MP4 disponible, Auto elige MP4');
+const webmOnly = pickExportMime('auto', t => t === 'video/webm;codecs=vp9');
+assert(webmOnly.ext === 'webm' && webmOnly.mime === 'video/webm;codecs=vp9', '#1: sin MP4, Auto cae a WebM (VP9)');
+const forcedWebm = pickExportMime('webm', () => true);
+assert(forcedWebm.ext === 'webm' && forcedWebm.mime.startsWith('video/webm'), '#1: forzar WebM ignora MP4');
+const noneAvail = pickExportMime('auto', () => false);
+assert(noneAvail.mime === '' && noneAvail.ext === 'webm', '#1: sin formatos soportados no se inventa mime');
+assert(typeof efOptions === 'function', '#1: la UI consulta qué formatos soporta el navegador');
+
 // --- gestos de un disparo (se reproducen una vez y vuelven a la acción base) ---
 const { GESTURE_DEFS, addHumanCharacter } = await import(pathToFileURL('./js/characters/characters.js'));
 const gnames = ['point', 'wave', 'shrug', 'no', 'clap', 'watch'];
@@ -455,6 +522,19 @@ assert(Math.abs(pxPerSec() - ((1280 - 116) / 20)) < 1e-9, 'escala única: tramos
 timeline.duration = 40;
 assert(Math.abs(pxPerSec() - ((1280 - 116) / 40)) < 1e-9, 'escala única: cubre la duración real');
 timeline.duration = savedDuration;
+
+// --- paquetes de datos: la red es un grafo conexo (suben por las bajadas) ---
+const { trayGraph } = await import(pathToFileURL('./js/office/packets.js'));
+const tgraph = trayGraph();
+assert(tgraph.edges.length > 0, 'grafo de canaletas con aristas');
+const nearNode = (x, z, y) => tgraph.nodes.filter(n => Math.hypot(n.x - x, n.z - z) < 0.15 && Math.abs(n.y - y) < 0.6);
+const degreeAt = (x, z, y) => nearNode(x, z, y).reduce((m, n) => m + n.edges.length, 0);
+assert(degreeAt(-13.5, -10.82, 3.55) >= 3, 'rack sube a la norte (riser + principal + oeste)');
+assert(degreeAt(-13.5, -10.82, 2.48) >= 2, 'riser empalma con el tramo del rack (sin rebote)');
+assert(degreeAt(14.84, -9.45, 3.55) >= 2, 'bajada al mini rack conectada');
+const risers = tgraph.edges.filter(e => Math.abs(e.y2 - e.y1) > 0.5);
+assert(risers.length >= 8, 'bajadas verticales en el grafo (racks, mini rack, piso, jefe, foto, 3 norte)');
+assert(tgraph.edges.every(e => isFinite(e.len) && e.len >= 0.05), 'sin aristas degeneradas');
 
 // --- Fase 3: resize por bordes + tiling (baldosas, no estirado) ---
 const { addConFloor, setConFloorSize, resizeConFloor, addConWall, retileConWall, clearConstruction, syncConstruction } = await import(pathToFileURL('./js/construction.js'));

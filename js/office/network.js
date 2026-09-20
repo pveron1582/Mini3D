@@ -87,6 +87,14 @@ function cableTray(x1, z1, x2, z2, y) {
   officeGroup.add(g);
 }
 
+// Tramo vertical (riser) SOLO para el grafo de paquetes: la malla ya la
+// pone cableDrop (bandeja + cables de colores). Así los datos suben/bajan
+// por las bajadas en vez de rebotar en la pared.
+function trayRiser(x, z, yBottom, yTop) {
+  if (yTop - yBottom < 0.05) return;
+  fixedTraySegs.push({ x1: x, z1: z, x2: x, z2: z, y: yTop, y1: yBottom, y2: yTop });
+}
+
 // Bajada vertical hasta el mini rack / tablero
 function cableDrop(x, z, yBottom, yTop) {
   const h = (yTop !== undefined ? yTop : TRAY_Y) - yBottom;
@@ -111,7 +119,7 @@ createMiniRack('miniRack', '🖧 Mini Rack de Red', 14.48, -9.45, -Math.PI / 2, 
 // sala de racks (NO) a la oficina de la mesa grande (NE) por la pared norte
 // exterior, atravesando los tabiques de las oficinas con pasamuros, como en
 // cablerío estructurado real.
-cableTray(-13.0, -10.82, 14.2, -10.82, TRAY_Y_OUT); // pared norte: racks → mini rack (juntas)
+cableTray(-13.5, -10.82, 14.2, -10.82, TRAY_Y_OUT); // pared norte: racks → mini rack (juntas)
 
 // Pasamuros donde el canal atraviesa los tabiques de las oficinas
 [-4.5, 4.5].forEach(px => {
@@ -134,10 +142,12 @@ cableTray(-13.0, -10.82, 14.2, -10.82, TRAY_Y_OUT); // pared norte: racks → mi
 // Bajada a los racks de la sala de servidores (por la pared hasta el tope
 // del primer rack, con un tramo corto horizontal sobre el rack)
 cableDrop(-13.5, -10.78, 2.48, TRAY_Y_OUT);
+trayRiser(-13.5, -10.82, 2.48, TRAY_Y_OUT); // los datos SUBEN a la canaleta norte
 cableTray(-13.5, -10.82, -13.5, -9.9, 2.48);
 // Bajada al mini rack de la oficina de juntas: baja por la pared ESTE
 // hasta el tope del rack (ahora montado bien arriba, junto a la TV)
 cableDrop(14.84, -9.45, 2.80, TRAY_Y_OUT);
+trayRiser(14.84, -9.45, 2.80, TRAY_Y_OUT);
 
 // Derivación de canaletas de colores hacia los puestos nuevos del sector
 // este (E5–E8): sale del mini rack por la parte superior de las paredes,
@@ -166,10 +176,11 @@ officeGroup.add(sleeveSE);
 });
 cableTray(14.82, -4.5, 14.82, 0, TRAY_Y_OUT);         // sigue por la pared este hasta su mitad
 cableDrop(14.78, 0, 0.12, TRAY_Y_OUT);                // bajada hasta el piso (mitad de la pared este)
+trayRiser(14.78, 0, 0.12, TRAY_Y_OUT);
 
 // Contorno OESTE: desde los racks de sistemas (rincón NO), por la pared
 // oeste hacia el sur y por la pared sur, rodeando la oficina del jefe.
-cableTray(-14.82, -10.82, -13.0, -10.82, TRAY_Y_OUT); // cierra el rincón NO con la canaleta existente
+cableTray(-14.82, -10.82, -13.5, -10.82, TRAY_Y_OUT); // cierra el rincón NO con la canaleta existente
 cableTray(-14.82, -10.82, -14.82, 10.82, TRAY_Y_OUT); // pared oeste completa hasta el rincón SO
 // Pasamuros donde la canaleta OESTE atraviesa los tabiques horizontales
 // (z=±4.5): mismos cilindros + anillos que el resto de la instalación.
@@ -198,19 +209,24 @@ cableTray(-14.82, 10.82, -4.82, 10.82, TRAY_Y_OUT);   // pared sur hasta el tabi
 // donde baja un canal directo sobre la impresora.
 cableTray(-14.7, 4.62, -10.4, 4.62, TRAY_Y);
 cableDrop(-10.4, 4.66, 1.05, TRAY_Y);
+trayRiser(-10.4, 4.62, 1.05, TRAY_Y);
 
 // Bajada a la fotocopiadora de la sala de sistemas: toma la canaleta de la
 // pared oeste y baja hasta el tope del equipo.
 cableDrop(-14.72, -5.3, 1.02, TRAY_Y_OUT);
+trayRiser(-14.72, -5.3, 1.02, TRAY_Y_OUT);
 
 // Bajada a altura de tomacorriente (y=0.10) en la pared norte, sobre los
 // puestos de la sala de sistemas: se ramifica de la canaleta y baja hasta
 // ~10 cm del piso (no llega al suelo)
 cableDrop(-4.0, -10.78, 0.10, TRAY_Y_OUT);
+trayRiser(-4.0, -10.82, 0.10, TRAY_Y_OUT);
 // Espejo del otro lado de la pared norte (lado este): baja hasta el piso
 cableDrop(4.0, -10.78, 0.0, TRAY_Y_OUT);
+trayRiser(4.0, -10.82, 0.0, TRAY_Y_OUT);
 // Centro de la pared norte: bajada para las PCs del medio (N5-N8), hasta el piso
 cableDrop(0.0, -10.78, 0.0, TRAY_Y_OUT);
+trayRiser(0.0, -10.82, 0.0, TRAY_Y_OUT);
 
 // C2. Distribución central por el PISO: bajada por el tabique sur al suelo,
 // canal plano sobre el piso y puestos de red junto a cada PC

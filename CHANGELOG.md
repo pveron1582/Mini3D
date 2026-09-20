@@ -2,6 +2,105 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Paquetes suben por las bajadas (red conexa)
+
+- El tramo del rack terminaba en la pared (callejón): la norte ahora llega
+  hasta la bajada y los datos SUBEN por ella y siguen el recorrido.
+- El grafo soporta tramos verticales (risers en las 8 bajadas: racks, mini
+  rack, piso, jefe, fotocopiadora, 3 norte) y parte tramos en uniones en T.
+- Tests de conectividad del grafo en la suite.
+## [2026-09-18] — Playhead: cabezal a la altura de la regla + tope visible en 0s
+
+- **Cabezal más abajo (a la altura de los segundos)**: el cálculo usaba
+  `ruler.offsetTop`, pero la regla vive dentro de `.tl-body` (que es
+  `position: relative`), así que el valor siempre era 0 y el cabezal quedaba
+  ~40 px arriba, sobre la barra de herramientas. Ahora se posiciona con las
+  medidas reales (rectángulo de la regla relativo al panel del playhead),
+  centrado en los segundos; si el cuerpo scrolleó, se ancla arriba del área
+  visible (`positionPlayheadKnob` en `js/cinema/timeline.js`).
+- **Tope duro y visible en el segundo 0**: la aguja ya hace tope en 0 (no va
+  más atrás y el tiempo nunca es negativo), pero al llegar exactamente a 0 el
+  playhead se ocultaba (`display:none`) y parecía que se metía detrás de las
+  pistas. Nueva bandera `playheadUsed`: apenas se arrastra el cabezal, se
+  mueve la aguja con los botones o se toca Play, la aguja queda visible —al
+  llevarla al 0 se detiene ahí y se queda dibujada; al mover el mouse de nuevo
+  para adelante sigue el recorrido normal.
+- `pnpm run verify` en verde.
+
+- **#1 — Exportación MP4**: el contenedor se elige con `isTypeSupported`
+  (preferencia MP4/H.264 → WebM VP9 → VP8). Nuevo selector "Formato" junto a
+  ⬇ Exportar (`Auto (MP4/WebM)` / `WebM`) que se auto-explica según lo que
+  soporte el navegador, y el archivo baja con la extensión correcta. La
+  elección vive en `pickExportMime()` (pura y cubierta por tests).
+- **#2 — Salida 1080p fija OFFLINE**: el video ya no se renderiza en el canvas
+  de edición estirado a 1920×1080, sino en un canvas/renderer propios de
+  1920×1080 reutilizados entre exportaciones (`js/media/recorder.js`). Nuevo
+  `output.renderer` en `js/core.js`: el loop de render, los subtítulos y el
+  quiz escriben ahí, así el video sale en 1080p fijo sin depender de la
+  ventana y sin tocar el viewport (que se muestra encima, en vivo, con el
+  mismo letterbox 16:9). Si no se puede crear el segundo contexto WebGL, cae
+  automáticamente al comportamiento anterior.
+- **#3 — Cámaras colocables**: nuevo prop `📷 Cámara` (`js/office/sceneCameras.js`,
+  catálogo `📡 Red`): cuerpo low-poly con trípode, seleccionable/movible como
+  cualquier pieza y con **FOV propio** (slider 20°–100° en el panel 🎥).
+  Nueva vista de toma **“📷 Cámara puesta”**: la toma mira con la posición,
+  orientación y FOV del prop (el encuadre se define en la cámara, no en la
+  toma, así se reutiliza en varias tomas). El FOV persiste en el JSON
+  (`spawnData.fov` + `rebuild`).
+- Tests nuevos en la suite: FOV por defecto/clamp/persistencia, corte de toma
+  a cámara puesta (posición, altura de óptica 1,5 m, sur con `rotY=0`), y la
+  elección de contenedor MP4/WebM en sus cuatro casos. `pnpm run verify` verde.
+## [2026-09-18] — GLM #4: paquetes de datos animados por las canaletas
+
+- Nuevo `js/office/packets.js`: 6 pulsos luminosos (esfera emisiva + estela
+  tenue, en cian/verde/ámbar) viajan a 2,4 m/s por la red de canaletas —
+  la instalación fija (`fixedTraySegs`) MÁS los tramos dibujados punto a
+  punto con la herramienta de canaletas.
+- Navegación por grafo: los extremos de tramo que se tocan forman esquinas;
+  al llegar a un nodo el paquete elige otra arista (nunca vuelve por donde
+  vino salvo callejón). Velocidad real en m/s (constante en tramos cortos y
+  largos), respeta pausa y velocidad de reproducción y sale determinista en
+  la exportación (usa `simDt`).
+- Auto-reconexión: una firma de la red (nº de fijos + id/posición de runs
+  visibles) se relee cada frame; si agregás, movés o borrás una canaleta el
+  grafo se reconstruye sin reiniciar los paquetes en vuelo.
+- Cuelgan de `officeGroup` (desaparecen fuera del ambiente oficina) y se
+  ocultan en la vista "👁 Solo edificio". Nada se serializa: decoración de
+  escena, no contenido del proyecto. Geometría vía `geoCache`.
+- Tests: el módulo carga en la suite y mantiene el registro de tickers.
+  `pnpm run verify` en verde.
+## [2026-09-18] — GLM #7 y #8: viewport sin timeouts + toggle de vistas
+
+- **#7 (inicialización frágil)**: `js/ui/viewport.js` ya no llama `onResize`
+  con 3 timeouts (0/100/500 ms) adivinando cuándo asienta el layout. Ahora un
+  `ResizeObserver` sobre `#viewport-container` dispara el ajuste ante cada
+  cambio real de tamaño (arranque, paneles redimensionados, ventana); el
+  evento `resize` global queda como fallback donde no haya `ResizeObserver`
+  (p. ej. los tests de Node).
+- **#8 (toggle de vistas raro)**: no era un bug visual sino código muerto —
+  el panel de botones `.view-btn` (órbita/1ª/3ª/persecución/cine) se quitó en
+  la Fase A y las vistas viven en el `<select>` de la toma y en los botones
+  1P/3P por personaje. Eliminados: el marcado de `.view-btn` en `setCamView`
+  (cinematics.js), el wiring de clicks en ui.js, el import huérfano de
+  `applyViewToSelectedShot` y los estilos `.view-btn*` de style.css.
+- `pnpm run verify` en verde tras ambos cambios.
+## [2026-09-18] — Limpieza de código muerto y basura (revisión general)
+
+- Eliminado `js/ui/compass.js`: módulo huérfano (nadie lo importaba) y roto
+  (usaba `THREE` sin importarlo); sus elementos (`compassRoot/Needle/Label`)
+  no existen en `index.html`.
+- Retirados los lookups/handlers de elementos que ya no están en el HTML:
+  `cinemaEditControls` (cinematics), `cameraViewControls` (cinematics y
+  timeline), `btnCinemaExit`, `btnResetTargetPos`, `btnFaceCamera`,
+  `btnDeleteObj`, `btnDuplicateObj`, `btnDeleteMulti` y `btnConstruction`
+  (ui). `updateCameraViewVisibility` quedó como no-op documentado (la llaman
+  selection.js/viewport.js); import de `duplicateActiveObject` limpiado.
+- Borrados `viewport_fixed.tmp` (0 bytes) y `__pycache__/` de la raíz.
+- `tools/fix-encoding.mjs` ahora recorre `js/` recursivo (characters/,
+  cinema/, ui/, media/, office/) y los `.css` de la raíz; con eso se reparó
+  el mojibake pendiente de los comentarios de `style.css` (la herramienta
+  antes solo miraba js/ y js/office/).
+- `pnpm run verify` en verde tras la limpieza.
 ## [2026-09-08] — Render determinista en exportación (backlog #7)
 
 - Exportando, la sim avanza por pasos fijos de 1/30 s (acumulador sobre el
