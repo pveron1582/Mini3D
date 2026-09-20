@@ -1429,10 +1429,8 @@ body, html {
 .tl-charmove {
   background: linear-gradient(180deg, #3d6b8a, #2f5570);
 }
-.tl-charpath .tl-shot-save,
-.tl-charpath .tl-shot-close {
-  display: block;   /* siempre visibles sobre el bloque del camino */
-}
+/* Las pastillas del camino salen SOLO en el tramo elegido (igual que los
+   cuadros: .selected). Antes 💾/✕ se veían en todos los tramos a la vez. */
 /* Lane 🧍 PERSONAJES: cuatro pastillas 💾 🗑 ⧉ ✕ (el camino usa 🎬 en vez
    de 🗑). Sin esto, ⧉ y 🗑 compartían posición y se pisaban. */
 .tl-charblock .tl-shot-save { right: 68px; }
