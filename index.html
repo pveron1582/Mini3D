@@ -683,7 +683,7 @@
             <div id="catalogPanel" style="display:none;">
               <div class="target-category-label" style="margin-top:8px;">➕ AGREGAR OBJETO</div>
               <div id="catalogGrid" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:4px; margin-top:4px;"></div>
-              <p class="cinema-hint" style="margin-top:4px;">Clic en una pieza: aparece donde mirás, seleccionada y lista para mover / rotar / escalar con el gizmo.</p>
+              <p class="cinema-hint" style="margin-top:4px;">Clic en una pieza: aparece donde mirás, seleccionada y lista para mover con el gizmo (círculo = libre, flecha = su eje) y rotar con los Giros.</p>
             </div>
           </div>
         </div>
@@ -734,15 +734,39 @@
                 </div>
               </div>
 
-              <!-- Rotación Y -->
+              <!-- Rotación Y (giro en el plano XZ: orientación) -->
               <div class="slider-row">
                 <div class="slider-header">
-                  <span>Giro / Orientación (°)</span>
+                  <span>Giro en plano XZ (°)</span>
                 </div>
                 <div class="slider-ctrl">
-                  <span class="axis-tag r">Rot</span>
+                  <span class="axis-tag y">Y</span>
                   <input type="range" id="sliderRotY" min="0" max="360" step="5" value="0" />
                   <input type="number" id="numRotY" step="5" value="0" />
+                </div>
+              </div>
+
+              <!-- Rotación Z (giro en el plano XY: inclinar de lado) -->
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span>Giro en plano XY (°)</span>
+                </div>
+                <div class="slider-ctrl">
+                  <span class="axis-tag z">Z</span>
+                  <input type="range" id="sliderRotZ" min="0" max="360" step="5" value="0" />
+                  <input type="number" id="numRotZ" step="5" value="0" />
+                </div>
+              </div>
+
+              <!-- Rotación X (giro en el plano YZ: inclinar adelante/atrás) -->
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span>Giro en plano YZ (°)</span>
+                </div>
+                <div class="slider-ctrl">
+                  <span class="axis-tag x">X</span>
+                  <input type="range" id="sliderRotX" min="0" max="360" step="5" value="0" />
+                  <input type="number" id="numRotX" step="5" value="0" />
                 </div>
               </div>
 

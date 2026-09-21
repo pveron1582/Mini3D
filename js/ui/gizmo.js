@@ -21,16 +21,13 @@ export const mouse = new THREE.Vector2();
 export const gizmoState = {
   group: null,
   arrows: [],       // { axis: 'x'|'y'|'z', mesh, cone, line }
-  rings: [],        // { axis, mesh } anillos de rotación (doble click en flecha)
   activeAxis: null, // eje actualmente arrastrado
   isDragging: false,
   isFreeDrag: false,
-  isRingRotation: false,   // girando con anillo de rotación del gizmo
   isAirDrag: false,        // movimiento libre por el aire (anillo azul)
   isScaleDrag: false,      // escalado con la banda del anillo azul
   scaleStartDist: 0,
   scaleStartVal: 1,
-  ringLastAngle: 0,
   dragPlane: new THREE.Plane(),
   dragOffset: new THREE.Vector3(),
   dragStart: new THREE.Vector3(),
@@ -54,8 +51,8 @@ function createGizmoArrow(axis, colorHex) {
   const arrowGroup = new THREE.Group();
   const dir = axis === 'x' ? new THREE.Vector3(1, 0, 0) : axis === 'y' ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(0, 0, 1);
 
-  // Línea del eje
-  const lineLen = 1.4;
+  // Línea del eje (larga: el doble para verla y agarrarla bien)
+  const lineLen = 2.8;
   const lineGeom = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(0, 0, 0),
     dir.clone().multiplyScalar(lineLen)
@@ -99,22 +96,6 @@ function createGizmoArrow(axis, colorHex) {
   return arrowGroup;
 }
 
-// Anillo de rotación para un eje (torus perpendicular al eje)
-function createRotationRing(axis, colorHex) {
-  const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(0.85, 0.035, 10, 48),
-    new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.85, depthTest: false })
-  );
-  ring.renderOrder = 999;
-  // El torus rodea el eje Z por defecto: orientarlo según el eje
-  if (axis === 'y') ring.rotation.x = Math.PI / 2;
-  else if (axis === 'x') ring.rotation.y = Math.PI / 2;
-  ring.visible = false;
-  ring.traverse && ring.traverse((c) => { c.userData = { rotRingAxis: axis, isGizmo: true }; });
-  ring.userData = { rotRingAxis: axis, isGizmo: true };
-  return ring;
-}
-
 export function createTransformGizmo() {
   const g = new THREE.Group();
   g.visible = false;
@@ -131,19 +112,6 @@ export function createTransformGizmo() {
     { axis: 'x', group: arrowX },
     { axis: 'y', group: arrowY },
     { axis: 'z', group: arrowZ }
-  ];
-
-  // Anillos de rotación (ocultos; doble click en una flecha los muestra)
-  const ringX = createRotationRing('x', 0xe04d4d);
-  const ringY = createRotationRing('y', 0x48bb78);
-  const ringZ = createRotationRing('z', 0x437ee8);
-  g.add(ringX);
-  g.add(ringY);
-  g.add(ringZ);
-  gizmoState.rings = [
-    { axis: 'x', mesh: ringX },
-    { axis: 'y', mesh: ringY },
-    { axis: 'z', mesh: ringZ }
   ];
 
   scene.add(g);
@@ -254,16 +222,6 @@ export function getIntersectedObjectId(e) {
   return null;
 }
 
-// Hit sobre un anillo de rotación visible del gizmo
-function getIntersectedRotRing(e) {
-  const ndc = getPointerNDC(e);
-  raycaster.setFromCamera(new THREE.Vector2(ndc.x, ndc.y), camera);
-  const meshes = gizmoState.rings.filter(r => r.mesh.visible).map(r => r.mesh);
-  if (!meshes.length) return null;
-  const hits = raycaster.intersectObjects(meshes, false);
-  return hits.length ? hits[0].object.userData.rotRingAxis : null;
-}
-
 // Hit sobre el anillo azul de selección: 'band' (banda = escalar) | 'inner' (interior = mover)
 function getSelectionRingHit(e) {
   if (!selectionRing || !selectionRing.visible) return null;
@@ -273,69 +231,6 @@ function getSelectionRingHit(e) {
   if (!hits.length) return null;
   // children[0] = banda del anillo, children[1] = círculo interior
   return hits[0].object === selectionRing.children[0] ? 'band' : 'inner';
-}
-
-// Mostrar/ocultar anillos de rotación (uno a la vez)
-function setRotationRingVisible(axis) {
-  gizmoState.rings.forEach(r => { r.mesh.visible = r.axis === axis; });
-}
-
-// Normalizar un ángulo al rango [-PI, PI]
-function normalizeAngle(a) {
-  while (a > Math.PI) a -= Math.PI * 2;
-  while (a < -Math.PI) a += Math.PI * 2;
-  return a;
-}
-
-// Base ortonormal (u, v) del plano perpendicular al eje, con u×v = eje
-function ringBasis(axis) {
-  if (axis === 'x') return { u: new THREE.Vector3(0, 1, 0), v: new THREE.Vector3(0, 0, 1) };
-  if (axis === 'y') return { u: new THREE.Vector3(1, 0, 0), v: new THREE.Vector3(0, 0, -1) };
-  return { u: new THREE.Vector3(1, 0, 0), v: new THREE.Vector3(0, 1, 0) };
-}
-
-// Ángulo del puntero alrededor del objeto en el plano del eje dado
-function pointerAxisAngle(e, obj, axis) {
-  const axisVec = axisVector(axis);
-  gizmoState.dragPlane.setFromNormalAndCoplanarPoint(axisVec, obj.position);
-  const hit = new THREE.Vector3();
-  if (!projectPointerToPlane(e, gizmoState.dragPlane, hit)) return null;
-  const d = hit.sub(obj.position);
-  const { u, v } = ringBasis(axis);
-  return Math.atan2(d.dot(v), d.dot(u));
-}
-
-// --- Rotación con anillo del gizmo (eje X, Y o Z según la flecha) ---
-function startGizmoRingRotation(e, axis) {
-  const obj = getActiveObject();
-  if (!obj) return;
-  const a = pointerAxisAngle(e, obj, axis);
-  if (a === null) return;
-  gizmoState.isRingRotation = true;
-  gizmoState.isDragging = true;
-  gizmoState.activeAxis = axis;
-  gizmoState.ringLastAngle = a;
-  controls.enabled = false;
-  canvas.style.cursor = 'grabbing';
-}
-
-function updateGizmoRingRotation(e) {
-  const obj = getActiveObject();
-  if (!obj) return;
-  const a = pointerAxisAngle(e, obj, gizmoState.activeAxis);
-  if (a === null) return;
-  const delta = normalizeAngle(a - gizmoState.ringLastAngle);
-  gizmoState.ringLastAngle = a;
-  const raw = obj.rotation[gizmoState.activeAxis] + delta;
-  const snapped = snapRotation(raw);
-  obj.rotation[gizmoState.activeAxis] = snapped;
-  if (snapped !== raw) {
-    const deg = Math.round(THREE.MathUtils.radToDeg(snapped) % 360);
-    showSnapBadge(deg + '°');
-  } else {
-    hideSnapBadge();
-  }
-  syncSlidersFromTarget();
 }
 
 // --- Movimiento libre por el aire (anillo azul de selección) ---
@@ -585,7 +480,6 @@ function updateFreeDrag(e) {
 function endDrag() {
   gizmoState.isDragging = false;
   gizmoState.isFreeDrag = false;
-  gizmoState.isRingRotation = false;
   gizmoState.isAirDrag = false;
   gizmoState.isScaleDrag = false;
   gizmoState.activeAxis = null;
@@ -614,7 +508,6 @@ function endDrag() {
 
 const SNAP_DIST = 0.12;   // radio del imán en metros
 const SNAP_HEIGHTS = [0, 0.45, 0.76]; // piso, altura de asiento, tapa de escritorio
-const SNAP_ROT = Math.PI / 12;        // 15 grados
 const SNAP_SCALE = 0.25;
 
 function isShown(obj) {
@@ -728,13 +621,6 @@ function applySnapY(pos, obj) {
     if (d >= -0.05 && Math.abs(d) <= 0.1 && (best === null || Math.abs(d) < Math.abs(best))) best = d;
   });
   if (best !== null) pos.y += best;
-}
-
-// Rotación: imán a múltiplos de 15°
-function snapRotation(angle) {
-  const k = Math.round(angle / SNAP_ROT);
-  const target = k * SNAP_ROT;
-  return Math.abs(angle - target) < 0.06 ? target : angle;
 }
 
 // Escala: imán a múltiplos de 0.25
@@ -993,14 +879,7 @@ canvas.addEventListener('pointerdown', (e) => {
     return;
   }
 
-  // 2. Clic en un anillo de rotación visible del gizmo
-  const rotAxis = getIntersectedRotRing(e);
-  if (rotAxis) {
-    startGizmoRingRotation(e, rotAxis);
-    return;
-  }
-
-  // 3. Borde iluminado (pared o piso): agarrarlo estira SOLO ese lado
+  // 2. Borde iluminado (pared o piso): agarrarlo estira SOLO ese lado
   if (wallEdgeHover) {
     startWallEdgeDrag(e);
     return;
@@ -1010,7 +889,7 @@ canvas.addEventListener('pointerdown', (e) => {
     return;
   }
 
-  // 4. Anillo azul de selección: el círculo interior = mover. La banda exterior
+  // 3. Anillo azul de selección: el círculo interior = mover. La banda exterior
   //    (escalar) está DESHABILITADA: la escala se controla solo desde el
   //    panel izquierdo, para no molestar al mover (se usa poco).
   const selHit = getSelectionRingHit(e);
@@ -1052,15 +931,6 @@ canvas.addEventListener('pointerdown', (e) => {
   }
   if (hasMulti()) clearMulti();
   gizmoState.pendingDeselect = true;
-});
-
-// Doble click en una flecha → mostrar/ocultar su anillo de rotación
-canvas.addEventListener('dblclick', (e) => {
-  if (cinema.active && cinema.mode !== 'play') return;
-  const axis = getIntersectedGizmoAxis(e);
-  if (!axis) return;
-  const ring = gizmoState.rings.find(r => r.axis === axis);
-  setRotationRingVisible(ring && ring.mesh.visible ? null : axis);
 });
 
 canvas.addEventListener('pointermove', (e) => {
@@ -1110,14 +980,8 @@ canvas.addEventListener('pointermove', (e) => {
   }
 
   // Arrastre de eje
-  if (gizmoState.isDragging && gizmoState.activeAxis && !gizmoState.isRingRotation) {
+  if (gizmoState.isDragging && gizmoState.activeAxis) {
     updateAxisDrag(e);
-    return;
-  }
-
-  // Rotación con anillo del gizmo
-  if (gizmoState.isDragging && gizmoState.isRingRotation) {
-    updateGizmoRingRotation(e);
     return;
   }
 

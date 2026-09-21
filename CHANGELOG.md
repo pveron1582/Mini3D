@@ -2,6 +2,13 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Gizmo sin anillos + flechas dobles + 3 giros en el panel
+
+- Afuera los anillos de rotación del gizmo (doble clic en flecha): solo
+  queda el círculo azul (libre) + las 3 flechas (una por eje), al doble de
+  largo para verlas y agarrarlas bien (la verde casi no se veía).
+- El "Giro" del panel ahora se llama "Giro en plano XZ" y se suman "Giro en
+  plano XY" y "Giro en plano YZ" (poco uso, pero permiten inclinar).
 ## [2026-09-20] — Bloques de movimiento con camino editable (curva + puntos)
 
 - El bloque de desplazamiento ya no es una recta A→B: guarda `waypoints`

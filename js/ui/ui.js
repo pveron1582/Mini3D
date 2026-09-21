@@ -240,6 +240,10 @@ const sliderZ = byId('sliderZ');
 const numZ = byId('numZ');
 const sliderRotY = byId('sliderRotY');
 const numRotY = byId('numRotY');
+const sliderRotZ = byId('sliderRotZ');
+const numRotZ = byId('numRotZ');
+const sliderRotX = byId('sliderRotX');
+const numRotX = byId('numRotX');
 const sliderScale = byId('sliderScale');
 const numScale = byId('numScale');
 
@@ -250,7 +254,10 @@ export function syncSlidersFromTarget() {
   const posX = obj.position.x;
   const posY = obj.position.y;
   const posZ = obj.position.z;
-  const degY = Math.round(THREE.MathUtils.radToDeg(obj.rotation.y));
+  const norm360 = (deg) => (Math.round(deg) % 360 + 360) % 360;
+  const degX = THREE.MathUtils.radToDeg(obj.rotation.x);
+  const degY = THREE.MathUtils.radToDeg(obj.rotation.y);
+  const degZ = THREE.MathUtils.radToDeg(obj.rotation.z);
 
   if (document.activeElement !== sliderX && document.activeElement !== numX) {
     sliderX.value = posX;
@@ -265,8 +272,16 @@ export function syncSlidersFromTarget() {
     numZ.value = posZ.toFixed(2);
   }
   if (document.activeElement !== sliderRotY && document.activeElement !== numRotY) {
-    sliderRotY.value = (degY % 360 + 360) % 360;
-    numRotY.value = Math.round((degY % 360 + 360) % 360);
+    sliderRotY.value = norm360(degY);
+    numRotY.value = norm360(degY);
+  }
+  if (sliderRotX && numRotX && document.activeElement !== sliderRotX && document.activeElement !== numRotX) {
+    sliderRotX.value = norm360(degX);
+    numRotX.value = norm360(degX);
+  }
+  if (sliderRotZ && numRotZ && document.activeElement !== sliderRotZ && document.activeElement !== numRotZ) {
+    sliderRotZ.value = norm360(degZ);
+    numRotZ.value = norm360(degZ);
   }
   // Escala: única vía para escalar (el gizmo ya no escala con la banda).
   if (document.activeElement !== sliderScale && document.activeElement !== numScale) {
@@ -285,6 +300,8 @@ function applySlidersToTarget() {
   obj.position.y = parseFloat(sliderY.value) || 0;
   obj.position.z = parseFloat(sliderZ.value) || 0;
   obj.rotation.y = THREE.MathUtils.degToRad(parseFloat(sliderRotY.value) || 0);
+  if (sliderRotX) obj.rotation.x = THREE.MathUtils.degToRad(parseFloat(sliderRotX.value) || 0);
+  if (sliderRotZ) obj.rotation.z = THREE.MathUtils.degToRad(parseFloat(sliderRotZ.value) || 0);
   // Escala uniforme desde el panel (rango 0.5–2)
   const sc = Math.min(2, Math.max(0.5, parseFloat(sliderScale.value) || 1));
   obj.scale.setScalar(sc);
@@ -300,6 +317,8 @@ function applySlidersToTarget() {
   numY.value = obj.position.y.toFixed(2);
   numZ.value = obj.position.z.toFixed(2);
   numRotY.value = Math.round(parseFloat(sliderRotY.value) || 0);
+  if (numRotX && sliderRotX) numRotX.value = Math.round(parseFloat(sliderRotX.value) || 0);
+  if (numRotZ && sliderRotZ) numRotZ.value = Math.round(parseFloat(sliderRotZ.value) || 0);
 
   updateSelectionRing();
 }
@@ -308,16 +327,20 @@ sliderX.addEventListener('input', applySlidersToTarget);
 sliderY.addEventListener('input', applySlidersToTarget);
 sliderZ.addEventListener('input', applySlidersToTarget);
 sliderRotY.addEventListener('input', applySlidersToTarget);
+sliderRotX?.addEventListener('input', applySlidersToTarget);
+sliderRotZ?.addEventListener('input', applySlidersToTarget);
 sliderScale?.addEventListener('input', applySlidersToTarget);
 
 numX.addEventListener('input', () => { sliderX.value = numX.value; applySlidersToTarget(); });
 numY.addEventListener('input', () => { sliderY.value = numY.value; applySlidersToTarget(); });
 numZ.addEventListener('input', () => { sliderZ.value = numZ.value; applySlidersToTarget(); });
 numRotY.addEventListener('input', () => { sliderRotY.value = numRotY.value; applySlidersToTarget(); });
+numRotX?.addEventListener('input', () => { sliderRotX.value = numRotX.value; applySlidersToTarget(); });
+numRotZ?.addEventListener('input', () => { sliderRotZ.value = numRotZ.value; applySlidersToTarget(); });
 numScale?.addEventListener('input', () => { sliderScale.value = numScale.value; applySlidersToTarget(); });
 
 // Confirmar cambios de transformación en el historial (al soltar el slider)
-[sliderX, sliderY, sliderZ, sliderRotY, sliderScale, numX, numY, numZ, numRotY, numScale].forEach(inp => {
+[sliderX, sliderY, sliderZ, sliderRotY, sliderRotX, sliderRotZ, sliderScale, numX, numY, numZ, numRotY, numRotX, numRotZ, numScale].forEach(inp => {
   inp?.addEventListener('change', pushHistory);
 });
 
