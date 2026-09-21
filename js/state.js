@@ -14,7 +14,7 @@ export const store = {
   editBuilding: false,  // "Editar Edificio" (paredes y puertas) (legacy)
   buildingOnly: false,  // "👁 Solo edificio" (oculta mobiliario/equipo)
   trayDrawing: false,   // herramienta de dibujo de canaletas activa (trayDraw.js)
-  pickMovePoints: false, // marcado de inicio/fin de bloque de desplazamiento (charTrack.js)
+  pickMovePoints: false, // edición del camino del bloque (marcar/insertar/arrastrar puntos en charTrack.js)
   editMode: 'personajes', // 'edificio' | 'objetos' | 'personajes' | 'subtitulos' | 'cinematica'
   // Id del objeto/personaje que se está arrastrando con el gizmo (o null).
   // Lo usa collision.js para NO empujarlo contra paredes durante el arrastre

@@ -16,7 +16,7 @@
 import * as THREE from 'three';
 import { charBlocks, timeline, interactiveRegistry, blockEdit, charLaneBus, charFullRange, store, timelineBus, blockPin, pinMatches, togglePinBlock, blockSelectionBlocked, blockBus } from '../state.js';
 import { byId, showViewportHint } from '../dom.js';
-import { camera, canvas, scene } from '../core.js';
+import { camera, canvas, controls, scene } from '../core.js';
 import { setActiveTarget } from '../ui/selection.js';
 import { pushHistory } from '../undo.js';
 import { setStatus } from '../media/recorder.js';
@@ -113,7 +113,7 @@ function renderCaminoSegments(inner, entry, info, pps) {
 
 export function clearCharBlockSelection() {
   if (chooserFor) closeBlockChooser();
-  if (movePick) cancelMovePick();
+  if (pathEdit) exitPathEditMode();
   clearCaminoSelection();
   if (selectedBlock) {
     selectedBlock = null;
@@ -257,23 +257,25 @@ export function charActionsAt(t) {
   return state;
 }
 
-// Desplazamiento vigente en el instante t: por personaje, { from, to, k
-// (0→1 en su tramo), action, rotY (rumbo) }. Solo dentro del tramo y con
-// puntos válidos; fuera, la pose de fin (charPoseAt) lo conserva.
+// Desplazamiento vigente en el instante t: por personaje, { x, z, action,
+// rotY (rumbo por la tangente de la curva) }. Solo dentro del tramo y con
+// recorrido válido; fuera, la pose de fin (charPoseAt) lo conserva.
 export function charMoveAt(t) {
   const moves = new Map();
   charBlocks.forEach(b => {
     if (t < b.start || t >= b.start + b.duration) return;
     Object.keys(b.actions || {}).forEach(charId => {
       const a = b.actions[charId];
-      if (!a || !a.move || !a.move.from || !a.move.to) return;
-      const d = moveDist(a.move);
-      if (d < 1e-6 || !(b.duration > 0)) return;
+      if (!a || !a.move) return;
+      const c = moveCurve(a.move);
+      if (!c || c.length < 1e-6 || !(b.duration > 0)) return;
       const k = Math.max(0, Math.min(1, (t - b.start) / b.duration));
+      const pos = c.curve.getPointAt(k);
+      const tan = c.curve.getTangentAt(k);
       moves.set(charId, {
-        from: a.move.from, to: a.move.to, k,
+        x: pos.x, z: pos.z,
         action: a.action || null,
-        rotY: Math.atan2(a.move.to.x - a.move.from.x, a.move.to.z - a.move.from.z)
+        rotY: Math.atan2(tan.x, tan.z)
       });
     });
   });
@@ -643,6 +645,8 @@ export function openCharBlockEditor(b) {
   chooserFor = null;
   clearCaminoSelection();
   charLaneBus.closeEditor();
+  // Si se editaba el camino de OTRO bloque, se sale (uno a la vez).
+  if (pathEdit && pathEdit.block !== b) exitPathEditMode();
   window.dispatchEvent(new CustomEvent('char-block-selected'));
   selectedBlock = b;
   blockSnapshot = JSON.parse(JSON.stringify({ start: b.start, duration: b.duration, actions: b.actions }));
@@ -672,6 +676,7 @@ export function resetCharBlock() {
 // Borrar el bloque seleccionado (🗑)
 export function deleteCharBlock() {
   if (!selectedBlock) return false;
+  if (pathEdit && pathEdit.block === selectedBlock) exitPathEditMode();
   const idx = charBlocks.indexOf(selectedBlock);
   if (idx >= 0) charBlocks.splice(idx, 1);
   selectedBlock = null;
@@ -826,8 +831,8 @@ function renderBlockChooser(list, entry) {
 }
 
 // ---------- Editor del bloque de desplazamiento ----------
-function movePointText(m, end) {
-  const p = m[end];
+function movePointTextAt(wps, idx) {
+  const p = wps && wps[idx];
   return p ? `(${p.x.toFixed(1)}, ${p.z.toFixed(1)})` : '— sin marcar —';
 }
 
@@ -862,9 +867,10 @@ function renderMoveEditorRow(list, entry, charId, a) {
 
   const info = document.createElement('div');
   info.className = 'cinema-hint';
+  const wps = moveWaypoints(m);
   const dist = moveDist(m);
-  info.textContent = dist > 0
-    ? `De ${movePointText(m, 'from')} → a ${movePointText(m, 'to')} · ${dist.toFixed(1)} m`
+  info.textContent = wps.length >= 2
+    ? `De ${movePointTextAt(wps, 0)} → a ${movePointTextAt(wps, wps.length - 1)} · ${dist.toFixed(1)} m${wps.length > 2 ? ` · ${wps.length - 2} intermedio(s)` : ''}`
     : 'Marcá inicio (verde) y fin (rojo) en el piso.';
   list.appendChild(info);
 
@@ -1081,9 +1087,12 @@ export const INITIAL_CHAR_BLOCK_DURATION = 3;
 // Un bloque es de UN personaje y de UN tipo:
 //   - estático (lo de siempre): dura `duration`, el personaje hace `action`
 //     con `mood` en su `pos`/`rotY`.
-//   - desplazamiento: va de `move.from` (verde) a `move.to` (rojo) con
-//     `move.speed` (m/s) y animación obligatoria (`walk`/`run`). La duración
-//     sale sola (distancia/velocidad); si se edita, la velocidad se adapta.
+//   - desplazamiento: recorre la curva de `move.waypoints` (inicio verde,
+//     fin rojo, intermedios amarillos) con `move.speed` (m/s) y animación
+//     obligatoria (`walk`/`run`). Al crearlo la duración sale sola
+//     (distancia/velocidad); después la duración manda y la velocidad se
+//     adapta. 🎬 abre el editor del camino (clic inserta punto, arrastre
+//     deforma, 🎬 de nuevo sale).
 // actions = { [charId]: { action, mood?, pos?, rotY?, move? } }
 export const MOVE_ACTIONS = [
   { id: 'walk', label: '🚶 Caminar' },
@@ -1091,9 +1100,46 @@ export const MOVE_ACTIONS = [
 ];
 export const DEFAULT_MOVE_SPEED = 2; // m/s (igual que la cinemática)
 
+// Recorrido del bloque: move = { waypoints: [{x,z}, ...], speed, _v? }.
+// Los extremos son inicio (verde) y fin (rojo); los intermedios (amarillos)
+// se agregan con clic sobre la curva en modo edición (🎬). _v es un contador
+// de versión para la caché de la curva (se serializa sin daño).
+function moveWaypoints(m) {
+  if (!m) return [];
+  if (Array.isArray(m.waypoints)) return m.waypoints;
+  // Proyecto viejo: from/to → waypoints (migración perezosa, in place).
+  if (m.from && m.to) {
+    m.waypoints = [m.from, m.to];
+    delete m.from;
+    delete m.to;
+    return m.waypoints;
+  }
+  m.waypoints = [];
+  return m.waypoints;
+}
+
+function touchMove(m) {
+  if (m) m._v = (m._v || 0) + 1;
+}
+
+// Curva del recorrido (con caché por objeto: se reconstruye solo si _v cambió).
+const moveCurveCache = new WeakMap(); // move -> { v, curve, length }
+function moveCurve(m) {
+  const wps = moveWaypoints(m);
+  if (wps.length < 2) return null;
+  const v = (m && m._v) || 0;
+  const hit = moveCurveCache.get(m);
+  if (hit && hit.v === v) return hit;
+  const pts = wps.map(p => new THREE.Vector3(p.x, 0.12, p.z));
+  const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.5);
+  const entry = { v, curve, length: curve.getLength() };
+  moveCurveCache.set(m, entry);
+  return entry;
+}
+
 export function moveDist(m) {
-  if (!m || !m.from || !m.to) return 0;
-  return Math.hypot(m.to.x - m.from.x, m.to.z - m.from.z);
+  const c = moveCurve(m);
+  return c ? c.length : 0;
 }
 
 export function calcMoveDuration(m) {
@@ -1112,7 +1158,7 @@ export function calcMoveSpeed(m, duration) {
 export function moveBlockReady(b) {
   const a = b && b.actions ? Object.values(b.actions).find(v => v && v.move) : null;
   if (!a) return true; // no es de desplazamiento
-  return !!(a.action && a.move.from && a.move.to && moveDist(a.move) > 0.05);
+  return !!(a.action && moveDist(a.move) > 0.05);
 }
 
 // Pose actual de un personaje en la escena (para guardar en su bloque).
@@ -1235,13 +1281,13 @@ function addMoveBlockFor(entry) {
     id: 'cb' + (++blockCounter),
     start: Math.round(Math.max(endOfLast, 0) * 10) / 10,
     duration: 2,
-    actions: { [entry.id]: { action: null, mood: undefined, move: { from: null, to: null, speed: DEFAULT_MOVE_SPEED } } }
+    actions: { [entry.id]: { action: null, mood: undefined, move: { waypoints: [], speed: DEFAULT_MOVE_SPEED } } }
   };
   charBlocks.push(b);
   openCharBlockEditor(b);
   pushHistory();
   if (timelineBus.refreshDuration) timelineBus.refreshDuration();
-  startMovePick(b, entry.id, 'from');
+  enterPathEditMode(b, entry.id);
 }
 
 byId('btnAddCharBlock')?.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -1250,17 +1296,24 @@ byId('btnAddCharBlock')?.addEventListener('click', (e) => {
   openBlockChooser(interactiveRegistry.get(store.activeTarget));
 });
 
-// ---------- Marcado de inicio/fin en el viewport ----------
-// Modo de marcado: clic en el piso = punto VERDE (inicio), clic = punto ROJO
-// (fin). La duración del bloque sale sola (distancia/velocidad).
-let movePick = null; // { block, charId, end: 'from'|'to' }
+// ---------- Edición del camino del bloque en el viewport (🎬) ----------
+// pathEdit = { block, charId, phase: 'from'|'to'|'edit', dragIdx }.
+// 'from'/'to': marcando inicio (verde) y fin (rojo). 'edit': la curva está
+// visible — clic sobre ella inserta un punto intermedio (amarillo), que se
+// arrastra para deformar el recorrido; clic afuera no hace nada. 🎬 de nuevo
+// (o ESC) sale del modo. La duración manda: al deformar, la velocidad se
+// adapta para cumplir el tiempo con el nuevo largo.
+let pathEdit = null; // bloque cuyo camino se está editando
+const PATH_GRAB_R = 0.3;   // agarrar un punto existente (m)
+const PATH_INSERT_R = 0.45; // insertar punto nuevo sobre la curva (m)
 
 const pickRay = new THREE.Raycaster();
 const pickPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 const pickHit = new THREE.Vector3();
 let markFrom = null;   // esfera verde (inicio)
 let markTo = null;     // esfera roja (fin)
-let markLine = null;   // línea entre ambas
+let markLine = null;   // curva amarilla entre los puntos
+let markMids = [];     // esferas amarillas (puntos intermedios, pool)
 
 function ensureMoveMarkers() {
   if (markFrom) return;
@@ -1278,26 +1331,51 @@ function ensureMoveMarkers() {
   scene.add(markFrom, markTo, markLine);
 }
 
-// Muestra los puntos del bloque en edición (o los que se están marcando).
+// Muestra el camino del bloque en edición (o del seleccionado): inicio
+// verde, fin rojo, intermedios amarillos y la curva que los une.
 function updateMoveMarkers() {
   ensureMoveMarkers();
-  let from = movePick && movePick.block.actions[movePick.charId].move.from;
-  let to = movePick && movePick.block.actions[movePick.charId].move.to;
-  if (!movePick && selectedBlock) {
+  let mv = null;
+  if (pathEdit) {
+    const a = pathEdit.block.actions[pathEdit.charId];
+    mv = a && a.move;
+  } else if (selectedBlock) {
     const solo = Object.keys(selectedBlock.actions || {})[0];
-    const mv = solo && selectedBlock.actions[solo].move;
-    if (mv) { from = mv.from; to = mv.to; }
+    const a = solo && selectedBlock.actions[solo];
+    mv = a && a.move;
   }
-  markFrom.visible = !!from;
-  markTo.visible = !!to;
-  markLine.visible = !!(from && to);
-  if (from) markFrom.position.set(from.x, 0.12, from.z);
-  if (to) markTo.position.set(to.x, 0.12, to.z);
-  if (from && to) {
-    markLine.geometry.setFromPoints([
-      new THREE.Vector3(from.x, 0.12, from.z),
-      new THREE.Vector3(to.x, 0.12, to.z)
-    ]);
+  const wps = moveWaypoints(mv);
+  const n = wps.length;
+  markFrom.visible = n >= 1;
+  markTo.visible = n >= 2;
+  if (n >= 1) markFrom.position.set(wps[0].x, 0.12, wps[0].z);
+  if (n >= 2) markTo.position.set(wps[n - 1].x, 0.12, wps[n - 1].z);
+  // Pool de intermedios: crece según haga falta, los que sobran se ocultan.
+  const needMid = Math.max(0, n - 2);
+  const matMid = (c) => new THREE.MeshBasicMaterial({ color: c, depthTest: false, transparent: true, opacity: 0.95 });
+  while (markMids.length < needMid) {
+    const s = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 12), matMid(0xffd24d));
+    s.renderOrder = 998;
+    s.visible = false;
+    scene.add(s);
+    markMids.push(s);
+  }
+  markMids.forEach((s, i) => {
+    const p = i < needMid ? wps[i + 1] : null;
+    s.visible = !!p;
+    if (p) {
+      s.position.set(p.x, 0.12, p.z);
+      // El punto arrastrado se agranda para verlo bien.
+      s.scale.setScalar(pathEdit && pathEdit.dragIdx === i + 1 ? 1.6 : 1);
+    }
+  });
+  // La curva (no una recta): 100 muestras por los waypoints.
+  const c = n >= 2 ? moveCurve(mv) : null;
+  markLine.visible = !!c;
+  if (c) {
+    markLine.geometry.setFromPoints(
+      c.curve.getPoints(100).map(v => new THREE.Vector3(v.x, 0.12, v.z))
+    );
   }
 }
 
@@ -1312,11 +1390,47 @@ function floorPointAt(e) {
   return { x: Math.round(pickHit.x * 20) / 20, z: Math.round(pickHit.z * 20) / 20 };
 }
 
+// Entra al modo edición del camino: si ya hay recorrido lo MUESTRA (fase
+// 'edit'); si falta el fin pide el rojo; si no hay nada pide el verde.
+export function enterPathEditMode(block, charId) {
+  if (!block || !charBlocks.includes(block)) return;
+  const a = block.actions[charId];
+  if (!a || !a.move) return;
+  const wps = moveWaypoints(a.move);
+  const phase = wps.length >= 2 ? 'edit' : (wps.length === 1 ? 'to' : 'from');
+  pathEdit = { block, charId, phase, dragIdx: -1 };
+  store.pickMovePoints = true;
+  updateMoveMarkers();
+  if (phase === 'edit') {
+    showViewportHint('Clic en la curva: agrega punto · arrastrá un punto para deformar · 🎬 sale', { sticky: true });
+    setStatus('Camino: clic en la línea agrega un punto, arrastrar lo mueve. 🎬 o ESC para salir.');
+  } else {
+    startMovePick(block, charId, phase);
+  }
+}
+
+// 🎬 como interruptor: si ya se edita este bloque se sale, si no se entra.
+export function togglePathEditMode(block, charId) {
+  if (pathEdit && pathEdit.block === block) exitPathEditMode();
+  else enterPathEditMode(block, charId);
+}
+
+export function exitPathEditMode() {
+  if (!pathEdit) return;
+  pathEdit = null;
+  if (controls) controls.enabled = true;
+  store.pickMovePoints = false;
+  showViewportHint('');
+  updateMoveMarkers();
+}
+
+// Botones 🟢/🔴 del panel: (re)marcar inicio o fin del bloque seleccionado.
 export function startMovePick(block, charId, end) {
   if (!block || !charBlocks.includes(block)) return;
   const a = block.actions[charId];
   if (!a || !a.move) return;
-  movePick = { block, charId, end: end === 'to' ? 'to' : 'from' };
+  moveWaypoints(a.move);
+  pathEdit = { block, charId, phase: end === 'to' ? 'to' : 'from', dragIdx: -1 };
   store.pickMovePoints = true;
   updateMoveMarkers();
   showViewportHint(
@@ -1327,50 +1441,196 @@ export function startMovePick(block, charId, end) {
 }
 
 export function cancelMovePick() {
-  if (!movePick) return;
-  movePick = null;
-  store.pickMovePoints = false;
-  showViewportHint('');
-  updateMoveMarkers();
+  exitPathEditMode();
 }
 
-// Fija el punto marcado y, al completar el fin, calcula la duración.
+// La pose de fin sigue al último punto (al terminar, conserva lugar y acción).
+function syncMoveEndPose(block, charId) {
+  const a = block.actions[charId];
+  if (!a || !a.move) return;
+  const wps = moveWaypoints(a.move);
+  if (wps.length < 2) return;
+  const last = wps[wps.length - 1], prev = wps[wps.length - 2];
+  const entry = interactiveRegistry.get(charId);
+  a.pos = [last.x, (entry && entry.rig && entry.rig.groundY) || 0, last.z];
+  a.rotY = Math.atan2(last.x - prev.x, last.z - prev.z);
+}
+
+// La duración manda: con los puntos actuales, velocidad para cumplir el tiempo.
+function adaptMoveSpeedToDuration(block, charId) {
+  const a = block.actions[charId];
+  if (!a || !a.move) return;
+  a.move.speed = Math.round(calcMoveSpeed(a.move, block.duration) * 100) / 100;
+}
+
+// Fija el punto marcado en fase 'from'/'to'. Al completar el fin por primera
+// vez, la duración sale sola (distancia/velocidad); al RE-marcar un extremo
+// de un recorrido existente, la duración se respeta y se adapta la velocidad.
 function commitMovePoint(pt) {
-  const pick = movePick;
-  if (!pick) return;
-  const a = pick.block.actions[pick.charId];
-  if (!a || !a.move) { cancelMovePick(); return; }
-  a.move[pick.end] = pt;
-  if (pick.end === 'from') {
-    startMovePick(pick.block, pick.charId, 'to');
-  } else {
-    const d = calcMoveDuration(a.move);
-    pick.block.duration = Math.max(0.5, Math.round(d * 10) / 10);
-    // La pose de fin queda guardada (al terminar, conserva lugar y acción)
-    const entry = interactiveRegistry.get(pick.charId);
-    a.pos = [pt.x, (entry && entry.rig && entry.rig.groundY) || 0, pt.z];
-    a.rotY = Math.atan2(pt.x - a.move.from.x, pt.z - a.move.from.z);
-    cancelMovePick();
-    renderCharBlocks();
-    pushHistory();
-    if (timelineBus.refreshDuration) timelineBus.refreshDuration();
-    setStatus(`Recorrido de ${pick.block.duration.toFixed(1)}s: elegí la animación (caminar/correr). 💾 guarda.`);
+  const ed = pathEdit;
+  if (!ed) return;
+  const a = ed.block.actions[ed.charId];
+  if (!a || !a.move) { exitPathEditMode(); return; }
+  const wps = moveWaypoints(a.move);
+  if (ed.phase === 'from') {
+    if (wps.length === 0) {
+      wps.push(pt);
+      touchMove(a.move);
+      startMovePick(ed.block, ed.charId, 'to');
+    } else {
+      wps[0] = pt;
+      touchMove(a.move);
+      syncMoveEndPose(ed.block, ed.charId);
+      adaptMoveSpeedToDuration(ed.block, ed.charId);
+      finishPathMarking('Inicio actualizado: la velocidad se adaptó al tiempo del bloque.');
+    }
+  } else if (ed.phase === 'to') {
+    if (wps.length < 2) {
+      wps.push(pt);
+      touchMove(a.move);
+      const d = calcMoveDuration(a.move);
+      ed.block.duration = Math.max(0.5, Math.round(d * 10) / 10);
+      syncMoveEndPose(ed.block, ed.charId);
+      finishPathMarking(`Recorrido de ${ed.block.duration.toFixed(1)}s: elegí la animación (caminar/correr). 💾 guarda.`);
+    } else {
+      wps[wps.length - 1] = pt;
+      touchMove(a.move);
+      syncMoveEndPose(ed.block, ed.charId);
+      adaptMoveSpeedToDuration(ed.block, ed.charId);
+      finishPathMarking('Fin actualizado: la velocidad se adaptó al tiempo del bloque.');
+    }
   }
   updateMoveMarkers();
 }
 
+// Termina el marcado y queda en fase 'edit' (curva visible, 🎬 sale).
+function finishPathMarking(msg) {
+  const ed = pathEdit;
+  if (!ed) return;
+  ed.phase = 'edit';
+  ed.dragIdx = -1;
+  renderCharBlocks();
+  pushHistory();
+  if (timelineBus.refreshDuration) timelineBus.refreshDuration();
+  updateMoveMarkers();
+  showViewportHint('Clic en la curva: agrega punto · arrastrá un punto para deformar · 🎬 sale', { sticky: true });
+  setStatus(msg);
+}
+
+// Punto de la curva más cercano al clic (120 muestras): { t, dist, x, z }.
+const nearCurveV = new THREE.Vector3();
+function nearestOnCurve(m, pt) {
+  const c = moveCurve(m);
+  if (!c) return null;
+  const N = 120;
+  let best = null;
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    c.curve.getPoint(t, nearCurveV);
+    const d = Math.hypot(nearCurveV.x - pt.x, nearCurveV.z - pt.z);
+    if (!best || d < best.dist) {
+      best = { t, dist: d, x: Math.round(nearCurveV.x * 20) / 20, z: Math.round(nearCurveV.z * 20) / 20 };
+    }
+  }
+  return best;
+}
+
+// Inserta un punto intermedio sobre la curva (sin deformarla: el punto nace
+// SOBRE la línea). Nunca antes del inicio ni después del fin.
+function insertMoveWaypoint(ed, hit) {
+  const a = ed.block.actions[ed.charId];
+  if (!a || !a.move) return;
+  const wps = moveWaypoints(a.move);
+  if (wps.length < 2) return;
+  const idx = Math.max(1, Math.min(wps.length - 1, Math.round(hit.t * (wps.length - 1))));
+  wps.splice(idx, 0, { x: hit.x, z: hit.z });
+  touchMove(a.move);
+  syncMoveEndPose(ed.block, ed.charId);
+  adaptMoveSpeedToDuration(ed.block, ed.charId);
+  updateMoveMarkers();
+  renderCharBlocks();
+  pushHistory();
+  if (timelineBus.refreshDuration) timelineBus.refreshDuration();
+  setStatus(`Punto ${idx + 1} agregado sobre el camino: arrastralo para deformar.`);
+}
+
 canvas.addEventListener('pointerdown', (e) => {
-  if (!movePick || e.button !== 0) return;
-  e.stopPropagation();
+  const ed = pathEdit;
+  if (!ed || e.button !== 0) return;
+  // Marcando inicio/fin: todo clic en el piso fija el punto.
+  if (ed.phase === 'from' || ed.phase === 'to') {
+    e.stopPropagation();
+    const pt = floorPointAt(e);
+    if (pt) commitMovePoint(pt);
+    return;
+  }
+  // Fase 'edit': 1) ¿cerca de un punto? → se arma el arrastre.
+  // 2) ¿cerca de la curva? → se inserta un punto. 3) Si no, no pasa nada
+  // (el clic sigue su curso normal: órbita, gizmo apagado por pickMovePoints).
+  if (ed.phase !== 'edit') return;
   const pt = floorPointAt(e);
-  if (pt) commitMovePoint(pt);
+  if (!pt) return;
+  const a = ed.block.actions[ed.charId];
+  const m = a && a.move;
+  const wps = moveWaypoints(m);
+  if (wps.length < 2) return;
+  let best = -1, bd = PATH_GRAB_R;
+  wps.forEach((p, i) => {
+    const d = Math.hypot(p.x - pt.x, p.z - pt.z);
+    if (d < bd) { bd = d; best = i; }
+  });
+  if (best >= 0) {
+    e.stopPropagation();
+    ed.dragIdx = best;
+    if (controls) controls.enabled = false; // arrastrar no orbita
+    updateMoveMarkers();
+    return;
+  }
+  const hit = nearestOnCurve(m, pt);
+  if (hit && hit.dist <= PATH_INSERT_R) {
+    e.stopPropagation();
+    insertMoveWaypoint(ed, hit);
+  }
+});
+
+// Arrastre del punto agarrado: la curva sigue en vivo; la duración manda.
+window.addEventListener('pointermove', (e) => {
+  const ed = pathEdit;
+  if (!ed || ed.phase !== 'edit' || ed.dragIdx == null || ed.dragIdx < 0) return;
+  if (e.buttons !== undefined && e.buttons !== 1) return;
+  const pt = floorPointAt(e);
+  if (!pt) return;
+  const a = ed.block.actions[ed.charId];
+  const m = a && a.move;
+  const wps = moveWaypoints(m);
+  const p = wps[ed.dragIdx];
+  if (!p) return;
+  p.x = pt.x; p.z = pt.z;
+  touchMove(m);
+  syncMoveEndPose(ed.block, ed.charId);
+  adaptMoveSpeedToDuration(ed.block, ed.charId);
+  updateMoveMarkers();
+});
+
+// Al soltar el punto: se redibuja la lane, se guarda en historial.
+window.addEventListener('pointerup', () => {
+  const ed = pathEdit;
+  if (!ed || ed.dragIdx == null || ed.dragIdx < 0) return;
+  ed.dragIdx = -1;
+  if (controls) controls.enabled = true;
+  updateMoveMarkers();
+  renderCharBlocks();
+  pushHistory();
+  if (timelineBus.refreshDuration) timelineBus.refreshDuration();
+  setStatus('Camino deformado: la velocidad se adaptó al tiempo del bloque. 💾 guarda.');
 });
 
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && movePick) {
-    cancelMovePick();
+  if (e.key === 'Escape' && pathEdit) {
+    if (controls) controls.enabled = true;
+    exitPathEditMode();
     renderCharBlocks();
-    setStatus('Marcado cancelado (se conserva lo marcado hasta ahora).');
+    setStatus('Edición del camino terminada (se conserva lo marcado hasta ahora).');
   }
 });
 
@@ -1390,6 +1650,8 @@ window.addEventListener('char-block-selected', () => {
 export function setCharBlocks(blocks, full) {
   charBlocks.length = 0;
   (blocks || []).forEach((b, i) => {
+    // Migración de proyectos viejos: from/to → waypoints.
+    if (b.actions) Object.values(b.actions).forEach(a => { if (a && a.move) moveWaypoints(a.move); });
     charBlocks.push({
       id: b.id || ('cb' + (i + 1)),
       start: b.start || 0,

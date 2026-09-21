@@ -20,7 +20,7 @@ import {
   charBlockSelection, clearCharBlockSelection, resetCharBlock, deleteCharBlock,
   captureBlockPose, duplicateCharBlock, charBaseSelection, clearBaseSelection,
   resetCharBase, deleteCharBase, commitCharBase, caminoSelection, clearCaminoSelection,
-  renderCharBlocks
+  renderCharBlocks, togglePathEditMode
 } from './charTrack.js';
 import {
   quizSelection, clearQuizSelection, resetQuizBlock, duplicateQuizBlock, deleteQuizBlock,
@@ -94,9 +94,17 @@ function blockGo(sel) {
     setStatus('Toma: aguja al inicio y cámara del plano.');
   } else if (sel.kind === 'char') {
     const solo = Object.keys(sel.ref.actions || {})[0];
-    if (solo && interactiveRegistry.has(solo)) setActiveTarget(solo);
-    scrubTo(sel.ref.start);
-    setStatus('Cuadro: aguja al inicio.');
+    const a = solo && sel.ref.actions[solo];
+    if (solo && a && a.move) {
+      // Bloque de movimiento: 🎬 abre/muestra su camino (🎬 de nuevo sale).
+      if (interactiveRegistry.has(solo)) setActiveTarget(solo);
+      togglePathEditMode(sel.ref, solo);
+      scrubTo(sel.ref.start);
+    } else {
+      if (solo && interactiveRegistry.has(solo)) setActiveTarget(solo);
+      scrubTo(sel.ref.start);
+      setStatus('Cuadro: aguja al inicio.');
+    }
   } else if (sel.kind === 'charbase') {
     scrubTo(0);
     setStatus('Base: aguja al inicio de la escena.');

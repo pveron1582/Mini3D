@@ -1326,14 +1326,14 @@ export function evaluateAllPathsAt(t) {
   // bloque. Sin recorrido, el personaje aparece en su pose vigente (salto
   // entre cuadros incluido) y la conserva cuando la escena sigue sin bloques.
   const blockPoses = charPoseAt(t);
-  // Desplazamientos de bloque (verde→rojo): mandan sobre camino y pose
-  // durante su tramo (la pose de fin lo conserva después).
+  // Desplazamientos de bloque (curva del bloque de movimiento): mandan sobre
+  // camino y pose durante su tramo (la pose de fin lo conserva después).
   const blockMoves = charMoveAt(t);
   const applyCharMove = (entry, mv) => {
     entry.group.position.set(
-      mv.from.x + (mv.to.x - mv.from.x) * mv.k,
+      mv.x,
       applyFloorLaw(entry, 0),
-      mv.from.z + (mv.to.z - mv.from.z) * mv.k
+      mv.z
     );
     entry.group.rotation.y = mv.rotY;
     if (entry.rig && mv.action && entry.rig.currentAction !== mv.action) {

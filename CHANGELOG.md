@@ -2,6 +2,14 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Bloques de movimiento con camino editable (curva + puntos)
+
+- El bloque de desplazamiento ya no es una recta A→B: guarda `waypoints`
+  y dibuja una curva (verde inicio, rojo fin, amarillos intermedios).
+- 🎬 en un bloque con movimiento abre/muestra su camino (🎬 de nuevo sale):
+  clic sobre la línea inserta un punto sin deformar, arrastrarlo deforma,
+  clic afuera no hace nada. La duración manda: al deformar o estirar, la
+  velocidad se adapta sola. Proyectos viejos (from/to) migran al cargar.
 ## [2026-09-20] — Botones de bloque en grupo propio + 0s bajo el borde del panel
 
 - Los botones del bloque (🎬↻⧉🗑✕📌) ahora van en una cajita con borde,
