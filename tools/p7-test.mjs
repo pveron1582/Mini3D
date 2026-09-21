@@ -621,12 +621,12 @@ controls.target.copy(savedTgt);
 
 // --- escala única de la timeline: todas las pistas dibujan igual ---
 const { pxPerSec, LANE_LABEL_W } = await import(pathToFileURL('./js/cinema/tlScale.js'));
-assert(LANE_LABEL_W === 116, 'rótulo único de 116px en todas las pistas');
+assert(Number.isFinite(LANE_LABEL_W) && LANE_LABEL_W >= 200, 'rótulo único alineado al panel (>=200px)');
 const savedDuration = timeline.duration;
 timeline.duration = 9;
-assert(Math.abs(pxPerSec() - ((1280 - 116) / 20)) < 1e-9, 'escala única: tramos cortos usan 20s');
+assert(Math.abs(pxPerSec() - Math.max(1, (1280 - LANE_LABEL_W) / 20)) < 1e-9, 'escala única: tramos cortos usan 20s');
 timeline.duration = 40;
-assert(Math.abs(pxPerSec() - ((1280 - 116) / 40)) < 1e-9, 'escala única: cubre la duración real');
+assert(Math.abs(pxPerSec() - Math.max(1, (1280 - LANE_LABEL_W) / 40)) < 1e-9, 'escala única: cubre la duración real');
 timeline.duration = savedDuration;
 
 // --- paquetes de datos: la red es un grafo conexo (suben por las bajadas) ---

@@ -7,7 +7,7 @@ import { resetQuiz, quizTick } from '../media/quiz.js';
 import { quizPlayTick, renderQuizLane, clearQuizSelection, quizSelection } from './quizTrack.js';
 import { renderCharBlocks, charBlockSelection } from './charTrack.js';
 import { collectTimelineSnapTimes, snapTimeToRefs, TL_SNAP_PX } from './tlSnap.js';
-import { pxPerSec, LANE_LABEL_W } from './tlScale.js';
+import { pxPerSec, LANE_LABEL_W, syncLaneLabelWidth } from './tlScale.js';
 import { subtitleTrack, refreshSubtitles } from '../media/subtitles.js';
 import { audioPlay, audioStop } from '../media/audio.js';
 import { stopAllPlaybacks, cutCameraToShot, setCamView, cinemaStorePath, updateCameraViewVisibility, evaluateAllPathsAt, cinemaDeactivate, cinemaClearVisuals, cinemaClearAllVisuals, cinemaSetMode, refreshCharLanes, applyShotDolly } from './cinematics.js';
@@ -1430,6 +1430,30 @@ byId('btnAddSub')?.addEventListener('click', (e) => {
 
 // ---------- Init ----------
 updateTransportUI();
+
+// El 0s arranca donde termina el panel izquierdo (más lugar para los
+// nombres). Si el panel cambia de ancho, re-medimos y re-dibujamos las
+// pistas SIN tocar la selección (no es un refresh de proyecto).
+syncLaneLabelWidth();
+if (typeof ResizeObserver !== 'undefined') {
+  const lpPanel = byId('left-panel');
+  if (lpPanel) {
+    let lpPending = null;
+    new ResizeObserver(() => {
+      if (lpPending) return;
+      lpPending = requestAnimationFrame(() => {
+        lpPending = null;
+        syncLaneLabelWidth();
+        playheadDx = null;
+        renderShots();
+        renderRuler();
+        renderCharBlocks();
+        renderQuizLane();
+        renderSubtitles();
+      });
+    }).observe(lpPanel);
+  }
+}
 
 // Refresco completo (usado al abrir un proyecto guardado)
 export function refreshTimelineUI() {

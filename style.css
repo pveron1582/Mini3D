@@ -930,6 +930,7 @@ body, html {
 }
 
 #scene-timeline {
+  --lane-label-w: 290px; /* arranca el 0s: lo pisa syncLaneLabelWidth con el ancho real del panel */
   border-top: 1px solid var(--border-color);
   background: var(--bg-panel);
   padding: 6px 10px 8px;
@@ -955,6 +956,21 @@ body, html {
   margin-bottom: 6px;
 }
 
+/* Grupo de botones del BLOQUE (🎬↻⧉🗑✕📌): otro grupo para otra cosa —
+   cajita propia bien separada de los botones de reproducción. */
+.tl-toolbar .tb-sep {
+  margin: 0 8px 0 14px;
+}
+.tl-blockgroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
 .tl-clock {
   margin-left: auto;
   color: var(--text-muted);
@@ -969,7 +985,7 @@ body, html {
 .tl-body::after {
   content: '';
   position: absolute;
-  left: 116px;
+  left: var(--lane-label-w, 290px);
   top: 0;
   bottom: 0;
   width: 1px;
@@ -1000,7 +1016,7 @@ body, html {
   height: 44px;
   background:
     repeating-linear-gradient(90deg, transparent 0, transparent 39px, rgba(255,255,255,0.04) 39px, rgba(255,255,255,0.04) 40px);
-  background-position: 116px 0;
+  background-position: var(--lane-label-w, 290px) 0;
   overflow: hidden;
 }
 
@@ -1334,7 +1350,7 @@ body, html {
   border-radius: 4px;
   background:
     repeating-linear-gradient(90deg, rgba(255,207,92,0.03) 0, rgba(255,207,92,0.03) 39px, rgba(255,207,92,0.08) 39px, rgba(255,207,92,0.08) 40px);
-  background-position: 116px 0;
+  background-position: var(--lane-label-w, 290px) 0;
   overflow: hidden;
 }
 
@@ -1504,6 +1520,9 @@ body, html {
   padding: 2px 7px;
   pointer-events: none;
   white-space: nowrap;
+  max-width: calc(var(--lane-label-w, 290px) - 12px);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* El botón ＋ del rótulo SÍ recibe clicks (el resto del rótulo, no). */

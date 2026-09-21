@@ -2,6 +2,13 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Botones de bloque en grupo propio + 0s bajo el borde del panel
+
+- Los botones del bloque (🎬↻⧉🗑✕📌) ahora van en una cajita con borde,
+  separada de los botones de reproducción: se nota que son otro grupo.
+- El 0s arranca justo donde termina el panel izquierdo (antes a 116px
+  fijos): hay lugar para leer los nombres y si se cambia el ancho del
+  panel, las pistas se re-acomodan solas sin perder la selección.
 ## [2026-09-20] — El ＋ vuelve a ofrecer estático o movimiento
 
 - El panel se ocultaba antes de mostrar el chooser (el ＋ parecía no hacer
