@@ -2,6 +2,14 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Fix: cámara libre real + ojito del quiz inmediato
+
+- La cámara libre no cortaba porque el modo de la toma (seguir, 1ª
+  persona, etc.) la seguía moviendo por frame: al reproducir con el ojo
+  tachado se fuerza órbita desde el arranque (cortes y dolly pausados).
+- El quiz quedaba con estado viejo (en pausa no se apagaba de una y a
+  veces no volvía): el ojito ahora sincroniza de inmediato (apaga y
+  olvida; al abrir muestra el del tramo si lo hay).
 ## [2026-09-20] — Ojito por pista + cámara libre en reproducción
 
 - Cada lane (personaje, cámara, subtítulos, quiz) tiene su 👁: tachado no

@@ -535,6 +535,27 @@ resetLaneVis();
 assert(isCharLaneHidden('poseTestChar') === false && laneVis.camera === true, 'reset deja todo visible');
 setCharBlocks([], {});
 
+// --- ojito quiz: sync apaga/muestra de una (vale en pausa) ---
+const { quizTrack: quizLaneT } = await import(pathToFileURL('./js/state.js'));
+const { quizPlayTick, syncQuizVisibility } = await import(pathToFileURL('./js/cinema/quizTrack.js'));
+const { quizIsActive, resetQuiz } = await import(pathToFileURL('./js/media/quiz.js'));
+const { timeline: tlT } = await import(pathToFileURL('./js/state.js'));
+const savedT = tlT.time;
+tlT.time = 5;
+quizLaneT.push({ id: 'quizT1', question: 'Q?', options: ['A', 'B', 'C'], correct: 0, duration: 10, start: 0, end: 20 });
+quizPlayTick(0);
+assert(quizIsActive() === true, 'cartel en el tramo se muestra');
+laneVis.quiz = false;
+syncQuizVisibility();
+assert(quizIsActive() === false, 'sync apaga de una');
+laneVis.quiz = true;
+syncQuizVisibility();
+assert(quizIsActive() === true, 'sync reabre en el tramo');
+quizLaneT.length = 0;
+resetQuiz();
+resetLaneVis();
+tlT.time = savedT;
+
 // --- duplicar bloque: copia idéntica al final de la lane ---
 const { duplicateCharBlock } = await import(pathToFileURL('./js/cinema/charTrack.js'));
 const { charBlocks } = await import(pathToFileURL('./js/state.js'));

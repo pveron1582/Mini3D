@@ -4,7 +4,7 @@ import { camera, controls } from '../core.js';
 import { stepLadder, STEP_LADDER_ORIGIN, openAllRackDoors } from '../office/group.js';
 import { setAlarm } from '../office/alarm.js';
 import { resetQuiz, quizTick } from '../media/quiz.js';
-import { quizPlayTick, renderQuizLane, clearQuizSelection, quizSelection } from './quizTrack.js';
+import { quizPlayTick, renderQuizLane, clearQuizSelection, quizSelection, syncQuizVisibility } from './quizTrack.js';
 import { renderCharBlocks, charBlockSelection } from './charTrack.js';
 import { collectTimelineSnapTimes, snapTimeToRefs, TL_SNAP_PX } from './tlSnap.js';
 import { pxPerSec, LANE_LABEL_W, syncLaneLabelWidth } from './tlScale.js';
@@ -187,6 +187,12 @@ export function playScene() {
   audioPlay(0);   // música + efectos desde el inicio (también al exportar)
   const first = currentShot(0);
   const freeCam = laneVis.camera === false;
+  if (freeCam) {
+    // Cámara libre: órbita desde el arranque (si no, el modo de la toma
+    // anterior —seguir, 1ª persona, etc.— la seguiría moviendo por frame).
+    view.mode = 'orbit';
+    controls.enabled = true;
+  }
   if (first) {
     timeline.activeShotId = first.id;
     if (!freeCam) cutCameraToShot(first.camMode, first.subjectId, first);
@@ -1490,7 +1496,7 @@ export function refreshLaneEyes() {
   paintLaneEye('btnEyeQuiz', laneVis.quiz === false);
 }
 
-function wireLaneEye(id, get, set, onMsg, offMsg) {
+function wireLaneEye(id, get, set, onMsg, offMsg, after) {
   const b = byId(id);
   if (!b) return;
   b.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -1498,6 +1504,7 @@ function wireLaneEye(id, get, set, onMsg, offMsg) {
     e.stopPropagation();
     set(!get());
     paintLaneEye(id, !get());
+    if (after) after();
     pushHistory();
     setStatus(get() ? onMsg : offMsg);
   });
@@ -1517,5 +1524,6 @@ wireLaneEye('btnEyeQuiz',
   () => laneVis.quiz !== false,
   (v) => { laneVis.quiz = v; },
   'Carteles visibles en la cinemática.',
-  'Carteles ocultos en la cinemática (no se borran).');
+  'Carteles ocultos en la cinemática (no se borran).',
+  () => syncQuizVisibility());
 refreshLaneEyes();

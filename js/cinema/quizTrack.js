@@ -313,6 +313,15 @@ export function quizPlayTick(dt) {
 }
 let quizShown = null;
 
+// Sincroniza el cartel con el ojito YA (vale en pausa): al cerrar, apaga y
+// olvida el cartel vigente; al abrir, muestra el del tramo si lo hay (esto
+// también sana el estado si el reloj lo había apagado solo).
+export function syncQuizVisibility() {
+  quizShown = null;
+  resetQuiz();
+  if (laneVis.quiz !== false) quizPlayTick(0);
+}
+
 // Pausa de simulación: el reloj del cartel sigue con el de la escena (quiz.js).
 export { resetQuiz };
 
