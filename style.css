@@ -994,9 +994,16 @@ body, html {
   z-index: 4;
 }
 
+/* Regla de segundos: sticky dentro del cuerpo con scroll — aunque bajemos
+   por las pistas, los segundos quedan clavados arriba (y con ellos el
+   cabezal rojo, que se ancla a la regla). Fondo opaco: tapa lo que pasa
+   por debajo. */
 .tl-ruler {
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 5;
   height: 16px;
+  background: var(--bg-panel);
   border-bottom: 1px solid var(--border-color);
   overflow: hidden;
 }

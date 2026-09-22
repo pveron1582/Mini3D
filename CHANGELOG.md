@@ -2,6 +2,11 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Regla de segundos fija al hacer scroll
+
+- La regla (marcas de tiempo) queda pegada arriba del cuerpo de pistas
+  al hacer scroll vertical: los segundos siempre a la vista y con ellos
+  el cabezal rojo (se ancla a la regla), para trabajar sin volver arriba.
 ## [2026-09-20] — Fix: cámara libre real + ojito del quiz inmediato
 
 - La cámara libre no cortaba porque el modo de la toma (seguir, 1ª
