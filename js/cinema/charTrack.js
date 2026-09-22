@@ -14,7 +14,7 @@
 // quedó en cada cuadro, aunque sea de un salto.
 
 import * as THREE from 'three';
-import { charBlocks, timeline, interactiveRegistry, blockEdit, charLaneBus, charFullRange, store, timelineBus, blockPin, pinMatches, togglePinBlock, blockSelectionBlocked, blockBus } from '../state.js';
+import { charBlocks, timeline, interactiveRegistry, blockEdit, charLaneBus, charFullRange, store, timelineBus, blockPin, pinMatches, togglePinBlock, blockSelectionBlocked, blockBus, laneVis, isCharLaneHidden, toggleCharLaneHidden } from '../state.js';
 import { byId, showViewportHint } from '../dom.js';
 import { camera, canvas, controls, scene } from '../core.js';
 import { setActiveTarget } from '../ui/selection.js';
@@ -351,6 +351,15 @@ function charBlockLabel(b, charId) {
   return actionLabel(a ? a.action : 'idle');
 }
 
+// Aplica el ojito YA (sin esperar al próximo frame): oculta/muestra el
+// grupo en la escena y marca el flag que respeta evaluateAllPathsAt.
+export function applyCharLaneVisibility(charId, hidden) {
+  const entry = interactiveRegistry.get(charId);
+  if (!entry || !entry.group) return;
+  entry.group.visible = !hidden;
+  entry.group.userData.laneHidden = !!hidden;
+}
+
 export function renderCharBlocks() {
   const host = byId('charLanes');
   if (!host) return;
@@ -393,13 +402,33 @@ export function renderCharBlocks() {
     });
     label.appendChild(addBtn);
 
+    // Ojito 👁: tachado = el personaje NO sale en la cinemática (no se borra,
+    // solo no se ve, ni en vista ni al reproducir/exportar).
+    const eyeBtn = document.createElement('button');
+    const eyeHidden = isCharLaneHidden(entry.id);
+    eyeBtn.className = 'tl-lane-add tl-lane-eye' + (eyeHidden ? ' off' : '');
+    eyeBtn.textContent = '👁';
+    eyeBtn.title = eyeHidden
+      ? `${entry.name} oculto en la cinemática (clic para mostrarlo)`
+      : `${entry.name} visible en la cinemática (clic para ocultarlo, no se borra)`;
+    eyeBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
+    eyeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const hidden = toggleCharLaneHidden(entry.id);
+      applyCharLaneVisibility(entry.id, hidden);
+      renderCharBlocks();
+      pushHistory();
+      setStatus(hidden ? `${entry.name} oculto en la cinemática (no se borra).` : `${entry.name} visible en la cinemática.`);
+    });
+    label.appendChild(eyeBtn);
+
     label.title = collapsedLanes.has(entry.id)
       ? `Expandir la pista de ${entry.name}`
       : `Colapsar la pista de ${entry.name} (el contenido sigue funcionando igual)`;
     label.addEventListener('pointerdown', (e) => e.stopPropagation());
     label.addEventListener('click', (e) => {
-      // Click en el nombre/arrow colapsa/expande; el ＋ agrega bloque
-      if (e.target.closest('.tl-char-add')) return;
+      // Click en el nombre/arrow colapsa/expande; el ＋ agrega bloque, el 👁 oculta
+      if (e.target.closest('.tl-char-add') || e.target.closest('.tl-lane-eye')) return;
       e.stopPropagation();
       if (collapsedLanes.has(entry.id)) collapsedLanes.delete(entry.id);
       else collapsedLanes.add(entry.id);
@@ -1658,6 +1687,13 @@ export function setCharBlocks(blocks, full) {
       duration: Math.max(0.5, b.duration || 1),
       actions: b.actions || {}
     });
+  });
+  // Ojitos: sincroniza visibilidad en escena (vale abrir / deshacer / nuevo).
+  interactiveRegistry.forEach((entry, id) => {
+    if (!(entry.type === 'human' || entry.type === 'pet') || !entry.group) return;
+    const hidden = isCharLaneHidden(id);
+    entry.group.visible = !hidden;
+    entry.group.userData.laneHidden = !!hidden;
   });
   bumpCharBlockCounter(charBlocks.length);
   // charFullRange: acción de toda la escena por personaje

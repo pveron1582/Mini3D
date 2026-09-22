@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { renderer } from '../core.js';
+import { output } from '../core.js';
+import { laneVis } from '../state.js';
 import { subtitlesHiddenAt } from '../cinema/quizTrack.js';
 
 // ==========================================
@@ -115,6 +116,7 @@ export function renderSubtitleOverlay(time) {
   // cartel está en pantalla, los subtítulos de ese tramo NO se dibujan
   // (el cartel los tapa). Es uno u otro, nunca los dos a la vez.
   let cue = time >= 0 ? cueAt(time) : null;
+  if (laneVis.subs === false) cue = null; // ojito tachado: no salen
   if (cue && subtitlesHiddenAt(time)) cue = null;
   // La firma incluye el estilo: si cambia fuente/tamaño/color se redibuja
   const sig = cue ? [cue.start, cue.end, cue.text, cue.font, cue.size, cue.color].join('|') : null;
@@ -125,10 +127,10 @@ export function renderSubtitleOverlay(time) {
   }
   quad.visible = !!cue;
   if (!cue) return;
-  const prevAuto = renderer.autoClear;
-  renderer.autoClear = false;
-  renderer.render(orthoScene, orthoCam);
-  renderer.autoClear = prevAuto;
+  const prevAuto = output.renderer.autoClear;
+  output.renderer.autoClear = false;
+  output.renderer.render(orthoScene, orthoCam);
+  output.renderer.autoClear = prevAuto;
 }
 
 // Fuerza el redibujado del overlay al próximo frame (tras editar un cue)

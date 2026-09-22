@@ -150,6 +150,32 @@ export const charBlocks = [];
 // aplica de 0s hasta el fin — ej. empleados tecleando toda la cinemática.
 export const charFullRange = {};
 
+// Visibilidad por pista en la cinemática (ojito 👁 de cada lane): lo oculto
+// NO se borra, solo no sale (ni en vista ni en reproducción/exportación).
+// chars: { [charId]: false } = personaje oculto (ausente = visible).
+// camera: false = la reproducción NO mueve la cámara (mirás libre con
+//   órbita mientras todo se reproduce). subs/quiz: false = no se dibujan.
+export const laneVis = { chars: {}, camera: true, subs: true, quiz: true };
+
+export function isCharLaneHidden(id) {
+  return laneVis.chars[id] === false;
+}
+
+// Alterna el ojito del personaje: devuelve true si quedó OCULTO.
+export function toggleCharLaneHidden(id) {
+  const hidden = !isCharLaneHidden(id);
+  if (hidden) laneVis.chars[id] = false;
+  else delete laneVis.chars[id];
+  return hidden;
+}
+
+export function resetLaneVis() {
+  Object.keys(laneVis.chars).forEach(k => delete laneVis.chars[k]);
+  laneVis.camera = true;
+  laneVis.subs = true;
+  laneVis.quiz = true;
+}
+
 // Bus de audio para la grabadora: audio.js no puede ser importado por
 // recorder.js (ciclo), así que registra acá cómo pedirle sus tracks.
 export const audioBus = { getExportTracks: () => [] };

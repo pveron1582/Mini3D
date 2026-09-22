@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { byId, qs } from '../dom.js';
 import { scene, camera, canvas, controls } from '../core.js';
-import { cinema, cinemaPaths, playbackInstances, view, interactiveRegistry, timelineBus, charLaneBus, blockEdit } from '../state.js';
+import { cinema, cinemaPaths, playbackInstances, view, interactiveRegistry, timelineBus, charLaneBus, blockEdit, isCharLaneHidden } from '../state.js';
 import { getActiveObject, getActiveEntry, setActiveTarget } from '../ui/selection.js';
 import { raycaster, getPointerNDC, projectPointerToPlane } from '../ui/gizmo.js';
 import { setStatus } from '../media/recorder.js';
@@ -1342,6 +1342,16 @@ export function evaluateAllPathsAt(t) {
   };
   interactiveRegistry.forEach((entry, id) => {
     if (!(entry.type === 'human' || entry.type === 'pet')) return;
+    // Ojito tachado: el personaje no sale (no se borra, solo no se ve).
+    if (isCharLaneHidden(id)) {
+      entry.group.visible = false;
+      entry.group.userData.laneHidden = true;
+      return;
+    }
+    if (entry.group.userData.laneHidden) {
+      entry.group.visible = true;
+      entry.group.userData.laneHidden = false;
+    }
     const ba = blockActions.get(id);
     const pose = blockPoses.get(id);
     const mv = blockMoves.get(id);
@@ -1379,6 +1389,12 @@ export function evaluateAllPathsAt(t) {
   cinemaPaths.forEach((stored, id) => {
     const entry = interactiveRegistry.get(id);
     if (!entry || !stored.waypoints || stored.waypoints.length < 2) return;
+    // Ojito tachado: tampoco camina a la vista.
+    if (isCharLaneHidden(id)) {
+      entry.group.visible = false;
+      entry.group.userData.laneHidden = true;
+      return;
+    }
     // Bloque de desplazamiento vigente: manda sobre el camino en su tramo.
     const mv = blockMoves.get(id);
     if (mv) { applyCharMove(entry, mv); return; }

@@ -2,6 +2,13 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Ojito por pista + cámara libre en reproducción
+
+- Cada lane (personaje, cámara, subtítulos, quiz) tiene su 👁: tachado no
+  sale en la cinemática (no se borra, vale vista, reproducción y video).
+- Ojo de cámara tachado = cámara libre: al reproducir no hay cortes ni
+  dolly y se orbita mientras todo pasa (sirve para revisar la escena).
+- Persiste en el proyecto y en deshacer/rehacer.
 ## [2026-09-20] — Gizmo sin anillos + flechas dobles + 3 giros en el panel
 
 - Afuera los anillos de rotación del gizmo (doble clic en flecha): solo

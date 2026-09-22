@@ -1528,6 +1528,26 @@ body, html {
 /* El botón ＋ del rótulo SÍ recibe clicks (el resto del rótulo, no). */
 .tl-lane-name .tl-lane-add { pointer-events: auto; }
 
+/* Ojito 👁 del rótulo: tachado = no sale en la cinemática (no se borra). */
+.tl-lane-name .tl-lane-eye {
+  position: relative;
+  pointer-events: auto;
+}
+.tl-lane-eye.off { opacity: 0.55; }
+.tl-lane-eye.off::after {
+  content: '';
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: #ff5252;
+  border-radius: 1px;
+  transform: rotate(-45deg);
+  pointer-events: none;
+}
+
 .tl-shot-editor {
   display: flex;
   align-items: center;

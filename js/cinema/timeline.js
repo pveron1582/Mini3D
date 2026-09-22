@@ -1,4 +1,4 @@
-import { timeline, cinema, cinemaPaths, interactiveRegistry, recorderState, playback, view, store, blockEdit, charBlocks, charFullRange, quizTrack, blockPin, pinMatches, togglePinBlock, blockSelectionBlocked, blockBus } from '../state.js';
+import { timeline, cinema, cinemaPaths, interactiveRegistry, recorderState, playback, view, store, blockEdit, charBlocks, charFullRange, quizTrack, blockPin, pinMatches, togglePinBlock, blockSelectionBlocked, blockBus, laneVis } from '../state.js';
 import { byId, qs, qsa } from '../dom.js';
 import { camera, controls } from '../core.js';
 import { stepLadder, STEP_LADDER_ORIGIN, openAllRackDoors } from '../office/group.js';
@@ -111,16 +111,19 @@ export function updateTimeline(dt) {
 
   const shot = currentShot(timeline.time);
 
+  // Ojito de la pista 🎥 CÁMARA: tachado = cámara LIBRE (la reproducción no
+  // la mueve y se mira con órbita mientras todo se reproduce).
+  const freeCam = laneVis.camera === false;
   if (shot && shot.id !== timeline.activeShotId) {
     if (shot.openDoor) openAllRackDoors(true);
     // Alarma de emergencia: sigue el flag `alarm` de las tomas ya iniciadas
     setAlarm(computeAlarmAt(timeline.time));
     timeline.activeShotId = shot.id;
-    cutCameraToShot(shot.camMode, shot.subjectId, shot);
+    if (!freeCam) cutCameraToShot(shot.camMode, shot.subjectId, shot);
   }
   // Dolly dentro de la toma: la cámara viaja inicio→fin mientras dura el plano
   // (toma el control: el usuario no orbita durante ese tramo).
-  if (shot && applyShotDolly(shot, timeline.time)) controls.enabled = false;
+  if (!freeCam && shot && applyShotDolly(shot, timeline.time)) controls.enabled = false;
 
   updatePlayheadUI();
 
@@ -183,16 +186,17 @@ export function playScene() {
   playheadUsed = true;   // tocó Play: la aguja ya es parte de la escena
   audioPlay(0);   // música + efectos desde el inicio (también al exportar)
   const first = currentShot(0);
+  const freeCam = laneVis.camera === false;
   if (first) {
     timeline.activeShotId = first.id;
-    cutCameraToShot(first.camMode, first.subjectId, first);
+    if (!freeCam) cutCameraToShot(first.camMode, first.subjectId, first);
   }
   updatePlayheadUI();
   const parts = [];
   if (playable.length) parts.push(`${playable.length} recorridos`);
   if (timeline.shots.length) parts.push(`${timeline.shots.length} tomas`);
   if (charBlocks.length) parts.push(`${charBlocks.length} bloques`);
-  setStatus(`Reproduciendo escena (${timeline.duration.toFixed(1)}s${parts.length ? ', ' + parts.join(' + ') : ''})...`);
+  setStatus(`Reproduciendo escena (${timeline.duration.toFixed(1)}s${parts.length ? ', ' + parts.join(' + ') : ''})${freeCam ? ' — cámara libre: orbitá mientras se reproduce' : ''}...`);
   updateTransportUI();
   return true;
 }
@@ -1470,3 +1474,48 @@ export function refreshTimelineUI() {
 export function setShotCounter(n) {
   shotCounter = Math.max(shotCounter, n);
 }
+
+// ---------- Ojitos de las pistas fijas (cámara / subtítulos / quiz) ----------
+// Tachado = no sale en la cinemática (no se borra). El de cámara encima
+// libera la cámara en reproducción (mirás con órbita mientras todo pasa).
+function paintLaneEye(id, off) {
+  const b = byId(id);
+  if (b) b.classList.toggle('off', !!off);
+}
+
+// Sincroniza los 3 ojitos fijos con laneVis (abrir proyecto / deshacer).
+export function refreshLaneEyes() {
+  paintLaneEye('btnEyeCamera', laneVis.camera === false);
+  paintLaneEye('btnEyeSubs', laneVis.subs === false);
+  paintLaneEye('btnEyeQuiz', laneVis.quiz === false);
+}
+
+function wireLaneEye(id, get, set, onMsg, offMsg) {
+  const b = byId(id);
+  if (!b) return;
+  b.addEventListener('pointerdown', (e) => e.stopPropagation());
+  b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    set(!get());
+    paintLaneEye(id, !get());
+    pushHistory();
+    setStatus(get() ? onMsg : offMsg);
+  });
+}
+
+wireLaneEye('btnEyeCamera',
+  () => laneVis.camera !== false,
+  (v) => { laneVis.camera = v; },
+  'Cámara en la cinemática: las tomas la mueven al reproducir.',
+  'Cámara libre: al reproducir, la cámara NO se mueve (orbitá para revisar).');
+wireLaneEye('btnEyeSubs',
+  () => laneVis.subs !== false,
+  (v) => { laneVis.subs = v; },
+  'Subtítulos visibles en la cinemática.',
+  'Subtítulos ocultos en la cinemática (no se borran).');
+wireLaneEye('btnEyeQuiz',
+  () => laneVis.quiz !== false,
+  (v) => { laneVis.quiz = v; },
+  'Carteles visibles en la cinemática.',
+  'Carteles ocultos en la cinemática (no se borran).');
+refreshLaneEyes();

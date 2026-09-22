@@ -512,6 +512,29 @@ const serM = serializeProject().charBlocks.find(b => b.id === 'cbM1');
 assert(!!serM && serM.actions.poseTestChar.move.waypoints[1].x === 6, 'move persiste en el JSON');
 setCharBlocks([], {});
 
+// --- ojitos de pistas: ocultar no borra ---
+const { laneVis, isCharLaneHidden, toggleCharLaneHidden, resetLaneVis } = await import(pathToFileURL('./js/state.js'));
+assert(isCharLaneHidden('poseTestChar') === false, 'visible por defecto');
+setCharBlocks([
+  { id: 'cbH1', start: 2, duration: 4, actions: { poseTestChar: { action: 'walk', move: { waypoints: [{ x: 0, z: 0 }, { x: 6, z: 8 }], speed: 2.5 } } } }
+], {});
+assert(toggleCharLaneHidden('poseTestChar') === true && isCharLaneHidden('poseTestChar') === true, 'ojito oculta');
+evaluateAllPathsAt(4);
+assert(poseEntry.group.visible === false, 'oculto no se ve al reproducir');
+assert(toggleCharLaneHidden('poseTestChar') === false && isCharLaneHidden('poseTestChar') === false, 'ojito muestra');
+evaluateAllPathsAt(4);
+assert(poseEntry.group.visible === true && Math.abs(poseEntry.group.position.x - 3) < 1e-6, 'visible vuelve y se mueve');
+toggleCharLaneHidden('poseTestChar');
+const serV = serializeProject().laneVis;
+assert(!!serV && Array.isArray(serV.chars) && serV.chars.includes('poseTestChar'), 'ojito persiste en el JSON');
+toggleCharLaneHidden('poseTestChar');
+laneVis.camera = false; laneVis.subs = false; laneVis.quiz = false;
+const serV2 = serializeProject().laneVis;
+assert(serV2.camera === false && serV2.subs === false && serV2.quiz === false, 'ojitos cámara/subs/quiz persisten');
+resetLaneVis();
+assert(isCharLaneHidden('poseTestChar') === false && laneVis.camera === true, 'reset deja todo visible');
+setCharBlocks([], {});
+
 // --- duplicar bloque: copia idéntica al final de la lane ---
 const { duplicateCharBlock } = await import(pathToFileURL('./js/cinema/charTrack.js'));
 const { charBlocks } = await import(pathToFileURL('./js/state.js'));

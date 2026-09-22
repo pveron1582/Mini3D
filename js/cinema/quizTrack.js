@@ -7,7 +7,7 @@
 // Compatibilidad: los proyectos viejos traían shot.quiz anclado a una toma;
 // al abrirlos, projectFiles.js lo migra a esta pista.
 
-import { quizTrack, timeline, blockEdit, blockPin, pinMatches, togglePinBlock, blockSelectionBlocked, blockBus } from '../state.js';
+import { quizTrack, timeline, blockEdit, blockPin, pinMatches, togglePinBlock, blockSelectionBlocked, blockBus, laneVis } from '../state.js';
 import { byId } from '../dom.js';
 import { showQuiz, resetQuiz, quizIsActive } from '../media/quiz.js';
 import { pushHistory } from '../undo.js';
@@ -290,13 +290,14 @@ export function quizAt(t) {
 // Si el reloj del cartel ya terminó (cartel oculto dentro del mismo tramo),
 // los subtítulos vuelven: es "uno u otro en pantalla", no por tramo completo.
 export function subtitlesHiddenAt(t) {
+  if (laneVis.quiz === false) return false; // ojito tachado: no tapa nada
   return quizAt(t) ? quizIsActive() : false;
 }
 
 // Arranca/reinicia el cartel según el tiempo de la escena (lo llama la
 // timeline cada frame). Devuelve true si hay cartel activo.
 export function quizPlayTick(dt) {
-  const q = quizAt(timeline.time);
+  const q = laneVis.quiz === false ? null : quizAt(timeline.time);
   if (q) {
     if (!quizShown || quizShown !== q) {
       quizShown = q;

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { byId, qs, qsa } from './dom.js';
-import { store, cinema, cinemaPaths, interactiveRegistry, timeline, recorderState, sessionDirty, view, timelineBus, charBlocks, charFullRange } from './state.js';
+import { store, cinema, cinemaPaths, interactiveRegistry, timeline, recorderState, sessionDirty, view, timelineBus, charBlocks, charFullRange, laneVis, resetLaneVis } from './state.js';
 import { controls } from './core.js';
 import { getMinGroundY } from './collision.js';
 import { setEnvironment } from './environment.js';
@@ -10,7 +10,7 @@ import { windowGroups, syncWindows } from './office/walls.js';
 import { getFloorTextureName, applyFloorTexture } from './office/floor.js';
 import { serializeConstruction, syncConstruction, clearConstruction } from './construction.js';
 import { setAlarm } from './office/alarm.js';
-import { refreshTimelineUI, setShotCounter } from './cinema/timeline.js';
+import { refreshTimelineUI, setShotCounter, refreshLaneEyes } from './cinema/timeline.js';
 import { setStatus, mediaRecorder } from './media/recorder.js';
 import { subtitleTrack, setSubtitles } from './media/subtitles.js';
 import { quizTrack as quizLaneData } from './state.js';
@@ -145,6 +145,8 @@ export function newProject(name) {
   timeline.paused = false;
   timeline.activeShotId = null;
   setSubtitles([]);
+  resetLaneVis();
+  refreshLaneEyes();
   setCharBlocks([], {});
   clearCharBlockSelection();
   clearAudio();
@@ -297,8 +299,7 @@ export function serializeProject(opts = {}) {
     subtitles: subtitleTrack.map(c => ({ start: round2(c.start), end: round2(c.end), text: c.text })),
     // Carteles de pregunta (pista 📋 QUIZ): varios, intercalados con los
     // subtítulos. Cada uno guarda su tramo [start, end] y la configuración.
-    quizzes: quizLaneData.length ? quizLaneData.map(q => ({
-      id: q.id,
+    quizzes: quizLaneData.length ? quizLaneData.map(q => ({      id: q.id,
       question: q.question,
       options: [...q.options],
       correct: q.correct ?? 0,
@@ -306,6 +307,17 @@ export function serializeProject(opts = {}) {
       start: round2(q.start),
       end: round2(q.end)
     })) : undefined,
+    // Ojitos de las pistas (qué sale en la cinemática): solo lo no
+    // predeterminado (ocultos + cámara/subs/quiz apagados).
+    laneVis: (() => {
+      const lv = {};
+      const hiddenChars = Object.keys(laneVis.chars);
+      if (hiddenChars.length) lv.chars = hiddenChars;
+      if (laneVis.camera === false) lv.camera = false;
+      if (laneVis.subs === false) lv.subs = false;
+      if (laneVis.quiz === false) lv.quiz = false;
+      return Object.keys(lv).length ? lv : undefined;
+    })(),
     timeline: {
       time: round2(timeline.time),
       shots: timeline.shots.map(s => ({
@@ -667,7 +679,17 @@ export function applyProject(data) {
           });
         }
       });
-      bumpQuizCounter(quizLaneData.length);
+  bumpQuizCounter(quizLaneData.length);
+
+  // Ojitos de las pistas (qué sale en la cinemática): vale abrir, deshacer
+  // y proyecto nuevo — se sincronizan botones y visibilidad en escena.
+  resetLaneVis();
+  const lv = data.laneVis || {};
+  (Array.isArray(lv.chars) ? lv.chars : []).forEach(id => { laneVis.chars[id] = false; });
+  if (lv.camera === false) laneVis.camera = false;
+  if (lv.subs === false) laneVis.subs = false;
+  if (lv.quiz === false) laneVis.quiz = false;
+  refreshLaneEyes();
     }
   }
   setShotCounter(timeline.shots.length);
