@@ -556,6 +556,25 @@ resetQuiz();
 resetLaneVis();
 tlT.time = savedT;
 
+// --- ojito cámara: el scrub NO mueve la cámara con el ojo tachado ---
+const { scrubTo } = await import(pathToFileURL('./js/cinema/timeline.js'));
+const { camera: camT, controls: ctrlT } = await import(pathToFileURL('./js/core.js'));
+const { timeline: tlC } = await import(pathToFileURL('./js/state.js'));
+tlC.shots.length = 0;
+tlC.shots.push({ id: 'shotEye1', start: 0, duration: 10, camMode: 'fixed', subjectId: null,
+  camPos: [40, 30, 40], target: [0, 1, 0] });
+camT.position.set(7, 1.8, 9);
+ctrlT.target.set(1, 1, 2);
+laneVis.camera = false;
+scrubTo(3);
+assert(Math.abs(camT.position.x - 7) < 1e-6 && Math.abs(camT.position.z - 9) < 1e-6,
+  'ojito tachado: scrub deja la cámara donde estaba');
+laneVis.camera = true;
+scrubTo(3);
+assert(Math.abs(camT.position.x - 40) < 1e-6, 'ojito activo: scrub encuadra la toma');
+tlC.shots.length = 0;
+resetLaneVis();
+
 // --- duplicar bloque: copia idéntica al final de la lane ---
 const { duplicateCharBlock } = await import(pathToFileURL('./js/cinema/charTrack.js'));
 const { charBlocks } = await import(pathToFileURL('./js/state.js'));

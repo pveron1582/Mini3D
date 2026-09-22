@@ -612,11 +612,16 @@ export function scrubTo(t) {
   // La aguja es la fuente de verdad: los personajes quedan EXACTAMENTE donde
   // ella marca (bloques de personajes + recorridos), sin restaurar nada.
   evaluateAllPathsAt(timeline.time);
+  // Ojito tachado: la aguja NO mueve la cámara — queda donde el usuario la
+  // dejó (órbita libre); al reactivar el ojo, el scrub vuelve a encuadrar.
+  const freeCam = laneVis.camera === false;
   const shot = currentShot(timeline.time);
-  if (shot) cutCameraToShot(shot.camMode, shot.subjectId, shot);
-  else setCamView('orbit');
-  // Previsualizar el dolly en la aguja (encuadre del instante, sin tomar control)
-  if (shot) applyShotDolly(shot, timeline.time);
+  if (!freeCam) {
+    if (shot) cutCameraToShot(shot.camMode, shot.subjectId, shot);
+    else setCamView('orbit');
+    // Previsualizar el dolly en la aguja (encuadre del instante, sin tomar control)
+    if (shot) applyShotDolly(shot, timeline.time);
+  }
   // Al previsualizar con la cabeza (sin reproducir), la cámara queda en el
   // encuadre de la toma pero en Vista Libre para poder orbitar desde ahí.
   view.mode = 'orbit';
@@ -922,7 +927,9 @@ export function selectShot(id) {
   // Funciona también durante la reproducción: es un corte de cámara manual
   // que NO interrumpe lo que los personajes están haciendo.
   syncCameraControlsVisibility(shot);
-  if (shot) {
+  // Ojito tachado: ni el clic en la toma ni su vista previa mueven la
+  // cámara — queda donde el usuario la dejó.
+  if (shot && laneVis.camera !== false) {
     if (shot.camMode === 'free' || shot.camMode === 'orbit') {
       cutCameraToShot('free', shot.subjectId, shot);
     } else {

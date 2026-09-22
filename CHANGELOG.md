@@ -2,6 +2,11 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Ojito de cámara: el scrub y 🎬 tampoco mueven la cámara
+
+- Con el ojo tachado, mover la barra roja (scrub), hacer clic en una toma
+  o ir con 🎬 ya no encuadra la toma programada: la cámara queda donde se
+  la dejó (órbita libre). Al reactivar el ojo, el scrub vuelve a encuadrar.
 ## [2026-09-20] — Regla de segundos fija al hacer scroll
 
 - La regla (marcas de tiempo) queda pegada arriba del cuerpo de pistas

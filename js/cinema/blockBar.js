@@ -6,7 +6,7 @@
 // los botones se ven semioscuros (deshabilitados) y no hacen nada.
 // Cada pista conserva su lógica; acá solo se orquesta sobre el bloque vigente.
 
-import { timeline, interactiveRegistry, blockPin, pinMatches, togglePinBlock, blockBus, charLaneBus, timelineBus } from '../state.js';
+import { timeline, interactiveRegistry, blockPin, pinMatches, togglePinBlock, blockBus, charLaneBus, timelineBus, laneVis } from '../state.js';
 import { byId } from '../dom.js';
 import { setStatus } from '../media/recorder.js';
 import { pushHistory } from '../undo.js';
@@ -90,8 +90,8 @@ function renderAllLanes() {
 function blockGo(sel) {
   if (sel.kind === 'shot') {
     scrubTo(sel.ref.start);
-    cutCameraToShot(sel.ref.camMode, sel.ref.subjectId, sel.ref);
-    setStatus('Toma: aguja al inicio y cámara del plano.');
+    if (laneVis.camera !== false) cutCameraToShot(sel.ref.camMode, sel.ref.subjectId, sel.ref);
+    setStatus('Toma: aguja al inicio' + (laneVis.camera !== false ? ' y cámara del plano.' : ' (cámara libre: no se mueve).'));
   } else if (sel.kind === 'char') {
     const solo = Object.keys(sel.ref.actions || {})[0];
     const a = solo && sel.ref.actions[solo];
