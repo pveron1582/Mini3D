@@ -540,31 +540,25 @@ function createHumanoidModel(id, name, posX, posZ, colors, opts = {}) {
   heldObject.visible = false;
   g.add(heldObject);
 
-  // Escalera TAMAÑO REAL que el personaje carga al hombro: misma geometría
-  // que la escalera del piso (`stepLadder`, 1.83 m, patas en "A" y 4 peldaños)
-  // para que se vea creíble al llevarla. Oculta salvo en las acciones de
-  // escalera; la real (stepLadder) se oculta mientras la lleva y vuelve al
-  // piso al "soltarla".
+  // Escalera RECTA (~1.7 m, la altura de Alex) para llevar al hombro en
+  // HORIZONTAL: dos largueros + 5 peldaños con huecos entre ellos. Se lleva
+  // colgada del hombro pasando por uno de los huecos (como una escalera
+  // larga de verdad); la mano la sujeta por el larguero. Oculta salvo en
+  // las acciones de escalera; la real (stepLadder) se oculta mientras la
+  // lleva y vuelve al piso al "soltarla".
   const heldLadder = new THREE.Group();
   const hlMat = new THREE.MeshStandardMaterial({ color: 0xb8bfc9, roughness: 0.35, metalness: 0.7 });
   const hlTreadMat = new THREE.MeshStandardMaterial({ color: 0x8d95a0, roughness: 0.5, metalness: 0.6 });
-  const LL = 1.83, leanA = 0.16;
+  const HL = 1.7;
   [1, -1].forEach(sx => {
-    [[leanA, 0.01], [-leanA, -0.01]].forEach(([a, zo]) => {
-      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.05, LL, 0.06), hlMat);
-      rail.position.set(sx * 0.21, 1.79 - (LL / 2) * Math.cos(a), zo - (LL / 2) * Math.sin(a));
-      rail.rotation.x = a;
-      rail.castShadow = true;
-      heldLadder.add(rail);
-    });
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.05, HL, 0.06), hlMat);
+    rail.position.set(sx * 0.20, 0, 0);
+    rail.castShadow = true;
+    heldLadder.add(rail);
   });
-  const hlCap = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.06, 0.24), hlMat);
-  hlCap.position.set(0, 1.81, 0);
-  hlCap.castShadow = true;
-  heldLadder.add(hlCap);
-  [0.35, 0.7, 1.05, 1.38].forEach(sy => {
-    const st = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.03, 0.09), hlTreadMat);
-    st.position.set(0, sy, 0.01 + 0.163 * (1.79 - sy));
+  [-0.6, -0.3, 0, 0.3, 0.6].forEach(sy => {
+    const st = new THREE.Mesh(new THREE.BoxGeometry(0.40, 0.035, 0.07), hlTreadMat);
+    st.position.set(0, sy, 0);
     st.castShadow = true;
     heldLadder.add(st);
   });
@@ -682,6 +676,49 @@ function createHumanoidModel(id, name, posX, posZ, colors, opts = {}) {
     if (rig.currentAction !== rig._prevAction) {
       onLadderActionChange();
       rig._prevAction = rig.currentAction;
+    }
+
+    // Postura de llevar la escalera colgada del hombro derecho EN HORIZONTAL
+    // (como una escalera larga de verdad): el hombro pasa por un hueco entre
+    // peldaños y la mano derecha sujeta el larguero. Vale para agarrarla
+    // (phase null: piernas en estocada leve de esfuerzo) y para caminar con
+    // ella (phase = fase de zancada: mismo torso y brazos, piernas caminando).
+    function poseShoulderCarry(phase) {
+      // Escalera horizontal sobre el hombro derecho, largo a lo largo del
+      // cuerpo (punta adelante): el hombro queda en un hueco entre peldaños.
+      parts.h_ladder.position.set(0.32, 1.40, 0.10);
+      parts.h_ladder.rotation.set(1.5, 0.06, 0.04);
+
+      // Leve inclinación hacia la carga + agachada mínima por el peso
+      parts.h_torso.rotation.x = 0.08;
+      parts.h_torso.rotation.z = -0.05;
+      parts.h_torso.rotation.y = 0;
+      parts.h_head.position.y = 1.74;
+      parts.h_head.rotation.set(-0.06, 0, 0);
+
+      // Mano derecha arriba sujetando el larguero junto al hombro
+      parts.h_armR.position.set(0.40, 1.42, 0.05);
+      parts.h_armR.rotation.set(-0.35, 0, 0.5);
+      parts.h_elbowR.rotation.x = -1.15;
+      // Brazo izquierdo suelto, apenas abierto para equilibrar
+      parts.h_armL.position.set(-0.40, 1.38, 0.02);
+      parts.h_armL.rotation.set(-0.15, 0, -0.25);
+      parts.h_elbowL.rotation.x = -0.35;
+
+      if (phase === null || phase === undefined) {
+        // Agarrando: estocada leve (una pierna adelante flexionada)
+        parts.h_torso.position.y = 1.04;
+        parts.h_legL.rotation.x = 0.25;  parts.h_kneeL.rotation.x = -0.35;
+        parts.h_legR.rotation.x = -0.15; parts.h_kneeR.rotation.x = -0.1;
+      } else {
+        // Caminando: ciclo de piernas del walk + rebote y balanceo suaves
+        parts.h_torso.position.y = 1.08 + Math.abs(Math.sin(phase)) * 0.03;
+        parts.h_legL.rotation.x = Math.sin(phase) * 0.45;
+        parts.h_kneeL.rotation.x = Math.max(0, -Math.sin(phase) * 0.6);
+        parts.h_legR.rotation.x = Math.sin(phase + Math.PI) * 0.45;
+        parts.h_kneeR.rotation.x = Math.max(0, -Math.sin(phase + Math.PI) * 0.6);
+        parts.h_armL.rotation.x += Math.sin(phase + Math.PI) * 0.06;
+      }
     }
 
     if (rig.currentAction === 'idle') {
@@ -874,52 +911,15 @@ function createHumanoidModel(id, name, posX, posZ, colors, opts = {}) {
       parts.h_elbowR.rotation.x = -0.9;
       parts.h_torso.rotation.x = 0.02;
     } else if (rig.currentAction === 'grab_ladder' || rig.currentAction === 'shoulder_lift') {
-      // Agarrar la escalera y CARGARLA AL HOMBRO: el arco superior se apoya en
-      // el hombro derecho y el cuerpo se inclina al levantarla. Un brazo la
-      // sujeta por el arco y el otro la equilibra. (`grab_ladder` queda como
-      // alias de `shoulder_lift`.)
-      parts.h_torso.rotation.x = 0.28;
-      parts.h_torso.position.y = 0.98;
-      parts.h_head.position.y = 1.62;
-      parts.h_head.rotation.x = 0.2;
-
-      parts.h_legL.position.set(-0.16, 0.56, 0);
-      parts.h_legL.rotation.x = 0.5;  parts.h_kneeL.rotation.x = -0.9;
-      parts.h_legR.position.set(0.16, 0.62, 0);
-      parts.h_legR.rotation.x = 0.4;  parts.h_kneeR.rotation.x = -0.7;
-
-      // Brazo derecho levanta la escalera por el arco superior
-      parts.h_armR.position.set(0.28, 1.42, 0.05);
-      parts.h_armR.rotation.set(-2.25, 0, -0.2); parts.h_elbowR.rotation.x = -0.45;
-      // Brazo izquierdo equilibra la parte baja
-      parts.h_armL.position.set(-0.32, 1.12, 0.1);
-      parts.h_armL.rotation.set(-1.1, 0, 0.35); parts.h_elbowL.rotation.x = -0.55;
-
-      // Escalera tamaño real apoyada sobre el hombro: el arco (tope superior)
-      // queda a la altura del hombro (~1.35 m) y la base cuelga cerca del piso
-      parts.h_ladder.position.set(0.32, -0.42, 0.08);
-      parts.h_ladder.rotation.set(-0.1, 0.1, 0.18);
+      // AGARRAR la escalera y subirla al hombro: MISMA postura que caminando
+      // con ella (la escalera en horizontal sobre el hombro derecho), pero con
+      // las piernas en una estocada leve de esfuerzo en vez del ciclo de pasos.
+      // (`grab_ladder` queda como alias de `shoulder_lift`.)
+      poseShoulderCarry(null);
     } else if (rig.currentAction === 'carry_ladder' || rig.currentAction === 'shoulder_carry') {
-      // CAMINAR llevando la escalera al hombro: misma postura de carga, con
-      // el ciclo de piernas del caminar (la zancada sigue la cadencia).
-      const phase = t * Math.PI * 2 * 1.5 * rig.cadence;
-      parts.h_legL.rotation.x = Math.sin(phase) * 0.45;
-      parts.h_kneeL.rotation.x = Math.max(0, -Math.sin(phase) * 0.6);
-      parts.h_legR.rotation.x = Math.sin(phase + Math.PI) * 0.45;
-      parts.h_kneeR.rotation.x = Math.max(0, -Math.sin(phase + Math.PI) * 0.6);
-
-      parts.h_torso.rotation.x = 0.1;
-      parts.h_torso.position.y = 1.1 + Math.abs(Math.sin(phase)) * 0.03;
-
-      // Brazo derecho lo sostiene por el arco, arriba del hombro
-      parts.h_armR.rotation.set(-2.4, 0, -0.15); parts.h_elbowR.rotation.x = -0.4;
-      // Brazo izquierdo equilibra la parte baja
-      parts.h_armL.rotation.set(-1.15, 0, 0.3); parts.h_elbowL.rotation.x = -0.6;
-
-      // Escalera tamaño real descansando en el hombro derecho (base al piso)
-      parts.h_ladder.position.set(0.34, -0.40, 0.02);
-      parts.h_ladder.rotation.set(-0.08, 0.12, 0.2);
-      parts.h_head.rotation.x = -0.05;
+      // CAMINAR llevando la escalera al hombro en horizontal: misma postura de
+      // carga, con el ciclo de piernas del caminar (la zancada sigue la cadencia).
+      poseShoulderCarry(t * Math.PI * 2 * 1.5 * rig.cadence);
     } else if (rig.currentAction === 'drop_ladder' || rig.currentAction === 'shoulder_drop') {
       // BAJAR la escalera del hombro y DEJARLA en el piso (la real aparece
       // frente a Alex vía onLadderActionChange; la mini desaparece).

@@ -1453,6 +1453,16 @@ export function evaluateAllPathsAt(t) {
       stepLadder.visible = true;
     }
   });
+  // Escalera del piso: si Alex la lleva al hombro en ESTE instante, se fuerza
+  // oculta acá (con la acción ya resuelta del frame). Sin esto, el reseteo de
+  // arriba la revivía en la sala en cada pasada mientras la animación de
+  // carga la ocultaba solo en el cambio de acción: quedaba siempre visible.
+  // Al soltarla, el drop de arriba la vuelve a mostrar en su sitio.
+  const alexEntry = interactiveRegistry.get('human1');
+  const alexAction = alexEntry && alexEntry.rig ? alexEntry.rig.currentAction : null;
+  if (stepLadder && ['grab_ladder', 'carry_ladder', 'shoulder_lift', 'shoulder_carry'].includes(alexAction)) {
+    stepLadder.visible = false;
+  }
 }
 
 export {

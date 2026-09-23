@@ -1057,11 +1057,21 @@ assert(Math.abs(laneEnd('cat') - 45.8) < 0.05, 'gato llega hasta el final');
   }
 });
 evaluateAllPathsAt(25);
-assert(interactiveRegistry.get('human1').rig.currentAction === 'walk', 'Alex caminando a los 25s (no desliza)');
+assert(interactiveRegistry.get('human1').rig.currentAction === 'shoulder_carry', 'Alex vuelve con la escalera al hombro a los 25s (camina, no desliza)');
+const { stepLadder } = await import(pathToFileURL('./js/office/group.js'));
+assert(stepLadder.visible === false, 'escalera del piso oculta mientras Alex la lleva');
+// Sin deslizamiento en idle al llegar: a los 29.4s sigue cargando y avanzando
+const alexPos = () => interactiveRegistry.get('human1').group.position;
+evaluateAllPathsAt(29.3);
+const x293 = alexPos().x;
+evaluateAllPathsAt(29.4);
+assert(interactiveRegistry.get('human1').rig.currentAction === 'shoulder_carry', 'a los 29.4s aún carga (el bloque llega al fin del camino)');
+assert(Math.abs(alexPos().x - x293) > 0.05, 'a los 29.4s sigue avanzando con pose de carga');
 evaluateAllPathsAt(40);
 assert(interactiveRegistry.get('human2').rig.currentAction === 'idle', 'Carlos parado a los 40s');
 assert(interactiveRegistry.get('human3').rig.currentAction === 'idle', 'Elena parada a los 40s');
 assert(interactiveRegistry.get('cat').rig.currentAction === 'lay', 'gato quieto a los 40s');
+assert(stepLadder.visible === true && stepLadder.position.x > 13, 'escalera soltada junto a la heladera a los 40s');
 console.log('✓ alarma: líneas completas y quietas hasta el fin del clip');
 
 // --- anillo de selección: sigue al objetivo tras cualquier movimiento ---

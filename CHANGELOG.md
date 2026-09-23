@@ -2,6 +2,24 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Escalera al hombro en horizontal + fixes del viaje de Alex (alarma)
+
+- La escalera que lleva Alex ahora es recta (~1.7 m, su altura, no
+  alargada) y va en HORIZONTAL sobre el hombro derecho, pasando por un
+  hueco entre peldaños con la mano sujetando el larguero — igual al
+  agarrarla (`shoulder_lift`) que al caminar con ella (`shoulder_carry`,
+  misma postura + ciclo de piernas).
+- La escalera del piso desaparecía... al revés: `evaluateAllPathsAt` la
+  revivía en la sala en cada pasada y solo se ocultaba en el frame del
+  cambio de acción, así que nunca desaparecía al agarrarla. Ahora, si
+  Alex la lleva en este instante, se fuerza oculta (al soltarla, el drop
+  la deja en su sitio).
+- Alex ya no desliza en `idle` al llegar a la heladera: el bloque de la
+  vuelta era `walk` hasta 29.2 pero el camino sigue hasta 29.57. Ahora
+  es `shoulder_carry` hasta el fin del camino (22.32→29.57) y el `idle`
+  arranca ahí.
+- Tests P7: carry a los 25s y 29.4s, escalera oculta en viaje y soltada
+  junto a la heladera a los 40s.
 ## [2026-09-20] — Alarma: pistas de Carlos, perro y gato continuas (sin huecos)
 
 - `scenes/alarma_en_la_red.json`: las líneas de Carlos (human2), perro y
