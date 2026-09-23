@@ -2,6 +2,23 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+
+## [2026-09-23] — Fix: personaje deslizándose "parado" durante la reproducción
+
+- Bug: en reproducción (no al pausar/mover la aguja) Alex se desplazaba con
+  pose quieta en los tramos donde el bloque de 🧍 PERSONAJES ya expiró pero
+  el camino sigue en movimiento (en alarma: la corrida 15.3–20.8 hacia la
+  escalera). Causa: `evaluateAllPathsAt` aplicaba la acción del bloque
+  (`idle` expirado) en el loop de bloques Y la del camino (`run`) en el de
+  caminos en el MISMO frame; dos `setAction()` distintos por cuadro
+  reiniciaban el blend de pose cada frame, que nunca terminaba → pose
+  congelada mientras la posición avanzaba. Medido: 222 reinicios de blend en
+  esa ventana; con el fix, 0 (solo los 4 cambios de acción reales).
+- Fix: el loop de bloques ya no llama `setAction` cuando el personaje tiene
+  recorrido o desplazamiento de bloque — la resuelve el sistema que corresponde
+  (caminos con su lógica de bloque expirado, o `applyCharMove`), quedando un
+  único `setAction` por frame. Fallback: si el mv no trae acción, manda la
+  del bloque.
 ## [2026-09-20] — Alarma: la ida por la escalera se ve en 3ra persona
 
 - El plano de 16.5–19.6 era 1ra persona sobre Alex: en FPV no se ven las

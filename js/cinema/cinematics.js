@@ -1359,7 +1359,15 @@ export function evaluateAllPathsAt(t) {
     // no se toca, queda donde está en el editor — como siempre.
     if (!ba && !pose && !mv) return;
     if (ba) {
-      if (entry.rig && entry.rig.currentAction !== ba.action) {
+      const pStored = cinemaPaths.get(id);
+      const hasPath = !!(pStored && pStored.waypoints && pStored.waypoints.length >= 2);
+      // La acción de bloque solo se aplica en este loop si NADIE más la va a
+      // pisar en el mismo frame: con recorrido la decide el loop de caminos
+      // (que mira si el bloque ya expiró) y con mv la decide applyCharMove.
+      // Si dos setAction() con valores distintos corrieran por frame, el
+      // blend de pose se reiniciaría cada cuadro y quedaría congelado: el
+      // personaje se desplaza "parado" (bug de la corrida hacia la escalera).
+      if (!hasPath && !mv && entry.rig && entry.rig.currentAction !== ba.action) {
         entry.rig.setAction(ba.action);
       }
       if (entry.rig && ba.mood && entry.rig.setMood) {
@@ -1373,7 +1381,15 @@ export function evaluateAllPathsAt(t) {
     // primero (está en camino dentro de su tramo).
     const stored = cinemaPaths.get(id);
     if (!stored || !stored.waypoints || stored.waypoints.length < 2) {
-      if (mv) { applyCharMove(entry, mv); return; }
+      if (mv) {
+        // Sin acción propia el mv, manda la del bloque (applyCharMove solo
+        // setAction si mv.action existe; acá no hay otro loop que lo haga).
+        if (ba && !mv.action && entry.rig && entry.rig.currentAction !== ba.action) {
+          entry.rig.setAction(ba.action);
+        }
+        applyCharMove(entry, mv);
+        return;
+      }
       if (pose && pose.pos) {
         entry.group.position.set(pose.pos[0], applyFloorLaw(entry, pose.pos[1]), pose.pos[2]);
         if (pose.rotY !== undefined) entry.group.rotation.y = pose.rotY;
@@ -1397,7 +1413,17 @@ export function evaluateAllPathsAt(t) {
     }
     // Bloque de desplazamiento vigente: manda sobre el camino en su tramo.
     const mv = blockMoves.get(id);
-    if (mv) { applyCharMove(entry, mv); return; }
+    if (mv) {
+      // Sin acción propia el mv, manda la del bloque (el loop de bloques ya
+      // no setAction cuando hay recorrido: acá queda el único setAction del
+      // frame — dos con valores distintos congelarían la pose en el blend).
+      const baMv = blockActions.get(id);
+      if (baMv && !mv.action && entry.rig && entry.rig.currentAction !== baMv.action) {
+        entry.rig.setAction(baMv.action);
+      }
+      applyCharMove(entry, mv);
+      return;
+    }
     const pv = getPreviewPath(stored);
     const s = samplePreviewPath(pv, t, entry);
     if (!pv) {
