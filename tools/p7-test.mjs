@@ -1058,6 +1058,9 @@ assert(Math.abs(laneEnd('cat') - 45.8) < 0.05, 'gato llega hasta el final');
 });
 evaluateAllPathsAt(25);
 assert(interactiveRegistry.get('human1').rig.currentAction === 'shoulder_carry', 'Alex vuelve con la escalera al hombro a los 25s (camina, no desliza)');
+// La ida a buscar la escalera se ve en 3ra persona (en 1ra no se ven las piernas)
+const shot165 = timeline.shots.find(s => Math.abs(s.start - 16.5) < 1e-6);
+assert(!!shot165 && shot165.camMode === 'third' && shot165.subjectId === 'human1', 'ida por la escalera en 3ra persona (se lo ve correr)');
 const { stepLadder } = await import(pathToFileURL('./js/office/group.js'));
 assert(stepLadder.visible === false, 'escalera del piso oculta mientras Alex la lleva');
 // Sin deslizamiento en idle al llegar: a los 29.4s sigue cargando y avanzando

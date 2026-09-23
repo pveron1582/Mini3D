@@ -2,6 +2,13 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Alarma: la ida por la escalera se ve en 3ra persona
+
+- El plano de 16.5–19.6 era 1ra persona sobre Alex: en FPV no se ven las
+  piernas (la cámara va en los ojos) y los brazos cruzan la lente a cada
+  zancada, por eso parecía que "iba empujado sin caminar" aunque la
+  animación de corrida sí corría (verificado cuadro por cuadro). Ahora es
+  3ra persona siguiéndolo: se lo ve correr. Test que lo fija.
 ## [2026-09-20] — Escalera al hombro en horizontal + fixes del viaje de Alex (alarma)
 
 - La escalera que lleva Alex ahora es recta (~1.7 m, su altura, no
