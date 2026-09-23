@@ -2,6 +2,16 @@
 
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
+## [2026-09-20] — Alarma: pistas de Carlos, perro y gato continuas (sin huecos)
+
+- `scenes/alarma_en_la_red.json`: las líneas de Carlos (human2), perro y
+  gato ahora son cambios de bloque continuos de 0 a 45.8s — se agregaron
+  bloques `walk` en los tramos de caminata inicial y se extendieron los
+  bloques previos hasta el inicio del siguiente (los huecos <0.3s no los
+  tapaba la tira 🚶 y se veían como cortes en la pista). Sin cambio de
+  animación: el `walk` es el que ya ponía el recorrido.
+- Test P7: aserción de continuidad (arranca en 0 y cada bloque empieza
+  donde termina el anterior) para esas tres pistas al cargar alarma.
 ## [2026-09-20] — Ojito de cámara: el scrub y 🎬 tampoco mueven la cámara
 
 - Con el ojo tachado, mover la barra roja (scrub), hacer clic en una toma

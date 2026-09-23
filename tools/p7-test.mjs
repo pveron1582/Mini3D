@@ -1046,6 +1046,16 @@ assert(Math.abs(laneEnd('human2') - 45.8) < 0.05, 'Carlos llega hasta el final')
 assert(Math.abs(laneEnd('human3') - 45.8) < 0.05, 'Elena llega hasta el final');
 assert(Math.abs(laneEnd('dog') - 45.8) < 0.05, 'perro llega hasta el final');
 assert(Math.abs(laneEnd('cat') - 45.8) < 0.05, 'gato llega hasta el final');
+// Carlos, perro y gato: bloques continuos desde 0 (sin huecos entre cambios)
+['human2', 'dog', 'cat'].forEach(charId => {
+  const ivals = charBlocks.filter(b => b.actions[charId])
+    .map(b => [b.start, b.start + b.duration]).sort((x, y) => x[0] - y[0]);
+  assert(ivals.length > 0 && Math.abs(ivals[0][0]) < 1e-6, `${charId} arranca en 0`);
+  for (let i = 1; i < ivals.length; i++) {
+    assert(Math.abs(ivals[i][0] - ivals[i - 1][1]) < 1e-6,
+      `${charId} continuo: bloque arranca donde termina el anterior (${ivals[i - 1][1]}s)`);
+  }
+});
 evaluateAllPathsAt(25);
 assert(interactiveRegistry.get('human1').rig.currentAction === 'walk', 'Alex caminando a los 25s (no desliza)');
 evaluateAllPathsAt(40);
