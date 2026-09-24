@@ -363,18 +363,35 @@ gestoRig.run(0.1);
 // --- escena: evento SIN espera mantiene su acción (lip-sync en marcha) ---
 // El preview de la timeline (getPreviewPath) antes perdía acciones de eventos
 // con wait:0 (ej. "talk" al pasar): el segmento move siguiente las pisaba.
-const { evaluateAllPathsAt } = await import(pathToFileURL('./js/cinema/cinematics.js'));
+// 3 waypoints con el evento en el INTERMEDIO: así hay un tramo en movimiento
+// después del evento. Los tiempos no son fijos: el A* del ambiente real
+// alarga el recorrido (desvíos), así que se barre la línea completa en vez
+// de asumir "llega al segundo 2".
+const cinGesto = await import(pathToFileURL('./js/cinema/cinematics.js'));
+const { evaluateAllPathsAt } = cinGesto;
 const V = (await import('three')).Vector3;
-cinemaPaths.set('gestoTestChar', {
-  waypoints: [new V(0, 0, 0), new V(10, 0, 0)],
+const gestoPath = {
+  waypoints: [new V(0, 0, 0), new V(5, 0, 0), new V(10, 0, 0)],
   planeY: 0,
   speed: 5,
   events: { '1': { action: 'talk', wait: 0 } }
-});
-evaluateAllPathsAt(2.5); // ~después del evento (llega a x=10 al segundo 2)
-assert(gestoRig.currentAction === 'talk', 'escena: evento sin espera mantiene su acción en el recorrido (talk en marcha)');
+};
+cinemaPaths.set('gestoTestChar', gestoPath);
+const gestoEnd = cinGesto.previewPathEnd(gestoPath);
+assert(gestoEnd && gestoEnd.totalEnd > 0, 'escena: el preview resuelve el recorrido de prueba');
+let gestoSawMove = false;
+let gestoTalkedDuringMove = false;
+for (let tt = 0.2; tt < gestoEnd.totalEnd; tt += 0.1) {
+  evaluateAllPathsAt(tt);
+  if (gestoRig.currentAction === 'run' || gestoRig.currentAction === 'walk') gestoSawMove = true;
+  // talk con t < totalEnd solo puede venir de un segmento move post-evento
+  // (no hay waits en este recorrido): eso es la acción "en marcha".
+  if (gestoRig.currentAction === 'talk') gestoTalkedDuringMove = true;
+}
+assert(gestoSawMove, 'escena: antes del evento el personaje camina/corre');
+assert(gestoTalkedDuringMove, 'escena: evento sin espera mantiene su acción en el recorrido (talk en marcha)');
 evaluateAllPathsAt(0.5); // antes del evento: caminando
-assert(gestoRig.currentAction === 'walk' || gestoRig.currentAction === 'run', 'escena: antes del evento el personaje camina/corre');
+assert(gestoRig.currentAction === 'walk' || gestoRig.currentAction === 'run', 'escena: rebobinar al inicio vuelve a caminar/correr');
 cinemaPaths.delete('gestoTestChar');
 
 // --- pista 🧍 por personaje: acción de TODA la escena (fullRange) ---
@@ -442,16 +459,23 @@ assert(Math.abs(capBlock.actions.poseTestChar.pos[0] - 11) < 1e-6 && Math.abs(ca
 // --- migración de proyectos viejos: bloques sobre esperas reales, walk libre ---
 const { previewWaitRanges, previewPathEnd, duplicatePathFor } = await import(pathToFileURL('./js/cinema/cinematics.js'));const { migrateEventsToCharBlocks } = await import(pathToFileURL('./js/projectFiles.js'));
 cinemaPaths.set('poseTestChar', { waypoints: [new V(0, 0, 0), new V(10, 0, 0)], planeY: 0, speed: 2, events: { 1: { action: 'talk', wait: 2 } } });
-const migRanges = previewWaitRanges(cinemaPaths.get('poseTestChar'));
+const migStored = cinemaPaths.get('poseTestChar');
+const migRanges = previewWaitRanges(migStored);
+const migEnd = previewPathEnd(migStored);
 assert(migRanges.length === 1 && migRanges[0].action === 'talk', 'migración: solo la espera genera bloque');
-assert(Math.abs(migRanges[0].start - 5) < 1e-9 && Math.abs(migRanges[0].duration - 2) < 1e-9, 'migración: tiempos reales del recorrido');
+assert(Math.abs(migRanges[0].duration - 2) < 1e-9, 'migración: la espera dura lo del evento');
+// El A* del ambiente real alarga el recorrido (desvíos): el instante de
+// llegada no es el del tramo recto (10m/2 = 5s). La espera termina exactamente
+// con el fin del preview (evento en el último waypoint, sin tramo posterior).
+assert(migRanges[0].start > 1 && migRanges[0].start <= migEnd.totalEnd - 2 + 1e-9 && migRanges[0].start >= migEnd.totalEnd - 2 - 0.05, 'migración: tiempos reales del recorrido');
 const migBlocks = migrateEventsToCharBlocks({ poseTestChar: {} });
 assert(migBlocks.length === 1 && migBlocks[0].actions.poseTestChar.action === 'talk', 'migración: bloque de habla');
-assert(Math.abs(migBlocks[0].start - 5) < 1e-9, 'migración: el bloque arranca al llegar (no en 0)');
+// El bloque guarda start redondeado a2 decimales (round2 de la migración)
+assert(migBlocks[0].start > 1 && Math.abs(migBlocks[0].start - migRanges[0].start) <= 0.011, 'migración: el bloque arranca al llegar (no en 0)');
 setCharBlocks(migBlocks, {});
 evaluateAllPathsAt(1);
 assert(poseRig.currentAction === 'walk', 'migración: caminando no hay bloque que pise (no desliza)');
-evaluateAllPathsAt(6);
+evaluateAllPathsAt(migRanges[0].start + 1);
 assert(poseRig.currentAction === 'talk', 'migración: en la espera habla');
 cinemaPaths.delete('poseTestChar');
 setCharBlocks([], {});

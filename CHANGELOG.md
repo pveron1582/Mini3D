@@ -3,6 +3,23 @@
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
 
+## [2026-09-23] — Limpieza oficina: PC flotante y macetas de la alfombra
+
+- Se quitó la torre PC IT de la sala de sistemas: estaba clavada a la altura
+  de la mesa (y=0.79) sobre la silla del banco junto a la escalera, como
+  flotando. La fábrica `createPCTower` queda para el catálogo (spawn bajo
+  demanda); ya no hay instancia fija en la escena.
+- Se quitaron las 4 macetas de las esquinas de la alfombra gris central
+  (plant1–4): estorbaban en el centro del espacio. Sus entradas huérfanas en
+  `scenes/alarma_en_la_red.json` también se borraron (al cargar se ignoran y
+  al guardar desaparecen).
+- Tests P7: al sacar esos5 obstáculos el A* del ambiente ya encuentra
+  desvío para el corredor de prueba (antes fallaba y caía al tramo recto),
+  lo que descalibraba dos tests que asumían tiempos fijos de tramo recto:
+  el del evento `wait:0` ahora barre la línea completa (evento en waypoint
+  intermedio, con tramo en movimiento después) y el de migración deriva los
+  tiempos del fin real del preview en vez del "10m ÷ speed".
+
 ## [2026-09-23] — Fix: personaje deslizándose "parado" durante la reproducción
 
 - Bug: en reproducción (no al pausar/mover la aguja) Alex se desplazaba con

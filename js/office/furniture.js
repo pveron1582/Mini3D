@@ -285,8 +285,9 @@ export function createEmptyTable(id, name, x, z, rotY = 0) {
 // fueron eliminados: habían quedado a 0,8 m de altura sin mueble debajo.)
 
 // C. PC Gaming / IT Server Tower
-// Fábrica paramétrica (P7/bug laptop): recibe id, nombre y posición. La
-// instancia original de la escena y las del catálogo comparten esta ruta.
+// Fábrica paramétrica (P7/bug laptop): recibe id, nombre y posición.
+// Sin instancia fija en la escena (flotaba sobre la silla del banco junto a
+// la escalera); solo se crea desde el catálogo cuando el usuario la pide.
 export function createPCTower(id = 'it_pc', name = '🖥️ Torre PC IT', x = -6.6, y = 0.79, z = -6.8, rotY = 0) {
   const pc = new THREE.Group();
   pc.position.set(x, y, z);
@@ -325,7 +326,6 @@ export function createPCTower(id = 'it_pc', name = '🖥️ Torre PC IT', x = -6
   if (id) registerSelectable(id, name, pc, 'prop');
   return pc;
 }
-createPCTower();
 
 // D. Independent Laptop — fábrica paramétrica (id, nombre, posición)
 export function createLaptop(id = 'it_laptop', name = '💻 Laptop Independiente', x = -1.1, y = 0.79, z = -0.6, rotY = 0) {

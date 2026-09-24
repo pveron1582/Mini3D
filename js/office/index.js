@@ -119,12 +119,8 @@ function buildOfficeEnvironment() {
   registerSelectable('coffeeTable', 'Mesita de Centro', coffeeTable, 'furniture');
 
   // Plantas de interior
-  // Una maceta en cada esquina de la alfombra central (7.5×7.5, esquinas ±3.75)
-  createPlant('plant1', 'Planta 1', -3.6, -3.6);
-  createPlant('plant2', 'Planta 2', 3.6, -3.6);
-  createPlant('plant3', 'Planta 3', -3.6, 3.6);
-  createPlant('plant4', 'Planta 4', 3.6, 3.6);
-  // (Las plantas 5 y 6 extra del espacio central fueron eliminadas: sobraban)
+  // (Las macetas de las esquinas de la alfombra central fueron eliminadas:
+  // sobraban y estoraban en el centro del espacio.)
 
   // Archiveros (lado sur)
   createFileCabinet('cabinet1', 'Archivero 1', 2.9, 4.05, 0);
