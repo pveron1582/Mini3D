@@ -1022,6 +1022,13 @@ assert(boss.rig.currentAction === 'sit', 'jefe sentado mientras Elena habla (t=3
 // Y en el turno del jefe, Alex también había vuelto a la base
 evaluateAllPathsAt(6.0);
 assert(alex.rig.currentAction === 'idle', 'Alex no habla en el turno del jefe (t=6)');
+// Cierre: Alex remata sobre el perro (bloque 39.6→45.2, subtítulo 40→44.8)
+evaluateAllPathsAt(42.0);
+assert(alex.rig.currentAction === 'talk', 'Alex habla en el cierre sobre el perro (t=42)');
+assert(boss.rig.currentAction === 'sit', 'jefe callado mientras Alex remata (t=42)');
+const lastSub = reunionJson.subtitles[reunionJson.subtitles.length - 1];
+assert(lastSub.text.startsWith('Alex:') && lastSub.text.includes('heladera'),
+  'último subtítulo (perro/heladera) atribuido a Alex');
 
 // Ley del piso en la evaluación: los personajes de PIE no se hunden (su
 // origen queda en rig.groundY, pies apoyados) — antes el JSON con y=0 los

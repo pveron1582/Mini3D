@@ -2,7 +2,7 @@
   "app": "MiniStudio 3D",
   "version": 1,
   "env": "office",
-  "description": "Reunión de urgencias en el despacho del jefe (45s). Carlos (jefe) sentado de frente a su escritorio en la silla de gerencia (respaldo atrás), y Alex y Elena de pie junto al frente del escritorio, mirando hacia él. Alex cuenta el AP WiFi saturado de la sala de juntas y Elena agrega el backup del disco al 91% fallido; El jefe fija el plan del día y ambos confirman los tiempos. Cierre con humor: el jefe dice que al menos el perro está tranquilo… y se lo ve sentado frente a la heladera de la cocina, vigilándola. Tomas cercas con lip-sync visible en cada parlamento.",
+  "description": "Reunión de urgencias en el despacho del jefe (45s). Carlos (jefe) sentado de frente a su escritorio en la silla de gerencia (respaldo atrás), y Alex y Elena de pie junto al frente del escritorio, mirando hacia él. Alex cuenta el AP WiFi saturado de la sala de juntas y Elena agrega el backup del disco al 91% fallido; El jefe fija el plan del día y ambos confirman los tiempos. Cierre con humor: el jefe dice que al menos el perro está tranquilo… y Alex remata que lleva media hora vigilando la heladera, con corte al perro sentado frente a ella en la cocina. Tomas cercas con lip-sync visible en cada parlamento.",
   "objects": {
     "human1": { "pos": [-8.3, 0, 7.2], "rotY": -0.28, "action": "idle" },
     "human2": { "pos": [-9.0, 0.17, 9.6], "rotY": 3.14159, "action": "sit" },
@@ -35,8 +35,10 @@
       "human1": { "action": "idle" } } },
     { "id": "cb_alex_4", "start": 28.6, "duration": 3.8, "actions": {
       "human1": { "action": "talk" } } },
-    { "id": "cb_alex_5", "start": 32.4, "duration": 12.8, "actions": {
+    { "id": "cb_alex_5", "start": 32.4, "duration": 7.2, "actions": {
       "human1": { "action": "idle" } } },
+    { "id": "cb_alex_6", "start": 39.6, "duration": 5.6, "actions": {
+      "human1": { "action": "talk" } } },
     { "id": "cb_elena_1", "start": 0.0, "duration": 16.2, "actions": {
       "human3": { "action": "idle" } } },
     { "id": "cb_elena_2", "start": 16.2, "duration": 6.2, "actions": {
@@ -57,7 +59,7 @@
     { "start": 28.6, "end": 32.4, "text": "Alex: Sí — el AP ya lo tengo acá: en una hora estará andando en el canal limpio." },
     { "start": 32.7, "end": 36.2, "text": "Elena: Yo reservo el almacenamiento a las 11, así el backup nocturno entra completo." },
     { "start": 36.6, "end": 39.6, "text": "Carlos: Perfecto. Al menos el perro está tranquilo… no como ustedes dos." },
-    { "start": 40.0, "end": 44.8, "text": "…«tranquilo» es una forma de decirlo: lleva media hora sentado vigilando la heladera." }
+    { "start": 40.0, "end": 44.8, "text": "Alex: …«tranquilo» es una forma de decirlo: lleva media hora sentado vigilando la heladera." }
   ],
   "timeline": {
     "time": 0,
@@ -71,7 +73,8 @@
       { "start": 28.6, "duration": 4.1, "camMode": "front", "subjectId": "human1" },
       { "start": 32.7, "duration": 3.9, "camMode": "front", "subjectId": "human3" },
       { "start": 36.6, "duration": 3.0, "camMode": "front", "subjectId": "human2" },
-      { "start": 39.6, "duration": 5.6, "camMode": "free",
+      { "start": 39.6, "duration": 2.4, "camMode": "front", "subjectId": "human1" },
+      { "start": 42.0, "duration": 3.2, "camMode": "free",
         "camPos": [6.95, 0.85, 6.35], "target": [5.7, 0.45, 7.05] }
     ]
   }

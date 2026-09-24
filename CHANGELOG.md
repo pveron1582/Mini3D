@@ -3,6 +3,19 @@
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
 
+## [2026-09-23] — Reunión: el cierre del perro/heladera lo dice Alex (con lip-sync)
+
+- El último subtítulo de `reunion_prioridades_jefe.json` (40.0–44.8s,
+  "…lleva media hora sentado vigilando la heladera") no tenía emisor y nadie
+  tenía bloque `talk` en ese tramo: con cámara libre no hablaban ni el jefe
+  ni nadie, y era imposible saber quién respondía.
+- Ahora la línea es de **Alex**: prefijo "Alex:" en el subtítulo, bloque
+  `cb_alex_6` (`talk` 39.6→45.2, continuidad con el idle anterior) y toma
+  frontal sobre human1 (39.6→42.0) para verlo rematar el chiste; el corte
+  `free` al perro ante la heladera queda para 42.0→45.2 (remate visual).
+- Descripción de la escena actualizada; tests P7: Alex habla en t=42, jefe
+  callado, subtítulo atribuido y toma frontal alineada al bloque de talk.
+
 ## [2026-09-23] — Undo completo: historial se resetea al abrir + base write-through
 
 - `resetHistory()` en `undo.js`: limpia el historial y pone el snapshot actual
