@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { byId, qs, qsa } from '../dom.js';
 import { scene, camera, canvas, controls } from '../core.js';
-import { cinema, view, interactiveRegistry, store } from '../state.js';
+import { cinema, view, interactiveRegistry, store, syncBasePose } from '../state.js';
 import { getActiveObject, getActiveEntry, setActiveTarget, updateSelectionRing, selectionRing, clearActiveTarget, onTargetSelected } from './selection.js';
 import { syncSlidersFromTarget, refreshWallPanel } from './ui.js';
 import { pushHistory } from '../undo.js';
@@ -496,6 +496,9 @@ function endDrag() {
   // el sistema lo acomoda pegado al lado más cercano (sin quedar a medias).
   resolveDropAfterDrag();
   syncSlidersFromTarget();
+  // El arrastre es una edición del usuario: escribir la pose viva en la base
+  // (initialState) para que entre al snapshot aunque la aguja esté en t>0.
+  syncBasePose(getActiveEntry());
   pushHistory();
 }
 

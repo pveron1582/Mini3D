@@ -1101,6 +1101,36 @@ assert(interactiveRegistry.get('cat').rig.currentAction === 'lay', 'gato quieto 
 assert(stepLadder.visible === true && stepLadder.position.x > 13, 'escalera soltada junto a la heladera a los 40s');
 console.log('✓ alarma: líneas completas y quietas hasta el fin del clip');
 
+// --- undo con la aguja en t>0: base write-through (gizmo/sliders/menú) ---
+const { syncBasePose } = await import(pathToFileURL('./js/state.js'));
+applyProject(alarmaJson); // re-aplica alarma limpia (time=6.02, human1 en x=-9)
+assert(timeline.time > 0, 'alarma abre con la aguja en t>0 (caso real del bug)');
+const h1e = interactiveRegistry.get('human1');
+const snapBefore = serializeProject();
+assert(snapBefore.objects.human1.pos[0] === -9, 'base inicial de human1 es x=-9');
+// Sin sync: la serialización en t>0 lee initialState y el arrastre no entra
+h1e.group.position.x = -7.5;
+let snapNoSync = serializeProject();
+assert(snapNoSync.objects.human1.pos[0] === -9, 'sin syncBasePose el arrastre NO entra al snapshot (protegido)');
+// Con sync (lo que hace gizmo.endDrag / sliders / menú antes del push):
+syncBasePose(h1e);
+let snapAfter = serializeProject();
+assert(snapAfter.objects.human1.pos[0] === -7.5, 'syncBasePose escribe el arrastre en la base');
+// undo: aplicar el snapshot previo restaura la posición original
+applyProject(snapBefore);
+assert(Math.abs(interactiveRegistry.get('human1').group.position.x + 9) < 1e-9, 'undo (apply del snapshot previo) restaura x=-9');
+assert(interactiveRegistry.get('human1').initialState.pos[0] === -9, 'undo restaura initialState coherente');
+// redo: aplicar el snapshot nuevo deja la posición editada
+applyProject(snapAfter);
+assert(Math.abs(interactiveRegistry.get('human1').group.position.x + 7.5) < 1e-9, 'redo (apply del snapshot nuevo) deja x=-7.5');
+assert(interactiveRegistry.get('human1').initialState.pos[0] === -7.5, 'redo restaura initialState coherente');
+// acción base: setAction + syncBasePose({action:true}) también entra al snapshot
+const h1rig = interactiveRegistry.get('human1');
+h1rig.rig.setAction('idle');
+syncBasePose(h1rig, { action: true });
+assert(serializeProject().objects.human1.action === 'idle', 'syncBasePose({action:true}) sincroniza la acción base');
+console.log('✓ undo t>0: base write-through (posición y acción) entra al snapshot');
+
 // --- anillo de selección: sigue al objetivo tras cualquier movimiento ---
 const { updateSelectionRing, selectionRing, setActiveTarget } = await import(pathToFileURL('./js/ui/selection.js'));
 addHumanCharacter('ringTestChar', 'Ring Test', 0, 0, 0, {});

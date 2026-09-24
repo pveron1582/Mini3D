@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { byId, qs, qsa } from '../dom.js';
-import { interactiveRegistry, cinemaPaths, timeline } from '../state.js';
+import { interactiveRegistry, cinemaPaths, timeline, syncBasePose } from '../state.js';
 import { refreshTimelineUI } from './timeline.js';
 import { setSubtitles } from '../media/subtitles.js';
-import { initUndo } from '../undo.js';
+import { pushHistory } from '../undo.js';
 import { setStatus } from '../media/recorder.js';
 
 // ==========================================
@@ -35,6 +35,8 @@ function placeFacing(id, x, z, lookAtX) {
   entry.group.position.set(x, 0, z);
   entry.group.rotation.y = Math.atan2(lookAtX - x, 0); // mira hacia el otro
   if (entry.rig) entry.rig.setAction('talk');
+  // El asistente decide la pose base: escribirla aunque la aguja esté en t>0
+  syncBasePose(entry, { action: true });
 }
 
 export function generateDialogueScene({ charA, charB, linesA, linesB, camStyle, withGeneral }) {
@@ -109,7 +111,9 @@ export function generateDialogueScene({ charA, charB, linesA, linesB, camStyle, 
   setSubtitles(cues);
 
   refreshTimelineUI();
-  initUndo();
+  // Un paso de historial (no reset): así el Undo revierte TODO lo que armó
+  // el asistente (tomas, subtítulos, posiciones) de vuelta a antes de generar.
+  pushHistory();
   setStatus(`Escena generada: ${turns.length} réplicas, ${timeline.shots.length} tomas, ${timeline.duration.toFixed(1)}s. ▶ para verla.`);
   return true;
 }

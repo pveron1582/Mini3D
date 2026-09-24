@@ -176,6 +176,33 @@ export function resetLaneVis() {
   laneVis.quiz = true;
 }
 
+// Escribe la pose EN VIVA de un personaje/mascota en su estado base
+// (initialState) tras un gesto de edición del usuario (gizmo, sliders, menú,
+// asistente). Con la aguja en t>0, serializeProject guarda initialState y NO
+// la posición viva (que sería transitoria de la cinemática): sin este paso un
+// arrastre no entra al snapshot, pushHistory deduplica y el Undo no existe.
+// opts.action = true también sincroniza la acción base (botones de acción).
+// Durante la reproducción la viva es transitoria: no se toca la base.
+export function syncBasePose(entry, opts = {}) {
+  if (!entry || !entry.group || (entry.type !== 'human' && entry.type !== 'pet')) return;
+  if (timeline.playing || timeline.recording) return;
+  const pos = [entry.group.position.x, entry.group.position.y, entry.group.position.z];
+  const rotY = entry.group.rotation.y;
+  if (!entry.initialState) {
+    entry.initialState = {
+      pos,
+      rotY,
+      action: (entry.rig && entry.rig.currentAction) || 'idle'
+    };
+    return;
+  }
+  entry.initialState.pos = pos;
+  entry.initialState.rotY = rotY;
+  if (opts.action && entry.rig && entry.rig.currentAction) {
+    entry.initialState.action = entry.rig.currentAction;
+  }
+}
+
 // Bus de audio para la grabadora: audio.js no puede ser importado por
 // recorder.js (ciclo), así que registra acá cómo pedirle sus tracks.
 export const audioBus = { getExportTracks: () => [] };

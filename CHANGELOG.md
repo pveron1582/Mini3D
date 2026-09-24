@@ -3,6 +3,30 @@
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
 
+## [2026-09-23] — Undo completo: historial se resetea al abrir + base write-through
+
+- `resetHistory()` en `undo.js`: limpia el historial y pone el snapshot actual
+  como único entrada. Se llama al final de `newProject()` y `applyProject()` —
+  antes, abrir un proyecto dejaba el historial del editor anterior y el primer
+  Undo volvía al estado de arranque del editor, «borrando» la escena cargada.
+- `syncBasePose(entry, opts)` en `state.js`: escribe la pose EN VIVA de un
+  personaje en su `initialState` (base) después de un gesto de edición.
+  Con la aguja en t>0, `serializeProject` guarda `initialState` y NO la
+  posición viva; sin este paso un arrastre no entraba al snapshot,
+  `pushHistory` deduplicaba y el Undo no existía (bug real: mover a un
+  personaje con la aguja en 6.02 no se podía deshacer).
+- Llamadas a `syncBasePose` añadidas en: `gizmo.endDrag`,
+  `multiselect.endGroupDrag`, sliders de transformación (`change`),
+  botones de acción del panel, menú contextual (acción + sentarse),
+  y `wizard.placeFacing` — todos antes de su `pushHistory`.
+- `initUndo()` → `pushHistory()` en `wizard.js`: el asistente de escenas es
+  ahora un solo paso Undo (antes requería dos).
+- `cinemaDiscardDraft()` y `applyShotCamControl()` ahora hacen `pushHistory()`
+  antes de mutar, para que descartar un borrador de camino y cambiar el modo
+  de cámara sean deshacibles.
+- Test P7 nuevo: con la aguja en t>0, `syncBasePose` escribe la posición y la
+  acción al snapshot; sin él, el arrastre no entra (comportamiento protegido).
+
 ## [2026-09-23] — Limpieza oficina: PC flotante y macetas de la alfombra
 
 - Se quitó la torre PC IT de la sala de sistemas: estaba clavada a la altura

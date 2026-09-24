@@ -3,7 +3,7 @@
 // juntos; Supr/Borrar borra toda la selección.
 import * as THREE from 'three';
 import { scene, camera, canvas } from '../core.js';
-import { interactiveRegistry } from '../state.js';
+import { interactiveRegistry, syncBasePose } from '../state.js';
 import { setActiveTarget, clearActiveTarget } from './selection.js';
 import { pushHistory } from '../undo.js';
 
@@ -125,6 +125,8 @@ export function updateGroupDrag(e) {
 export function endGroupDrag() {
   if (!multi.dragging) return;
   multi.dragging = false;
+  // Mover en bloque también es edición: base write-through antes del snapshot.
+  multi.ids.forEach(id => syncBasePose(interactiveRegistry.get(id)));
   multi.dragTargets = [];
   pushHistory(); // un solo paso de undo para todo el bloque
 }

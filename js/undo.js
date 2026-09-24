@@ -45,6 +45,21 @@ export function pushHistory() {
   updateButtons();
 }
 
+// Reinicia el historial dejando SOLO el estado actual como punto de partida.
+// Se usa al cargar/crear un proyecto: el primer Undo debe volver a ESTE
+// estado, no al arranque del editor (si no, abrir un archivo y deshacer
+// borraba la escena entera). No marca "sin guardar" (cargar no es una edición)
+// y, si la llamada llega durante un Undo/Redo en curso (restoring), no toca
+// la pila para no perder el Redo.
+export function resetHistory() {
+  if (restoring) return;
+  history = [];
+  index = -1;
+  history.push(JSON.stringify(serializeScene()));
+  index = 0;
+  updateButtons();
+}
+
 export function undo() {
   if (index <= 0) { setStatus('Nada que deshacer.'); return; }
   index--;

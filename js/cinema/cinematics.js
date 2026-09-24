@@ -268,6 +268,7 @@ export function cinemaDiscardDraft() {
   canvas.style.cursor = 'default';
   cinemaSetMode('off');
   refreshCharLanes();
+  pushHistory();   // el descarte también se puede deshacer (vuelve el borrador)
   setStatus('Recorrido descartado (sin guardar).');
   return true;
 }
@@ -719,6 +720,7 @@ function applyShotCamControl() {
       shot.camMode = 'free';
       shot.subjectId = null;
       timelineBus.renderShots();
+      pushHistory();   // la toma cambió: un paso de undo por gesto del panel
     }
     view.mode = 'orbit';
     view.subjectId = null;
@@ -729,6 +731,7 @@ function applyShotCamControl() {
     shot.subjectId = personId;
     timelineBus.renderShots();
     cutCameraToShot(mode, personId, shot);
+    pushHistory();   // camMode/subjectId de la toma quedaron modificados
     setStatus(`${label(mode)} ${mode === 'sceneCam' ? 'con' : 'sobre'} ${entry ? entry.name : 'objeto'} (toma seleccionada).`);
   } else {
     view.mode = mode;

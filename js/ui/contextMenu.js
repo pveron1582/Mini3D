@@ -13,7 +13,7 @@
 
 import { byId, showViewportHint } from '../dom.js';
 import { canvas, camera } from '../core.js';
-import { interactiveRegistry } from '../state.js';
+import { interactiveRegistry, syncBasePose } from '../state.js';
 import { getActiveEntry } from './selection.js';
 import { sitAtAnchor, GESTURE_DEFS } from '../characters/characters.js';
 import { getAnchor, anchorSeats } from '../characters/anchors.js';
@@ -80,6 +80,7 @@ function applyAction(act) {
       return;
     }
     entry.rig.setAction(act);
+    syncBasePose(entry, { action: true });
     pushHistory();
   }
 }
@@ -229,6 +230,7 @@ canvas.addEventListener('pointerdown', (e) => {
     exitPickSeat();
     setStatus(`${entry.name} sentado en ${seatEntry.name}${seats.length > 1 ? ' (lugar ' + (bestSpot + 1) + ')' : ''}.`);
     showViewportHint(`✅ ${entry.name} se sentó en ${seatEntry.name}${seats.length > 1 ? ' (lugar ' + (bestSpot + 1) + ')' : ''}`);
+    syncBasePose(entry, { action: true });
     pushHistory();
   }
 }, true);

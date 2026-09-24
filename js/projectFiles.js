@@ -24,6 +24,7 @@ import {
 } from './characters/characters.js';
 import { populateOutliner, closeAllBarMenus } from './ui/ui.js';
 import { clearActiveTarget } from './ui/selection.js';
+import { resetHistory } from './undo.js';
 
 // ==========================================
 // GUARDAR / ABRIR PROYECTO (JSON)
@@ -163,6 +164,7 @@ export function newProject(name) {
   sessionDirty.value = false;
   refreshTimelineUI();
   updateCinemaCharList();
+  resetHistory();   // el undo arranca desde el proyecto nuevo (no del editor)
 }
 
 export function serializeProject(opts = {}) {
@@ -712,6 +714,12 @@ export function applyProject(data) {
     view.subjectId = null;
     controls.enabled = true;
   }
+
+  // Punto de partida del undo: el primer "Deshacer" tras abrir vuelve a ESTE
+  // proyecto cargado, no al estado de arranque del editor. Si la llamada
+  // viene de un Undo/Redo (restoring), resetHistory no hace nada y la pila
+  // se conserva. Además no se marca "sin guardar": abrir no es una edición.
+  resetHistory();
 }
 
 // Colores/contador de tomas al recargar (mantiene el ciclo de palette)

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { byId, qs, qsa } from '../dom.js';
 import { camera, canvas, controls, viewCenterGround } from '../core.js';
-import { store, cinema, view, playbackInstances, interactiveRegistry, blockEdit, blockPin } from '../state.js';
+import { store, cinema, view, playbackInstances, interactiveRegistry, blockEdit, blockPin, syncBasePose } from '../state.js';
 import { getActiveEntry, getActiveObject, setActiveTarget, updateSelectionRing, clearActiveTarget } from './selection.js';
 import {
   setCamView, cinemaDeactivate, refreshCinemaUI
@@ -226,6 +226,8 @@ document.addEventListener('click', (e) => {
     const entry = getActiveEntry();
     if (entry && entry.rig) {
       entry.rig.setAction(act);
+      // Acción elegida por el usuario = nueva base (aunque la aguja esté en t>0)
+      syncBasePose(entry, { action: true });
       pushHistory();
     }
   }
@@ -341,7 +343,7 @@ numScale?.addEventListener('input', () => { sliderScale.value = numScale.value; 
 
 // Confirmar cambios de transformación en el historial (al soltar el slider)
 [sliderX, sliderY, sliderZ, sliderRotY, sliderRotX, sliderRotZ, sliderScale, numX, numY, numZ, numRotY, numRotX, numRotZ, numScale].forEach(inp => {
-  inp?.addEventListener('change', pushHistory);
+  inp?.addEventListener('change', () => { syncBasePose(getActiveEntry()); pushHistory(); });
 });
 
 // (Los botones btnResetTargetPos / btnFaceCamera ya no existen: la
