@@ -1,7 +1,14 @@
 // Test de humo P9: verifica que geoCache deduplica primitivas idénticas.
 // Uso: node tools/test-geo-cache.js
-// (node_modules/three apunta a vendor/three.module.js — solo para tests Node)
-import { box, sphere, geoCacheSize } from '../js/office/geoCache.js';
+// Resuelve 'three' → vendor/three.module.js vía p7-loader.mjs (mismo loader
+// que p7-test/p7-loadtest): así el test corre también en CI, sin necesitar el
+// shim manual de node_modules/three (que está en .gitignore).
+import { register } from 'node:module';
+import { pathToFileURL } from 'node:url';
+
+register('./p7-loader.mjs', pathToFileURL('./tools/'));
+
+const { box, sphere, geoCacheSize } = await import('../js/office/geoCache.js');
 
 const a = box(0.06, 0.76, 0.85);
 const b = box(0.06, 0.76, 0.85);
