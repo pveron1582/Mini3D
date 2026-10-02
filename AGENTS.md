@@ -14,3 +14,10 @@ Puntos clave:
 - Three.js se carga desde `vendor/` (única copia en uso).
 - **Obligatorio**: luego de generar cualquier cambio, registrar una entrada en
   `CHANGELOG.md` (fecha + qué se hizo). Informe de estado del proyecto: `GLM.md`.
+- **Spec-first (regla 8 de `SKILL.md`)**: `docs/specs/` es la fuente de verdad
+  de QUÉ se construye. Todo cambio de producto empieza creando/editando el RF
+  ahí (formato en `plantilla_spec.md`); sin spec `aprobada` no se
+  implementa — si el pedido no existe en una spec, el primer paso es
+  redactarla como `borrador` y pedir confirmación. Al cerrar: criterios
+  marcados, estado del RF actualizado y entrada en `CHANGELOG.md`
+  referenciando el `RF-XX`.

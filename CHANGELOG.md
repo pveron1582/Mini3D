@@ -3,6 +3,19 @@
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
 
+## [2026-10-01] — Fase C SDD: reglas spec-first en SKILL.md y AGENTS.md
+
+- `SKILL.md` **regla 8 (Spec-first)**: `docs/specs/` es fuente de verdad;
+  proceso obligatorio en 4 pasos — (a) empezar en la spec (crear/editar RF
+  antes de codear; sin spec aprobada no se implementa, si falta se redacta
+  en borrador y se pide confirmación), (b) implementar contra la spec no
+  contra el chat, (c) cierre de ciclo (criterios marcados + estado del RF +
+  CHANGELOG referenciando el RF-XX), (d) zona libre para spikes/ramas.
+- `AGENTS.md`: resumen operativo de la regla 8 (es el primer archivo que
+  lee cualquier agente) para que el proceso aplique en sesiones nuevas sin
+  este chat.
+- `roadmap_mejoras.md`: Fase C marcada HECHA.
+
 ## [2026-10-01] — Fase A SDD: estructura docs/specs + ADRs (v1 para revisión)
 
 - Nueva carpeta `docs/specs/` con 6 archivos y `docs/adr/` con 4 decisiones.

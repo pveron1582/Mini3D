@@ -113,3 +113,19 @@ modular). No usarlo como referencia de arquitectura.
    de los ejes deja a personajes/sillas de espaldas (bug que se repitió
    varias veces). Los asientos con ancla (`sitAtAnchor`) ya aplican
    `rotY_silla + 180°` internamente.
+8. **Spec-first (SDD)**: `docs/specs/` es la fuente de verdad de QUÉ se
+   construye; el código y los tests son la implementación. Proceso
+   obligatorio para todo cambio de producto:
+   a. **Empieza en la spec**: crear o editar el RF en `docs/specs/`
+      (formato en `plantilla_spec.md`) ANTES de escribir código. Sin spec
+      `aprobada` no se implementa: si el pedido del usuario no existe en una
+      spec, el primer paso es redactarla como `borrador` y pedir
+      confirmación.
+   b. **Implementar contra la spec, no contra el chat**: los criterios de
+      aceptación del RF son la contracta. Si algo del pedido contradice la
+      spec, se actualiza la spec primero.
+   c. **Cierre de ciclo**: al terminar → criterios marcados, estado del RF
+      actualizado (`implementado` o `verificado` si se agregó test), y la
+      entrada de `CHANGELOG.md` referenciando el `RF-XX`.
+   d. **Zona libre**: experimentos y spikes pueden vivir sin spec (rama o
+      estado `borrador`); nada mergea a `main` sin spec `aprobada`.
