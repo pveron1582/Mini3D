@@ -1,0 +1,27 @@
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Suite completa: imports + ciclos (check-scc) + suite funcional (p7-test)
+      # + carga de proyecto (p7-loadtest) + geo-cache. Sin dependencias que
+      # instalar: los validadores usan Node puro (SKILL.md).
+      - name: pnpm run verify
+        run: pnpm run verify
