@@ -3,6 +3,20 @@
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
 
+## [2026-10-01] — P1-2: THREE.Clock → THREE.Timer (fin del warning deprecado)
+
+- `js/render.js`: el reloj del bucle de render ahora es `THREE.Timer`
+  (`timer.update()` una vez por frame antes de `getDelta()`, API distinta de
+  Clock) con `timer.connect(document)` — Page Visibility API: delta 0 con la
+  pestaña oculta y `reset()` al volver, sin spike de tiempo.
+- `THREE.Clock` (deprecado en r183) ya no se instancia: desaparece el warning
+  `THREE.Clock: This module has been deprecated` que salía en cada arranque y
+  confundía a PowerShell marcando la suite como fallida.
+- Impacto de comportamiento nulo: `getDelta()` sigue devolviendo segundos y el
+  clamp existente de dt (1/20 s) cubre el primer frame. Verificado: `pnpm run
+  verify` = 0 y grep del warning = 0 ocurrencias.
+- `roadmap_mejoras.md`: P1-2 marcado RESUELTO.
+
 ## [2026-10-01] — P1-1: CI con GitHub Actions (verify en cada push/PR)
 
 - Nuevo `.github/workflows/verify.yml`: corre `npm run verify` (imports +

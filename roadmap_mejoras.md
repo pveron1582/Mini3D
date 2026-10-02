@@ -42,7 +42,7 @@
 | # | Hallazgo | Acción |
 |---|---|---|
 | P1-1 ✅ | **Sin CI** — el repo tiene `origin` en GitHub y scripts de verify listos. | **RESUELTO (2026-10-01)**: `.github/workflows/verify.yml` — `npm run verify` en push/PR a main; run #2 en verde. Nota: `test-geo-cache.js` ahora usa `p7-loader.mjs` (antes dependía del shim gitignorado de `node_modules/three`). |
-| P1-2 | **`THREE.Clock` deprecado** en Three.js r0.185 — avisa en cada corrida y hace que PowerShell trate el stderr como error de la suite. | Migrar a `THREE.Timer` (cambio menor). |
+| P1-2 ✅ | **`THREE.Clock` deprecado** en Three.js r0.185 — avisa en cada corrida y hace que PowerShell trate el stderr como error de la suite. | **RESUELTO (2026-10-01)**: migrado a `THREE.Timer` en `js/render.js` (`timer.update()` por frame + `connect(document)` para Page Visibility). Warning eliminado de la salida de tests. |
 | P1-3 | **Tests sesgados al catálogo** — spawn/persistencia/carga bien cubiertos; timeline, imán (`tlSnap`), bloques de movimiento y A* con poca cobertura. | Ampliar el patrón de `p7-test` a esas áreas. |
 
 ### 🟢 P2 — Arquitectura a futuro

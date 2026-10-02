@@ -18,7 +18,12 @@ import { tickers } from './tickers.js';
 // ==========================================
 // CONTINUOUS RENDER LOOP (LIVE ANIMATIONS)
 // ==========================================
-const clock = new THREE.Clock();
+// Reloj del bucle de render: THREE.Timer (r183+ reemplaza al deprecado
+// THREE.Clock, que además emitía warning en cada arranque). `connect(document)`
+// activa la Page Visibility API: con la pestaña oculta el delta queda en 0 y al
+// volver `reset()` evita el spike de tiempo acumulado.
+const timer = new THREE.Timer();
+timer.connect(document);
 let globalTime = 0;
 let frameCount = 0;
 let lastFpsUpdate = 0;
@@ -147,7 +152,10 @@ function stepSim(simDt, dt) {
 function animate(timestamp) {
   requestAnimationFrame(animate);
   try {
-    const rawDt = clock.getDelta();
+    // update() calcula el delta internamente; hay que llamarlo una vez por
+    // frame ANTES de getDelta() (API de Timer, distinta de Clock).
+    timer.update();
+    const rawDt = timer.getDelta();
     // Acotar dt: si la pestaña pierde foco o hay un drop de FPS, un dt grande
     // desincronizaría la escena de la grabación (video no determinista).
     const dt = Math.min(rawDt, 1 / 20);
