@@ -194,7 +194,7 @@ Agregar a `AGENTS.md` + `SKILL.md`:
 3. Fase A (estructura docs/specs + plantilla + ADRs base)  ✅ HECHA (2026-10-01)
 4. Fase B.3 (spec del formato JSON)        ← ✅ ADELANTADA: `docs/specs/03-formato-json.md`
 5. P1-1 (CI) + P1-2 (THREE.Timer)
-6. Fase B resto (requisitos, no funcionales, trazabilidad de tests)
+6. Fase B resto (requisitos, no funcionales, trazabilidad de tests)  ✅ HECHA (2026-10-01: 59 secciones de p7-test etiquetadas RF-XX + consolidación de fuentes)
 7. Fase C (reglas spec-first en AGENTS/SKILL)  ✅ HECHA (2026-10-01: regla 8)
 8. P1-3 (tests timeline/A*) + P2-1 (refactor bajo demanda)
 9. P3 (menores) + Fase D (enforcement continuo)

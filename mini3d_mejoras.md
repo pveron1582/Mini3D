@@ -1,5 +1,11 @@
 # MiniStudio 3D — Plan de mejoras (mini3d_mejoras.md)
 
+> **Nota SDD (2026-10-01)**: la fuente de verdad de QUÉ se construye vive en
+> `docs/specs/` (RFs con estados y criterios). Este archivo queda como
+> **borrador operativo de ideas**: al aprobarse un ítem, se convierte en RF en
+> `docs/specs/01-requisitos.md` (sección G, RF-60..) y se tacha acá. Ver la
+> regla 8 de `SKILL.md` (spec-first).
+
 > Objetivo: hacer el producto más **usable** para producir videos educativos
 > de redes/ciberseguridad de forma repetible. Este documento es el backlog
 > vivo: acá se anotan las mejoras pendientes, ordenadas por impacto vs.
@@ -85,7 +91,7 @@ independiente de la oficina (`js/construction.js`), terreno con césped
 
 ## Backlog priorizado
 
-### 1. ~~Gestos de un disparo~~ ✅ (2026-08-28)
+### 1. ~~Gestos de un disparo~~ ✅ (2026-08-28) → RF-11
 HECHO: 6 gestos one-shot (`GESTURE_DEFS` en `js/characters.js`): señalar 👉,
 saludar 👋, encogerse de hombros 🤷, negar con la cabeza 🙅, aplaudir 👏 y
 mirar el reloj ⌚. Se activan con `setAction('gesture:<nombre>')` o
@@ -94,21 +100,21 @@ Botones en el panel (grilla "Gestos") y opciones `gesture:*` en los eventos de
 waypoint. Las acciones sostenidas existentes (wave/clap/point en bucle) se
 mantienen intactas.
 
-### 2. ~~Lip-sync mínimo~~ ✅ (2026-08-28)
+### 2. ~~Lip-sync mínimo~~ ✅ (2026-08-28) → RF-12
 HECHO: durante `talk`, la boca abre/cierra al ritmo del habla (~4.5 acentos/s)
 con dos senos desfasados (9 Hz + 23 Hz) para que el batido no sea metronómico —
 a veces queda un poco abierta entre "sílabas". La boca escala su alto de 1× a
 ~4.4× y baja apenas al abrirse; se aplica tras el ánimo (el habla se impone a
 la boca neutral). Fuera de `talk` vuelve a la forma normal.
 
-### 3. ~~Audio por escena~~ ✅ (2026-09-08)
+### 3. ~~Audio por escena~~ ✅ (2026-09-08) → RF-42
 HECHO: pistas de música + efectos (`js/media/audio.js`, sección 🔊 Audio):
 suena por WebAudio al reproducir (con volumen, inicio y loop por pista) y al
 exportar entra por `MediaStreamAudioDestinationNode` al mismo MediaRecorder —
 el WebM sale con audio sincronizado en una sola pasada. El audio va embebido
 (dataURL) en el JSON (`audio`/`audioData`); el undo guarda solo la metadata.
 
-### 4. ~~Sentarse real en sillas~~ ✅ (2026-08-28)
+### 4. ~~Sentarse real en sillas~~ ✅ (2026-08-28) → RF-13
 HECHO (mejorado sobre la propuesta original): acción `sit_at` en eventos de
 waypoint con **dropdown de sillas** por nombre (no "la más cercana": la que
 se elige), **animación suave** de 0.8 s hasta el asiento (easing, giro corto,
@@ -118,19 +124,19 @@ Acción única (gestos) y "🪑 Elegir asiento…" → click en la silla lo posi
 DIRECTO (sin animación) para posar la escena. Anclas `seat_<id>` en todas las
 sillas (oficina, comedor, gerencia, invitado, sillones).
 
-### 5. ~~Transiciones suaves entre acciones~~ ✅ (2026-09-08)
+### 5. ~~Transiciones suaves entre acciones~~ ✅ (2026-09-08) → RF-14
 HECHO: al cambiar de acción (o arrancar un gesto) cada articulación interpola
 desde la pose anterior durante 0.3 s (smoothstep + slerp, genérico para
 humanos, perro y gato; la raíz queda afuera — la maneja la escena). Repetir la
 misma acción no re-dispara la mezcla. Tests en la suite.
 
-### 6. ~~Cámara con movimiento dentro de la toma~~ ✅ (2026-09-08)
+### 6. ~~Cámara con movimiento dentro de la toma~~ ✅ (2026-09-08) → RF-22
 HECHO: la toma guarda encuadre de FIN (`camPosEnd`/`targetEnd`, botón
 "📍 Marcar fin aquí" en 🎥 Cámara); en la toma viaja inicio→fin con
 smoothstep (vale en libre/fija, persiste en el JSON, se previsualiza en la
 aguja y el ✕ lo descarta vía snapshot).
 
-### 7. ~~Render determinista + exportación 1080p fijo~~ ✅ (2026-09-08, ampliado 2026-09-18)
+### 7. ~~Render determinista + exportación 1080p fijo~~ ✅ (2026-09-08, ampliado 2026-09-18) → RF-40, RF-43
 HECHO: en exportación la sim avanza por pasos fijos de 1/30 s acumulados
 sobre el reloj real (`SIM_STEP`/`consumeSimTime` en `js/media/recorder.js`,
 `stepSim` en `js/render.js`) — sin saltos por drops y misma trayectoria
@@ -140,13 +146,13 @@ renderer propios de 1920×1080 reutilizados entre exportaciones, con
 quiz escriban ahí. Contenedor: **MP4 (H.264)** con respaldo WebM y selector
 de formato (#1 de GLM.md, 2026-09-18).
 
-### 8. Biblioteca / navegador de escenas (UX)
+### 8. Biblioteca / navegador de escenas (UX) → RF-64 (borrador)
 Con varias escenas en `scenes/`, un panel "Escenas" que liste los JSON del
 directorio y los cargue con un clic (hoy hay que ir a Archivo → Abrir).
 - Dónde: `index.html` + nuevo `js/sceneBrowser.js` (fetch del listado via
   `serve.py`).
 
-### 9. Más props narrativos (contenido)
+### 9. Más props narrativos (contenido) → RF-60 (pizarra, borrador)
 Pizarra/pantalla con texto editable (diagramas de red), celular en la mano.
 - ✅ **Paquetes de datos animados** (2026-09-18): `js/office/packets.js` hace
   viajar pulsos luminosos por la red de canaletas (fija + dibujada punto a
@@ -157,12 +163,12 @@ Pizarra/pantalla con texto editable (diagramas de red), celular en la mano.
 - Dónde: `js/office/*.js` (props seleccionables) + texto dinámico vía canvas
   texture.
 
-### 10. Exterior utilizable (postergado)
+### 10. Exterior utilizable (postergado) → RF-66 (borrador)
 El parque existe pero sin narrativa. Si las historias lo requieren:
 bancos, camino, farolas ya están; falta mobiliario narrativo y razones
 para filmar ahí.
 
-### 11. Terminal en pantalla / screencast (contenido)
+### 11. Terminal en pantalla / screencast (contenido) → RF-61 (borrador)
 Escena de alguien tipeando en una PC con la pantalla mostrando comandos
 (Linux/PowerShell, ej. `nmap`) y su salida. Reproducción guionada, no
 ejecución real.

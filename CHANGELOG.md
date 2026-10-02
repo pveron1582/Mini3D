@@ -3,6 +3,19 @@
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
 
+## [2026-10-01] — Fase B SDD: trazabilidad test↔RF + consolidación de docs
+
+- **B.5 (trazabilidad)**: las **59 secciones** de `tools/p7-test.mjs` llevan
+  etiqueta `(RF-XX)` en su encabezado, mapeadas 1:1 a `docs/specs/01-requisitos.md`
+  (insertadas por script; cero cambios de lógica de test). Se sumó el RF-66
+  faltante (Exterior utilizable, borrador). `verify` = 0.
+- **B.4 (consolidación)**:
+  - `GLM.md`: ítem 7 duplicado fusionado (pizarra pendiente → apunta a RF-60)
+    + nota SDD (qué rol cumple el informe vs `docs/specs/`).
+  - `mini3d_mejoras.md`: nota SDD (borrador operativo de ideas, RFs viven en
+    `docs/specs/`) + punteros `→ RF-XX` en los 11 ítems numerados.
+- `roadmap_mejoras.md`: Fase B marcada HECHA. Queda solo la Fase D y P2/P3.
+
 ## [2026-10-01] — Fase C SDD: reglas spec-first en SKILL.md y AGENTS.md
 
 - `SKILL.md` **regla 8 (Spec-first)**: `docs/specs/` es fuente de verdad;

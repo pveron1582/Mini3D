@@ -1,5 +1,11 @@
 # Revisión del proyecto — Mini 3D (MiniStudio 3D)
 
+> **Nota SDD (2026-10-01)**: este informe es el **estado del proyecto**
+> (qué hay hecho y qué falta). La fuente de verdad de QUÉ se construye vive
+> en `docs/specs/` (ver `01-requisitos.md` para los RFs y `03-formato-json.md`
+> para el formato de archivo). Al trabajar un ítem, se actualiza primero la
+> spec (regla 8 de `SKILL.md`).
+
 > Informe de revisión realizado por GLM el 2026-08-21.
 >
 > **Actualización 2026-08-23 (ZCode)**: verificado en navegador (carga sin errores,
@@ -247,12 +253,11 @@ WebCodecs para bitrate/resolución a medida.
    (`js/office/sceneCameras.js`) con posición, orientación y **FOV propios**
    (20°–100°, persistido en el JSON); la vista de toma “📷 Cámara puesta” la usa
    como encuadre (`camMode: 'sceneCam'`).
-7. **Más props educativos**: pizarra/pantalla con texto o diagramas de red.
+7. **Más props educativos**: pizarra/pantalla con texto o diagramas de red
+   (pendiente — ver RF-60 en `docs/specs/01-requisitos.md`).
    ~~paquetes de datos animados viajando entre dispositivos~~ **HECHO
    (2026-09-18)**: `js/office/packets.js` recorre la red de canaletas (fija +
    dibujada) con pulsos luminosos y estela.
-7. **Más props educativos**: pizarra/pantalla con texto o diagramas de red,
-   paquetes de datos animados viajando entre dispositivos.
 8. ~~Limpieza: borrar `app.js`, `node_modules` y los bindings huérfanos.~~
    **HECHO (2026-08-23)**.
 

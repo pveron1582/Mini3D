@@ -315,6 +315,12 @@ usuario y cada paso por undo. Requiere vocabulario completo de edición
 (catálogo, construcción, personajes, cinemáticas) — ver `mini3d_mejoras.md`
 para el esquema de herramientas y mitigaciones.
 
+### RF-66 — Exterior utilizable (parque con narrativa)
+Estado: `borrador`
+El parque existe (bancos, camino, farolas) pero sin razones para filmar ahí:
+mobiliario narrativo + al menos una escena de ejemplo que lo use.
+Depende de: RF-30.
+
 - Test: `p7-test` (núcleo del archivo: catálogo, spawn, duplicar, escala/rotación, bug laptop)
 - CHANGELOG: 2026-08-28
 

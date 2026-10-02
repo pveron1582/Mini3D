@@ -101,7 +101,7 @@ assert(CATALOG.some(c => c.id === 'serverRack'), 'piezas de serverRoom registrad
 ['wallAP', 'elecPanel', 'cableTray', 'floorOutlet', 'miniRack'].forEach(id =>
   assert(CATALOG.some(c => c.id === id), `pieza de red registrada: ${id}`));
 
-// --- spawn ---
+// --- spawn --- (RF-32)
 const desk = spawnCatalogItem('desk');
 assert(!!desk, 'spawn de escritorio');
 assert(desk.userData.id === 'desk_spawn1', 'ID autogenerado: ' + desk.userData.id);
@@ -117,50 +117,50 @@ function officeContains(g) {
   return !!parent;
 }
 
-// --- spawn con posición libre cerca del target ---
+// --- spawn con posición libre cerca del target --- (RF-32)
 const chair = spawnCatalogItem('chair');
 assert(chair.position.y === 0, 'silla apoyada en el piso (y=0)');
 
-// --- duplicar ---
+// --- duplicar --- (RF-32)
 assert(duplicateActiveObject() === true, 'duplicar objeto activo');
 assert(interactiveRegistry.has('chair_spawn2'), 'copia registrada: chair_spawn2');
 
-// --- borrar (soft) ---
+// --- borrar (soft) --- (RF-32)
 assert(deleteActiveObject() === true, 'borrar objeto activo');
 const delEntry = interactiveRegistry.get(store.activeTarget ? store.activeTarget : 'chair_spawn2');
 // tras borrar se deselecciona; verificar por id conocido
 const dEntry = interactiveRegistry.get('chair_spawn2');
 assert(dEntry && dEntry.deleted === true && dEntry.group.visible === false, 'borrado suave: invisible + flag');
 
-// --- serialización ---
+// --- serialización --- (RF-02)
 const snap = serializeProject();
 assert(Array.isArray(snap.spawned) && snap.spawned.length === 3, `spawned serializados: ${snap.spawned.length} (esperados 3)`);
 assert(snap.objects['chair_spawn2'] && snap.objects['chair_spawn2'].deleted === true, 'flag deleted en la serialización');
 
-// --- undo/apply: restaurar desde el snapshot ---
+// --- undo/apply: restaurar desde el snapshot --- (RF-03)
 syncSpawned([]);  // simular undo a un estado sin spawns
 assert(interactiveRegistry.get('desk_spawn1').deleted === true, 'syncSpawned oculta los spawns al deshacer');
 applyProject(JSON.parse(JSON.stringify(snap)));
 assert(interactiveRegistry.get('desk_spawn1').deleted === false && interactiveRegistry.get('desk_spawn1').group.visible === true, 'applyProject restaura spawns visibles');
 assert(interactiveRegistry.get('chair_spawn2').deleted === true && interactiveRegistry.get('chair_spawn2').group.visible === false, 'applyProject mantiene el borrado del snapshot');
 
-// --- sync de contadores: nuevo spawn no pisa IDs existentes ---
+// --- sync de contadores: nuevo spawn no pisa IDs existentes --- (RF-32)
 const desk2 = spawnCatalogItem('desk');
 assert(desk2.userData.id === 'desk_spawn2', `contador continúa tras carga sin colisionar: ${desk2.userData.id}`);
 
-// --- escala y rotación persisten ---
+// --- escala y rotación persisten --- (RF-32)
 const rack = spawnCatalogItem('serverRack', { pos: [5, 0, 5], rotY: 1.2, scale: 1.5 });
 const rs = serializeProject();
 const rEntry = rs.spawned.find(s => s.id === rack.userData.id);
 assert(rEntry && rEntry.rotY === 1.2 && rEntry.scale === 1.5, 'rotY y escala del spawn serializados');
 
-// --- BUG LAPTOP: spawn de laptop NO debe sobrescribir el it_laptop original ---
+// --- BUG LAPTOP: spawn de laptop NO debe sobrescribir el it_laptop original --- (RF-32)
 const it_laptop_orig = interactiveRegistry.get('it_laptop').group;
 spawnCatalogItem('laptop', { pos: [9, 0, 9] });
 assert(interactiveRegistry.has('laptop_spawn1'), 'laptop spawneada desde catálogo');
 assert(interactiveRegistry.get('it_laptop').group === it_laptop_orig, 'bug laptop: it_laptop original intacto');
 
-// --- MULTISELECCIÓN: toggle + mover bloque juntos + borrar grupo ---
+// --- MULTISELECCIÓN: toggle + mover bloque juntos + borrar grupo --- (RF-04)
 toggleInMulti('laptop_spawn1');
 toggleInMulti('desk_spawn2');
 assert(hasMulti() && multi.ids.size === 2, `multiselección: ${multi.ids.size} objetos`);
@@ -191,7 +191,7 @@ assert(!!cableTray && Math.abs(cableTray.position.y - 3.42) < 1e-6, 'canaleta sp
 const floorOutlet = spawnCatalogItem('floorOutlet', { silent: true });
 assert(!!floorOutlet && Math.abs(floorOutlet.position.y - 0) < 1e-6, 'puesto de red de piso spawneado en el piso');
 
-// --- mini rack (Lote 3b): puerta multi-instancia desde el catálogo ---
+// --- mini rack (Lote 3b): puerta multi-instancia desde el catálogo --- (RF-37)
 const miniRackSpawn = spawnCatalogItem('miniRack', { silent: true });
 assert(!!miniRackSpawn && !!miniRackSpawn.userData.doorHinge, 'mini rack spawneado con puerta (doorHinge)');
 assert(Math.abs(miniRackSpawn.position.y - 2.3) < 1e-6, 'mini rack spawneado a altura de pared (baseY 2.3)');
@@ -201,7 +201,7 @@ assert(rackFijo.group !== miniRackSpawn, 'mini rack fijo y spawneado son instanc
 miniRackSpawn.userData.doorOpen = 1;
 assert(miniRackSpawn.userData.doorAngle === 0 && miniRackSpawn.userData.doorHinge.rotation.y === 0, 'cada mini rack anima su puerta con estado propio');
 
-// --- canaleta dibujada punto a punto (trayDraw): geometría, puntos y rebuild ---
+// --- canaleta dibujada punto a punto (trayDraw): geometría, puntos y rebuild --- (RF-33)
 const { createCableTrayRun } = await import(pathToFileURL('./js/office/network.js'));
 const runPts = [{ x: 2, z: 7 }, { x: 5, z: 7 }, { x: 5, z: 9.5 }];
 const run = createCableTrayRun('cableTray_run1', 'Canaleta Test', runPts, 3.42);
@@ -219,7 +219,7 @@ const runSnap = serializeProject();
 const runSer = runSnap.spawned.find(s => s.id === 'cableTray_run1');
 assert(!!runSer && runSer.data && runSer.data.points.length === 3, 'tramo dibujado serializa sus puntos');
 
-// --- canaleta dibujada con pasamuros automáticos (atraviesa tabiques) ---
+// --- canaleta dibujada con pasamuros automáticos (atraviesa tabiques) --- (RF-33)
 // Tramo que cruza el tabique vertical oeste de juntas (x=-4.5): de x=-8 a x=0
 // con z=-7.75 (dentro del rango del tabique). Debe incluir el pasamuro.
 const runWall = createCableTrayRun('cableTray_runWall', 'Cruza Tabique', [{ x: -8, z: -7.75 }, { x: 0, z: -7.75 }], 3.42);
@@ -230,7 +230,7 @@ const runFree = createCableTrayRun('cableTray_runFree', 'Libre', [{ x: 5, z: 5 }
 const sleevesFree = runFree.children.filter(c => c.children.length === 0 && c.geometry && c.geometry.type === 'CylinderGeometry' && c.material && c.material.color && c.material.color.getHex() === 0x8a929e);
 assert(sleevesFree.length === 0, 'tramo sin cruces no genera pasamuros');
 
-// --- canaleta: routing ortogonal (sin diagonales), codo 90° e imán/T ---
+// --- canaleta: routing ortogonal (sin diagonales), codo 90° e imán/T --- (RF-33)
 const { orthoSnap, routeOrtho, nearestOnSegment } = await import(pathToFileURL('./js/trayDraw.js'));
 const os1 = orthoSnap({ x: 0, z: 0 }, { x: 3, z: 1 });
 assert(os1.x === 3 && os1.z === 0, 'orthoSnap elige el eje dominante (X)');
@@ -247,7 +247,7 @@ assert(Math.abs(n1.x - 2) < 1e-6 && Math.abs(n1.z) < 1e-6 && n1.t > 0 && n1.t < 
 const n2 = nearestOnSegment({ x: -1, z: 0 }, { x: 0, z: 0 }, { x: 5, z: 0 });
 assert(n2.t === 0 && Math.abs(n2.x) < 1e-6, 'nearestOnSegment se limita al extremo (imán a punta)');
 
-// --- paquetes de datos por las canaletas (GLM #4) ---
+// --- paquetes de datos por las canaletas (GLM #4) --- (RF-35)
 // El grafo se construye con la red fija + los runs dibujados, y se reconecta
 // solo al detectar cambios (agregar/mover/borrar un tramo).
 const { tickers } = await import(pathToFileURL('./js/tickers.js'));
@@ -256,7 +256,7 @@ await import(pathToFileURL('./js/office/packets.js'));
 assert(interactiveRegistry.has('cableTray_run1'), 'run de canaleta de prueba registrado');
 assert(tickers.length >= tickersAntes, 'packets.js cargó sin romper el registro de tickers');
 
-// --- cámaras colocables (#3): prop con FOV propio usado por las tomas ---
+// --- cámaras colocables (#3): prop con FOV propio usado por las tomas --- (RF-34)
 const { CATALOG: CAT3, spawnCatalogItem: spawn3 } = await import(pathToFileURL('./js/catalog.js'));
 const { createSceneCamera, sceneCameraFov, setSceneCameraFov } =
   await import(pathToFileURL('./js/office/sceneCameras.js'));
@@ -298,7 +298,7 @@ camCore.updateProjectionMatrix();
 viewState.mode = 'orbit';
 viewState.subjectId = null;
 
-// --- exportación 1080p fija y contenedor MP4/WebM (#1 y #2) ---
+// --- exportación 1080p fija y contenedor MP4/WebM (#1 y #2) --- (RF-40)
 const { output } = await import(pathToFileURL('./js/core.js'));
 assert(!!output && !!output.renderer, '#2: existe el renderer de SALIDA (indirección)');
 assert(output.renderer === (await import(pathToFileURL('./js/core.js'))).renderer,
@@ -314,7 +314,7 @@ const noneAvail = pickExportMime('auto', () => false);
 assert(noneAvail.mime === '' && noneAvail.ext === 'webm', '#1: sin formatos soportados no se inventa mime');
 assert(typeof efOptions === 'function', '#1: la UI consulta qué formatos soporta el navegador');
 
-// --- gestos de un disparo (se reproducen una vez y vuelven a la acción base) ---
+// --- gestos de un disparo (se reproducen una vez y vuelven a la acción base) --- (RF-11)
 const { GESTURE_DEFS, addHumanCharacter } = await import(pathToFileURL('./js/characters/characters.js'));
 const gnames = ['point', 'wave', 'shrug', 'no', 'clap', 'watch'];
 assert(gnames.every(n => GESTURE_DEFS[n] && GESTURE_DEFS[n].duration > 0 && typeof GESTURE_DEFS[n].animate === 'function'), 'GESTURE_DEFS: 6 gestos con duración y animación');
@@ -330,7 +330,7 @@ gestoRig.setAction('idle');
 gestoRig.setAction('type_standing');
 assert(gestoRig.currentAction === 'type_standing', 'acción type_standing (tecleando de pie) existe y aplica');
 
-// --- lip-sync (backlog #2): la boca abre/cierra mientras dura `talk` ---
+// --- lip-sync (backlog #2): la boca abre/cierra mientras dura `talk` --- (RF-12)
 // (Muestras fuera de la ventana de blending 0.3s: a 0.1s aún está mezclando.)
 gestoRig.setAction('talk');
 gestoRig.run(0.5); // frame con la boca bastante abierta
@@ -344,7 +344,7 @@ gestoRig.setAction('idle');
 gestoRig.run(0.1);
 assert(Math.abs(gestoRig.parts.h_mouth.scale.y - 1) < 0.02, 'lip-sync: fuera de talk la boca vuelve a la forma normal');
 
-// --- sit_talk: hablando SENTADO (el jefe no se para de la silla) ---
+// --- sit_talk: hablando SENTADO (el jefe no se para de la silla) --- (RF-13)
 // La pose mantiene las piernas de sit y agrega gesticulación + lip-sync.
 gestoRig.setAction('sit_talk');
 gestoRig.run(0.5);
@@ -360,7 +360,7 @@ assert(gestoRig.parts.h_torso.position.y < 0.95, 'sit_talk: torso a altura de si
 gestoRig.setAction('idle');
 gestoRig.run(0.1);
 
-// --- escena: evento SIN espera mantiene su acción (lip-sync en marcha) ---
+// --- escena: evento SIN espera mantiene su acción (lip-sync en marcha) --- (RF-12)
 // El preview de la timeline (getPreviewPath) antes perdía acciones de eventos
 // con wait:0 (ej. "talk" al pasar): el segmento move siguiente las pisaba.
 // 3 waypoints con el evento en el INTERMEDIO: así hay un tramo en movimiento
@@ -394,7 +394,7 @@ evaluateAllPathsAt(0.5); // antes del evento: caminando
 assert(gestoRig.currentAction === 'walk' || gestoRig.currentAction === 'run', 'escena: rebobinar al inicio vuelve a caminar/correr');
 cinemaPaths.delete('gestoTestChar');
 
-// --- pista 🧍 por personaje: acción de TODA la escena (fullRange) ---
+// --- pista 🧍 por personaje: acción de TODA la escena (fullRange) --- (RF-21)
 // Un personaje con acción base la mantiene durante toda la línea, y un
 // bloque puntual la pisa solo durante su tramo (después vuelve a la base).
 // (setCharBlocks(blocks, full) es la API de applyProject: setea ambos juntos.)
@@ -419,7 +419,7 @@ assert(st && st.action === 'sit_typing', 'antes del bloque: acción base');
 // Limpieza para no contaminar el resto de la suite
 setCharBlocks([], {});
 
-// --- bloques guardan pose (lugar + rotación) y la reproducen ---
+// --- bloques guardan pose (lugar + rotación) y la reproducen --- (RF-16)
 // Cada cuadro recuerda dónde quedó el personaje: al pasar de un cuadro a
 // otro salta a su pose, y terminada la escena conserva la última.
 const { charPoseAt, createInitialCharBlock, captureBlockPose, charMoveAt, calcMoveDuration, calcMoveSpeed, moveDist, moveBlockReady } = await import(pathToFileURL('./js/cinema/charTrack.js'));const poseRig = addHumanCharacter('poseTestChar', 'Pose Test', 1, 2, 0, {});
@@ -456,7 +456,7 @@ poseEntry.group.rotation.y = 0.7;
 captureBlockPose(capBlock);
 assert(Math.abs(capBlock.actions.poseTestChar.pos[0] - 11) < 1e-6 && Math.abs(capBlock.actions.poseTestChar.rotY - 0.7) < 1e-6, 'definir en el cuadro captura el lugar');
 
-// --- migración de proyectos viejos: bloques sobre esperas reales, walk libre ---
+// --- migración de proyectos viejos: bloques sobre esperas reales, walk libre --- (RF-21)
 const { previewWaitRanges, previewPathEnd, duplicatePathFor } = await import(pathToFileURL('./js/cinema/cinematics.js'));const { migrateEventsToCharBlocks } = await import(pathToFileURL('./js/projectFiles.js'));
 cinemaPaths.set('poseTestChar', { waypoints: [new V(0, 0, 0), new V(10, 0, 0)], planeY: 0, speed: 2, events: { 1: { action: 'talk', wait: 2 } } });
 const migStored = cinemaPaths.get('poseTestChar');
@@ -480,7 +480,7 @@ assert(poseRig.currentAction === 'talk', 'migración: en la espera habla');
 cinemaPaths.delete('poseTestChar');
 setCharBlocks([], {});
 
-// --- bloque expirado no pisa el caminar (no desliza) ---
+// --- bloque expirado no pisa el caminar (no desliza) --- (RF-16)
 cinemaPaths.set('poseTestChar', { waypoints: [new V(0, 0, 0), new V(20, 0, 0)], planeY: 0, speed: 2, events: {} });
 setCharBlocks([{ id: 'cbOld', start: 0, duration: 2, actions: { poseTestChar: { action: 'idle' } } }], {});
 evaluateAllPathsAt(5);
@@ -493,7 +493,7 @@ assert(poseRig.currentAction === 'idle', 'al terminar el camino conserva');
 cinemaPaths.delete('poseTestChar');
 setCharBlocks([], {});
 
-// --- camino: ⧉ duplica waypoints + eventos (lo camina dos veces) ---
+// --- camino: ⧉ duplica waypoints + eventos (lo camina dos veces) --- (RF-20)
 cinemaPaths.set('dupPathChar', { waypoints: [new V(0, 0, 0), new V(4, 0, 0)], planeY: 0, speed: 2, events: { 1: { action: 'talk', wait: 1 } } });
 assert(duplicatePathFor('dupPathChar') === true, 'duplica el recorrido');
 const dupSt = cinemaPaths.get('dupPathChar');
@@ -503,7 +503,7 @@ assert(previewPathEnd(dupSt).totalEnd > 3, 'el recorrido duplicado dura más');
 assert(duplicatePathFor('sinCamino') === false, 'sin recorrido no duplica');
 cinemaPaths.delete('dupPathChar');
 
-// --- bloques de desplazamiento: duración auto + interpolación en curva ---
+// --- bloques de desplazamiento: duración auto + interpolación en curva --- (RF-21)
 const mvTest = { waypoints: [{ x: 0, z: 0 }, { x: 3, z: 4 }], speed: 2 };
 assert(Math.abs(moveDist(mvTest) - 5) < 1e-6, 'distancia del recorrido (curva)');
 assert(Math.abs(calcMoveDuration(mvTest) - 2.5) < 1e-9, 'duración = distancia/velocidad');
@@ -536,7 +536,7 @@ const serM = serializeProject().charBlocks.find(b => b.id === 'cbM1');
 assert(!!serM && serM.actions.poseTestChar.move.waypoints[1].x === 6, 'move persiste en el JSON');
 setCharBlocks([], {});
 
-// --- ojitos de pistas: ocultar no borra ---
+// --- ojitos de pistas: ocultar no borra --- (RF-27)
 const { laneVis, isCharLaneHidden, toggleCharLaneHidden, resetLaneVis } = await import(pathToFileURL('./js/state.js'));
 assert(isCharLaneHidden('poseTestChar') === false, 'visible por defecto');
 setCharBlocks([
@@ -559,7 +559,7 @@ resetLaneVis();
 assert(isCharLaneHidden('poseTestChar') === false && laneVis.camera === true, 'reset deja todo visible');
 setCharBlocks([], {});
 
-// --- ojito quiz: sync apaga/muestra de una (vale en pausa) ---
+// --- ojito quiz: sync apaga/muestra de una (vale en pausa) --- (RF-27)
 const { quizTrack: quizLaneT } = await import(pathToFileURL('./js/state.js'));
 const { quizPlayTick, syncQuizVisibility } = await import(pathToFileURL('./js/cinema/quizTrack.js'));
 const { quizIsActive, resetQuiz } = await import(pathToFileURL('./js/media/quiz.js'));
@@ -580,7 +580,7 @@ resetQuiz();
 resetLaneVis();
 tlT.time = savedT;
 
-// --- ojito cámara: el scrub NO mueve la cámara con el ojo tachado ---
+// --- ojito cámara: el scrub NO mueve la cámara con el ojo tachado --- (RF-27)
 const { scrubTo } = await import(pathToFileURL('./js/cinema/timeline.js'));
 const { camera: camT, controls: ctrlT } = await import(pathToFileURL('./js/core.js'));
 const { timeline: tlC } = await import(pathToFileURL('./js/state.js'));
@@ -599,7 +599,7 @@ assert(Math.abs(camT.position.x - 40) < 1e-6, 'ojito activo: scrub encuadra la t
 tlC.shots.length = 0;
 resetLaneVis();
 
-// --- duplicar bloque: copia idéntica al final de la lane ---
+// --- duplicar bloque: copia idéntica al final de la lane --- (RF-21)
 const { duplicateCharBlock } = await import(pathToFileURL('./js/cinema/charTrack.js'));
 const { charBlocks } = await import(pathToFileURL('./js/state.js'));
 setCharBlocks([
@@ -613,7 +613,7 @@ assert(dupD.actions.poseTestChar.action === 'idle' && dupD.actions.poseTestChar.
 assert(duplicateCharBlock({ id: 'cbX' }, 'poseTestChar') === null, 'fuera de la pista no duplica');
 setCharBlocks([], {});
 
-// --- camino por tramos: la selección abraza el pedazo visible ---
+// --- camino por tramos: la selección abraza el pedazo visible --- (RF-21)
 const { caminoGaps } = await import(pathToFileURL('./js/cinema/charTrack.js'));
 setCharBlocks([
   { id: 'cbG1', start: 0, duration: 4, actions: { poseTestChar: { action: 'idle' } } },
@@ -627,7 +627,7 @@ setCharFullAction('poseTestChar', null);
 assert(JSON.stringify(caminoGaps('otro', 30)) === JSON.stringify([[0, 30]]), 'sin cuadros: tira entera');
 setCharBlocks([], {});
 
-// --- extender bloque hasta el final del clip ---
+// --- extender bloque hasta el final del clip --- (RF-21)
 const { extendBlockDataTo } = await import(pathToFileURL('./js/cinema/charTrack.js'));
 const extB = { id: 'cbE', start: 8, duration: 4, actions: { poseTestChar: { action: 'idle' } } };
 assert(extendBlockDataTo(extB, 45.8) === true && Math.abs(extB.duration - 37.8) < 1e-9, 'estira hasta el final');
@@ -636,7 +636,7 @@ const extM = { id: 'cbEM', start: 0, duration: 2, actions: { poseTestChar: { act
 assert(extendBlockDataTo(extM, 10) === true && extM.duration === 10, 'move también se estira');
 assert(Math.abs(extM.actions.poseTestChar.move.speed - 1) < 1e-9, 'al estirar adapta la velocidad');
 
-// --- reproducción con solo bloques (sin tomas): siempre funciona ---
+// --- reproducción con solo bloques (sin tomas): siempre funciona --- (RF-22)
 // La duración cubre los bloques y el play no se niega aunque no haya tomas.
 const { playScene, stopScene, sceneDuration } = await import(pathToFileURL('./js/cinema/timeline.js'));
 setCharBlocks([
@@ -648,7 +648,7 @@ assert(playScene() === true, 'reproduce con solo bloques de personajes');
 stopScene();
 setCharBlocks([], {});
 
-// --- dolly dentro de la toma: interpola inicio→fin en el plano ---
+// --- dolly dentro de la toma: interpola inicio→fin en el plano --- (RF-22)
 const { shotDollyAt, applyShotDolly } = await import(pathToFileURL('./js/cinema/cinematics.js'));
 const { timeline } = await import(pathToFileURL('./js/state.js'));
 const { camera, controls } = await import(pathToFileURL('./js/core.js'));
@@ -669,7 +669,7 @@ const serD = serializeProject().timeline.shots.find(s => Array.isArray(s.camPosE
 assert(!!serD && serD.camPosEnd[0] === 1, 'dolly persiste en el JSON');
 timeline.shots.splice(timeline.shots.findIndex(s => s.id === 'shotDollySer'), 1);
 
-// --- audio por escena: metadata chica en snapshots, data solo al guardar ---
+// --- audio por escena: metadata chica en snapshots, data solo al guardar --- (RF-42)
 const { audioTracks, serializeAudioTracks, setAudioTracks, clearAudio } = await import(pathToFileURL('./js/media/audio.js'));
 const { audioBus } = await import(pathToFileURL('./js/state.js'));
 setAudioTracks([{ id: 'audio1', name: 'tema', kind: 'music', volume: 70, start: 2, loop: true }]);
@@ -682,7 +682,7 @@ assert(Array.isArray(audioBus.getExportTracks()) && audioBus.getExportTracks().l
 clearAudio();
 assert(audioTracks.length === 0, 'audio: limpiar deja cero pistas');
 
-// --- reloj fijo de exportación: pasos de 1/30 s sobre tiempo real ---
+// --- reloj fijo de exportación: pasos de 1/30 s sobre tiempo real --- (RF-43)
 const { SIM_STEP, simClock, consumeSimTime } = await import(pathToFileURL('./js/media/recorder.js'));
 assert(Math.abs(SIM_STEP - 1 / 30) < 1e-12, 'paso fijo de 1/30 s');
 simClock.acc = 0;
@@ -696,7 +696,7 @@ assert(consumeSimTime(10, 1, false) === 4 && simClock.acc === 0, 'tope anti-espi
 simClock.acc = 0.02;
 assert(consumeSimTime(1 / 60, 1, true) === 0 && Math.abs(simClock.acc - 0.02) < 1e-12, 'pausa congela el reloj');
 
-// --- spawn en el centro de la vista (donde mira la cámara) ---
+// --- spawn en el centro de la vista (donde mira la cámara) --- (RF-51)
 const { viewCenterGround } = await import(pathToFileURL('./js/core.js'));const vc = viewCenterGround();
 assert(Number.isFinite(vc.x) && Number.isFinite(vc.z), 'centro de vista: punto finito sobre el piso');
 const savedPos = camera.position.clone();
@@ -709,7 +709,7 @@ assert(Math.abs(vcH.x - 3) < 1e-6 && Math.abs(vcH.z - 4) < 1e-6, 'horizonte: usa
 camera.position.copy(savedPos);
 controls.target.copy(savedTgt);
 
-// --- escala única de la timeline: todas las pistas dibujan igual ---
+// --- escala única de la timeline: todas las pistas dibujan igual --- (RF-24)
 const { pxPerSec, LANE_LABEL_W } = await import(pathToFileURL('./js/cinema/tlScale.js'));
 assert(Number.isFinite(LANE_LABEL_W) && LANE_LABEL_W >= 200, 'rótulo único alineado al panel (>=200px)');
 const savedDuration = timeline.duration;
@@ -719,7 +719,7 @@ timeline.duration = 40;
 assert(Math.abs(pxPerSec() - Math.max(1, (1280 - LANE_LABEL_W) / 40)) < 1e-9, 'escala única: cubre la duración real');
 timeline.duration = savedDuration;
 
-// --- paquetes de datos: la red es un grafo conexo (suben por las bajadas) ---
+// --- paquetes de datos: la red es un grafo conexo (suben por las bajadas) --- (RF-35)
 const { trayGraph } = await import(pathToFileURL('./js/office/packets.js'));
 const tgraph = trayGraph();
 assert(tgraph.edges.length > 0, 'grafo de canaletas con aristas');
@@ -732,7 +732,7 @@ const risers = tgraph.edges.filter(e => Math.abs(e.y2 - e.y1) > 0.5);
 assert(risers.length >= 8, 'bajadas verticales en el grafo (racks, mini rack, piso, jefe, foto, 3 norte)');
 assert(tgraph.edges.every(e => isFinite(e.len) && e.len >= 0.05), 'sin aristas degeneradas');
 
-// --- Fase 3: resize por bordes + tiling (baldosas, no estirado) ---
+// --- Fase 3: resize por bordes + tiling (baldosas, no estirado) --- (RF-31)
 const { addConFloor, setConFloorSize, resizeConFloor, addConWall, retileConWall, clearConstruction, syncConstruction } = await import(pathToFileURL('./js/construction.js'));
 const { getWallTexture } = await import(pathToFileURL('./js/office/walls.js'));
 const tFloor = addConFloor(0, 0, 6, 6, 'Losa de cemento');
@@ -753,7 +753,7 @@ assert(Math.abs(tWall.userData.wallMesh.material.map.repeat.x - 12) < 1e-9, 'al 
 const serCon = serializeProject().construction.find(c => c.id === tWall.userData.conId);
 assert(!!serCon && serCon.w === 8 && serCon.tex === 'Ladrillo', 'resize persiste (tamaño + textura)');
 
-// --- Fase 4: puertas y ventanas sobre paredes (huecos que se abren/cierran) ---
+// --- Fase 4: puertas y ventanas sobre paredes (huecos que se abren/cierran) --- (RF-31)
 const { addConDoor, addConWindow, attachOpeningToWall } = await import(pathToFileURL('./js/construction.js'));
 const { wallSnap } = await import(pathToFileURL('./js/office/walls.js'));
 const tW = addConWall(30, 30, 0, 6, 3, 0.15, 'solid', 'Cemento');
@@ -780,7 +780,7 @@ syncConstruction(serializeProject().construction);
 const reWall = interactiveRegistry.get(tW.userData.conId);
 assert(reWall && reWall.group.userData._wallHoleSegments && reWall.group.userData._wallHoleSegments.length > 0, 'al abrir se restaura el hueco');
 
-// --- Fase 5: diseños de puertas y ventanas ---
+// --- Fase 5: diseños de puertas y ventanas --- (RF-31)
 const { addDoor, setDoorDesign, setDoorState, createWindow, setWindowDesign, DOOR_DESIGNS, WINDOW_DESIGNS } = await import(pathToFileURL('./js/office/walls.js'));
 assert(DOOR_DESIGNS.length === 3 && WINDOW_DESIGNS.length === 3, '3 diseños de puerta y 3 de ventana');
 const dGlass = addDoor('tDoorGlass', 'Puerta Vidrio', 40, 40, 0, 1.4);
@@ -805,7 +805,7 @@ const serDD = serializeProject().construction.find(c => c.id === dCon.userData.c
 assert(!!serDD && serDD.design === 'madera', 'diseño de puerta persiste en el JSON');
 clearConstruction();
 
-// --- convención de orientación (blindaje anti "dados vuelta") ---
+// --- convención de orientación (blindaje anti "dados vuelta") --- (RF-15)
 const { rotYToLookAt } = await import(pathToFileURL('./js/characters/characters.js'));
 const approx = (a, b, tol = 0.02) => Math.abs(a - b) <= tol;
 const deg = (r) => r * 180 / Math.PI;
@@ -829,13 +829,13 @@ addHumanCharacter('customChar1', 'Personaje Test', 0, 0, 0, { shirt: 0xff0000 })
 const withChar = serializeProject();
 assert(Array.isArray(withChar.characters) && withChar.characters[0].id === 'customChar1', 'personaje personalizado serializado');
 
-// --- creador: outfit + accesorios persisten en el personaje ---
+// --- creador: outfit + accesorios persisten en el personaje --- (RF-10)
 addHumanCharacter('customChar2', 'Chef Test', 1, 1, 0, { outfit: 'chef', sunglasses: true, femaleHair: true });
 const withOutfit = serializeProject();
 const serChef = withOutfit.characters.find(c => c.id === 'customChar2');
 assert(!!serChef && serChef.colors.outfit === 'chef' && serChef.colors.sunglasses === true, 'outfit y accesorios del personaje serializados');
 
-// --- mascotas del creador: 3 variantes de perro y 3 de gato ---
+// --- mascotas del creador: 3 variantes de perro y 3 de gato --- (RF-10)
 const { DOG_VARIANTS, CAT_VARIANTS, addDogCharacter, addCatCharacter, createDogPreview, createCatPreview } = await import(pathToFileURL('./js/characters/characters.js'));
 assert(DOG_VARIANTS.length === 3 && CAT_VARIANTS.length === 3, '3 variantes de perro y 3 de gato');
 const petDog = addDogCharacter('petDog1', 'Firulais Test', 1, 1, 0, DOG_VARIANTS[1].colors);
@@ -860,7 +860,7 @@ const serCat = withPets.characters.find(c => c.id === 'petCat1');
 assert(!!serDog && serDog.pet === 'dog' && serDog.colors.fur === DOG_VARIANTS[1].colors.fur, 'perro serializado con variante');
 assert(!!serCat && serCat.pet === 'cat' && serCat.colors.fur === CAT_VARIANTS[2].colors.fur, 'gato serializado con variante');
 
-// --- transiciones suaves: la pose interpola 0.3s al cambiar de acción ---
+// --- transiciones suaves: la pose interpola 0.3s al cambiar de acción --- (RF-14)
 const blendRig = addHumanCharacter('blendTestChar', 'Blend Test', 5, 5, 0, {});
 blendRig.run(10); // idle estable
 blendRig.setAction('sit');
@@ -881,7 +881,7 @@ blendDog.run(10.15);
 const midBody = blendDog.parts.d_body.position.y;
 assert(midBody < 0.65 && midBody > 0.44, 'blending perro: interpola el cuerpo');
 
-// --- sentarse en asiento (sit_at): evento con silla + ancla ---
+// --- sentarse en asiento (sit_at): evento con silla + ancla --- (RF-13)
 const { sitAtAnchor } = await import(pathToFileURL('./js/characters/characters.js'));
 const { anchorPose, anchorSeats } = await import(pathToFileURL('./js/characters/anchors.js'));
 const sitRig = addHumanCharacter('sitTestChar', 'Sit Test', 2, 2, 0, {});
@@ -931,7 +931,7 @@ assert(!!sitEv && sitEv.action === 'sit_at' && sitEv.sitAt === 'chair1', 'evento
  sitAtAnchor(sitTest2, 'seat_execChair', { instant: true });
  assert(Math.abs(sitTest2.root.position.y - (0.65 - 0.48)) < 0.02, 'sentado en gerencia: muslos sobre el almohadón (y = 0.17)');
 
-// --- personajes de pie junto a muebles: uso del frente del ancla ---
+// --- personajes de pie junto a muebles: uso del frente del ancla --- (RF-13)
 const { standInFrontOf, standFacing } = await import(pathToFileURL('./js/characters/characters.js'));
 const standTest = addHumanCharacter('standTestChar', 'Test Frente', 0, 0, 0, {});
 assert(standInFrontOf(standTest, 'kitchenCounter'), 'se ubica frente al mueble');
@@ -947,7 +947,7 @@ const expectRot = Math.atan2(counterEntry.group.position.x - standTest.root.posi
 assert(Math.abs(facing - expectRot) < 0.05, 'mirando hacia el mueble (no le da la espalda)');
 assert(standFacing(standTest, -5.0, 8.5, 0.55, 0), 'standFacing se ajusta igualmente');
 
-// --- ✕ de la toma = commit: cinemática activa se guarda al cerrar ---
+// --- ✕ de la toma = commit: cinemática activa se guarda al cerrar --- (RF-22)
 // (El ✕ de una toma seleccionada llama clearSelection, que hace cinemaDeactivate
 // cuando hay un recorrido en edición — así la cinemática grabada de principio
 // a fin queda guardada y se reproduce con la escena.)
@@ -964,7 +964,7 @@ assert(cinema.active === false, 'al 💾 de la toma: modo cinemático liberado')
 assert(cinemaPaths.has('cineCommitChar') && cinemaPaths.get('cineCommitChar').waypoints.length === 2,
   'al 💾 de la toma: recorrido quedo guardado (se reproduce en la escena)');
 
-// --- ✕ DESCARTA: el snapshot restaura el bloque modificado ---
+// --- ✕ DESCARTA: el snapshot restaura el bloque modificado --- (RF-03)
 // (discardSelection usa el mismo mecanismo: Object.assign sobre el snapshot)
 const shotDiscard = { id: 'shotX', start: 1, duration: 2, camMode: 'free', subjectId: null, label: '', color: '#111' };
 const snapDiscard = JSON.parse(JSON.stringify(shotDiscard));
@@ -973,7 +973,7 @@ Object.assign(shotDiscard, JSON.parse(JSON.stringify(snapDiscard)));
 assert(shotDiscard.start === 1 && shotDiscard.duration === 2 && shotDiscard.camMode === 'free',
   '✕ de la toma: el snapshot restaura el bloque modificado');
 
-// --- Escena estática / diálogo (reunion_prioridades_jefe) ---
+// --- Escena estática / diálogo (reunion_prioridades_jefe) --- (RF-22)
 const fs = await import('fs');
 const reunionJson = JSON.parse(fs.readFileSync('scenes/reunion_prioridades_jefe.json', 'utf8'));
 applyProject(reunionJson);
@@ -1037,7 +1037,7 @@ evaluateAllPathsAt(0);
 assert(alex.group.position.y >= (alex.rig.groundY || 0) - 1e-6, 'Alex apoya los pies (y >= groundY, no hundido)');
 assert(elena.group.position.y >= (elena.rig.groundY || 0) - 1e-6, 'Elena apoya los pies (y >= groundY, no hundida)');
 
-// --- Imán de alineación entre pistas (tlSnap) ---
+// --- Imán de alineación entre pistas (tlSnap) --- (RF-23)
 // La toma de cámara que muestra a un personaje debe arrancar EXACTO cuando
 // él empieza a hablar: al arrastrar la toma cerca del borde del bloque de
 // talk, el imán los deja coincidiendo (0.1s de paso, radio ~8px).
@@ -1068,7 +1068,7 @@ tShots.filter(s => s.camMode === 'front').forEach(s => {
 
 console.log('✓ escena de diálogo: jefe y empleados mantienen posición, orientación y pose sin derivar');
 
-// --- alarma (escena vieja): cada línea llega quieta hasta el fin del clip ---
+// --- alarma (escena vieja): cada línea llega quieta hasta el fin del clip --- (RF-36)
 const alarmaJson = JSON.parse(fs.readFileSync('scenes/alarma_en_la_red.json', 'utf8'));
 applyProject(alarmaJson);
 const laneEnd = (charId) => Math.max(...charBlocks.filter(b => b.actions[charId]).map(b => b.start + b.duration));
@@ -1108,7 +1108,7 @@ assert(interactiveRegistry.get('cat').rig.currentAction === 'lay', 'gato quieto 
 assert(stepLadder.visible === true && stepLadder.position.x > 13, 'escalera soltada junto a la heladera a los 40s');
 console.log('✓ alarma: líneas completas y quietas hasta el fin del clip');
 
-// --- undo con la aguja en t>0: base write-through (gizmo/sliders/menú) ---
+// --- undo con la aguja en t>0: base write-through (gizmo/sliders/menú) --- (RF-03)
 const { syncBasePose } = await import(pathToFileURL('./js/state.js'));
 applyProject(alarmaJson); // re-aplica alarma limpia (time=6.02, human1 en x=-9)
 assert(timeline.time > 0, 'alarma abre con la aguja en t>0 (caso real del bug)');
@@ -1138,7 +1138,7 @@ syncBasePose(h1rig, { action: true });
 assert(serializeProject().objects.human1.action === 'idle', 'syncBasePose({action:true}) sincroniza la acción base');
 console.log('✓ undo t>0: base write-through (posición y acción) entra al snapshot');
 
-// --- anillo de selección: sigue al objetivo tras cualquier movimiento ---
+// --- anillo de selección: sigue al objetivo tras cualquier movimiento --- (RF-04)
 const { updateSelectionRing, selectionRing, setActiveTarget } = await import(pathToFileURL('./js/ui/selection.js'));
 addHumanCharacter('ringTestChar', 'Ring Test', 0, 0, 0, {});
 setActiveTarget('ringTestChar');
@@ -1149,7 +1149,7 @@ assert(selectionRing.visible === true, 'anillo visible con objetivo');
 assert(Math.abs(selectionRing.position.x - 7) < 1e-9 && Math.abs(selectionRing.position.z + 3) < 1e-9, 'anillo sigue al grupo en XZ');
 assert(Math.abs(selectionRing.position.y - 0.19) < 1e-9, 'anillo apoyado sobre el grupo');
 
-// --- barra de bloques: selección, pin y acciones por pista ---
+// --- barra de bloques: selección, pin y acciones por pista --- (RF-53)
 const { selectShot, getSelectedShot, resetShotToSnapshot, duplicateShot, deleteShot, openSubEditor, resetSubToSnapshot, duplicateSub, deleteSub } = await import(pathToFileURL('./js/cinema/timeline.js'));
 const { openCharBlockEditor, charBlockSelection, resetCharBlock, deleteCharBlock } = await import(pathToFileURL('./js/cinema/charTrack.js'));
 const { openQuizEditor, quizSelection, resetQuizBlock, duplicateQuizBlock, deleteQuizBlock } = await import(pathToFileURL('./js/cinema/quizTrack.js'));
@@ -1229,7 +1229,7 @@ deselectAllBlocks();
 assert(getSelectedBlock() === null && blockPin.kind === null, 'todo limpio');
 console.log('✓ barra de bloques: selección, pin y acciones por pista');
 
-// --- navegación A* (navigation.js): desvío, fallback y extremos intactos ---
+// --- navegación A* (navigation.js): desvío, fallback y extremos intactos --- (RF-28)
 // Aislamiento total: se vacía el registry y se ocultan TODOS los ambientes para
 // que los obstáculos sean 100% controlados por el test (sin paredes/muebles
 // reales de la escena cargada). Se restaura todo al final del bloque.
@@ -1304,7 +1304,7 @@ navPark.visible = navSavedVis[1];
 navStudio.visible = navSavedVis[2];
 console.log('✓ navegación A*: desvío alrededor de obstáculos, fallback sin solución, extremos y planeY intactos');
 
-// --- imán (tlSnap): exclude no imanta consigo mismo + refs de subtítulos/quiz ---
+// --- imán (tlSnap): exclude no imanta consigo mismo + refs de subtítulos/quiz --- (RF-23)
 // El test de arriba (línea ~1040) cubre shots/bloques; acá se agregan las
 // pistas restantes (subtitleTrack/quizTrack) y el exclude del bloque arrastrado.
 const navSnapSub = { start: 99.0, end: 99.5, text: '__nav_snap__' };
