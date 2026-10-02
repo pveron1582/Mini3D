@@ -1,5 +1,5 @@
-﻿const fs = require('fs'), path = require('path');
-function walk(dir, acc = []) { for (const f of fs.readdirSync(dir)) { const p = path.join(dir, f); const s = fs.statSync(p); if (s.isDirectory()) walk(p, acc); else if (f.endsWith('.js')) acc.push(p); } return acc; }
+const fs = require('fs'), path = require('path');
+function walk(dir, acc = []) { for (const f of fs.readdirSync(dir)) { const p = path.join(dir, f); const s = fs.statSync(p); if (s.isDirectory()) { if (f === 'node_modules') continue; walk(p, acc); } else if (f.endsWith('.js')) acc.push(p); } return acc; }
 let bad = 0;
 for (const f of walk('js')) {
   const src = fs.readFileSync(f, 'utf8');

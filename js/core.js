@@ -6,6 +6,13 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 export const canvas = byId('view');
 
 export const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true, alpha: true });
+
+// Renderer de SALIDA actual: normalmente el de la ventana; durante la
+// exportación (#2) apunta al renderer offscreen de 1920×1080, así el video
+// sale en 1080p fijo —sin depender del tamaño de la ventana y sin redimensionar
+// el viewport de edición—. Los overlays (subtítulos, quiz) y el loop de render
+// leen SIEMPRE `output.renderer`, no `renderer`, para que salgan en el video.
+export const output = { renderer };
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 // Use a minimum size of 1×1; viewport.js will call onResize() to set the correct size
 // once the DOM layout is fully calculated.

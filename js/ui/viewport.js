@@ -132,9 +132,18 @@ function onResize() {
   controls.update();
   renderer.setSize(w, h, false);
 }
-window.addEventListener('resize', onResize);
-setTimeout(onResize, 0);
-setTimeout(onResize, 100);
-setTimeout(onResize, 500);
+// Resize: en vez de adivinar cuándo "asienta" el layout con varios timeouts
+// (la inicialización frágil de antes), observamos el CONTENEDOR: cada cambio
+// de tamaño —arranque, paneles redimensionados, ventana— dispara el ajuste
+// exacto una sola vez por cambio real.
+const containerRO = byId('viewport-container');
+if (typeof ResizeObserver === 'function' && containerRO) {
+  new ResizeObserver(() => onResize()).observe(containerRO);
+} else {
+  // Fallback (o en los tests de Node, donde no hay ResizeObserver): el evento
+  // global alcanza.
+  window.addEventListener('resize', onResize);
+  setTimeout(onResize, 0);
+}
 // Al terminar una exportación, recalcular (recorder restaura el tamaño)
 window.addEventListener('recorder-exited', onResize);

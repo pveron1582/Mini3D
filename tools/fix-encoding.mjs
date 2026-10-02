@@ -10,7 +10,7 @@
 //
 // Uso: node tools/fix-encoding.mjs  (reporta y repara in-place)
 
-import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -60,9 +60,19 @@ function repair(s) {
   return out;
 }
 
-const files = ['js', 'js/office'].flatMap((d) =>
-  readdirSync(join(root, d)).filter((f) => f.endsWith('.js')).map((f) => d + '/' + f)
-);
+// Recoge todos los .js bajo js/ (recursivo: characters/, cinema/, ui/,
+// media/, office/) más los CSS de la raíz — antes solo recorría js/ y
+// js/office/, así que el mojibake de style.css nunca se reparaba.
+function collectJs(dir, out = []) {
+  for (const f of readdirSync(join(root, dir))) {
+    const p = join(root, dir, f);
+    if (statSync(p).isDirectory()) collectJs(dir + '/' + f, out);
+    else if (f.endsWith('.js')) out.push(dir + '/' + f);
+  }
+  return out;
+}
+
+const files = [...collectJs('js'), ...readdirSync(root).filter((f) => f.endsWith('.css'))];
 
 let reparados = 0;
 for (const f of files) {

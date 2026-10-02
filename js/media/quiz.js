@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { renderer } from '../core.js';
+import { output } from '../core.js';
 
 // ==========================================
 // QUIZ DE CIERRE (cartel con pregunta y opciones)
@@ -190,8 +190,8 @@ export function renderQuizOverlay() {
   draw();
   qTex.needsUpdate = true;
   qQuad.visible = true;
-  const prevAuto = renderer.autoClear;
-  renderer.autoClear = false;
-  renderer.render(qScene, qCam);
-  renderer.autoClear = prevAuto;
+  const prevAuto = output.renderer.autoClear;
+  output.renderer.autoClear = false;
+  output.renderer.render(qScene, qCam);
+  output.renderer.autoClear = prevAuto;
 }

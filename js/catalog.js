@@ -9,6 +9,7 @@ import {
   createDesk, createChair, createSofa, createPlant, createFileCabinet,
   createCopier, createEmptyTable, createPCTower, createLaptop
 } from './office/furniture.js';
+import { createSceneCamera, setSceneCameraFov } from './office/sceneCameras.js';
 import { pushHistory } from './undo.js';
 import { setStatus } from './media/recorder.js';
 import { attachOpeningToWall } from './construction.js';
@@ -40,6 +41,21 @@ registerCatalogEntry({ id: 'emptyTable', label: '🛠️ Mesa Multiuso', cat: '�
 
 registerCatalogEntry({ id: 'pcTower', label: '💻 Torre PC', cat: '💻 Equipamiento IT', spawn: spawnPCTower });
 registerCatalogEntry({ id: 'laptop', label: '💻 Laptop', cat: '💻 Equipamiento IT', spawn: spawnLaptop });
+
+// Cámaras colocables (GLM #3): prop con posición/orientación/FOV propios que
+// las tomas pueden usar como vista ("Cámara puesta"). `rebuild` restaura el
+// FOV guardado en el JSON (la posición/rotación las aplica syncSpawned).
+registerCatalogEntry({
+  id: 'sceneCamera',
+  label: '📷 Cámara',
+  cat: '📡 Red',
+  spawn: (id, name, x, z, rotY) => createSceneCamera(id, name, x, z, rotY),
+  rebuild: (s) => {
+    const g = createSceneCamera(s.id, s.name, s.pos[0], s.pos[2], s.rotY || 0);
+    if (g && s.data && typeof s.data.fov === 'number') setSceneCameraFov(g, s.data.fov);
+    return g;
+  }
+});
 
 // ==========================================
 // SPAWN / DELETE / DUPLICATE

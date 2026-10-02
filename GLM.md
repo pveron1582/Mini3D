@@ -99,6 +99,16 @@
 > `scenes/alarma_en_la_red (1).json` (duplicado). `verify` en verde. Detalle
 > en `CHANGELOG.md`.
 
+> **Actualización 2026-09-18 (cierre del backlog técnico y de producto)**: se
+> cerraron los ítems #1 (MP4 con respaldo WebM), #2 (1080p 60 fps fijo y
+> **offscreen** con `output.renderer`), #3 (prop `📷 Cámara` colocable con FOV
+> propio y vista de toma "Cámara puesta"), #4 (paquetes de datos animados
+> recorriendo la red de canaletas), #7 (`ResizeObserver` en el viewport) y #8
+> (retiro del wiring muerto del panel de vistas). Además, limpieza de código
+> muerto (`compass.js` y handlers de elementos inexistentes), reparación del
+> mojibake de `style.css` y `verify` en verde con tests nuevos. Detalle en
+> `CHANGELOG.md`.
+
 ## Arquitectura general
 
 Aplicación web estática sin framework (vanilla JS + ES Modules), servida con `serve.py`
@@ -170,17 +180,19 @@ Módulos activos (`index.html` carga `js/main.js`, que importa todo en orden):
 ## Estado de las funciones clave para el objetivo (videos educativos de YouTube)
 
 **Animación de personajes — funcional, con actuación básica.** Timeline por personaje,
-gestos one-shot, lip-sync y `sit_at` reales; faltan transiciones suaves (~0,3 s),
-poses keyframeables e interacción con objetos. El cambio de acción sigue en seco.
+gestos one-shot, lip-sync, `sit_at` real y transiciones suaves entre acciones
+(0,3 s, ✅ 2026-09-08); faltan poses keyframeables e interacción con objetos.
 
 **Cámaras/ángulos — bueno para tomas con corte.** Tomas conmutables con sujeto/vista
-por toma y encuadre guardado; falta dolly/zoom dentro de la toma (`camPosEnd`) y
-cámaras colocables con FOV/distancia editables.
+por toma y encuadre guardado; dolly/zoom dentro de la toma (`camPosEnd`) y
+**cámaras colocables** (`📷 Cámara`, `js/office/sceneCameras.js`) con FOV propio.
+Pendiente: altura/distancia como parámetros de la toma (hoy las define el prop).
 
-**Grabación/exportación — funcional pero con techo.** Escena completa con cortes,
-subtítulos embebidos y control de velocidad; pendiente: solo WebM (falta MP4),
-resolución del viewport (falta 1080p fijo offscreen), sin audio y reloj por
-wall-clock (no determinista total).
+**Grabación/exportación — publicable.** Escena completa con cortes, subtítulos
+embebidos, audio mezclado y control de velocidad; salida 1080p 60 fps **fija y
+offscreen** (`output.renderer`, `js/media/recorder.js`) con simulación de paso
+fijo (1/30 s) y contenedor **MP4 (H.264)** con WebM de respaldo. Pendiente:
+WebCodecs para bitrate/resolución a medida.
 
 ## Problemas técnicos
 
@@ -199,13 +211,16 @@ wall-clock (no determinista total).
 5. ~~**Sin persistencia**~~ — **RESUELTO**: guardar/abrir JSON (`js/projectFiles.js`)
    con posiciones, acciones, recorridos, tomas, subtítulos, quiz, bloques de
    personajes y spawns del catálogo.
-6. **~~Bug potencial en `js/render.js`~~ (mitigado 2026-08-23)**: `dt` acotado a 1/20 s;
-   la reproducción de escena ahora es determinista por aguja (`evaluateAllPathsAt`);
-   queda pendiente el reloj fijo total (frame 1/30 s + 1080p offscreen).
-7. **Inicialización frágil**: `js/ui/viewport.js` llama `onResize` con 3 timeouts como
-   workaround de layout.
-8. **Toggle de vistas raro** (`js/ui/ui.js`): clicar la vista activa vuelve a órbita,
-   pero el botón "Libre (Órbita)" nunca aparece visualmente activo salvo por CSS inicial.
+6. ~~**Bug potencial en `js/render.js`~~ (mitigado 2026-08-23; **cerrado
+   2026-09-18**)**: `dt` acotado a 1/20 s, reproducción por aguja
+   (`evaluateAllPathsAt`) y, además, la exportación ahora renderiza **offscreen
+   a 1080p fijo** con pasos de 1/30 s (`output.renderer` en `core.js`).
+7. ~~**Inicialización frágil**: `js/ui/viewport.js` llamaba `onResize` con 3
+   timeouts como workaround de layout.~~ — **RESUELTO (2026-09-18)**: ahora un
+   `ResizeObserver` sobre `#viewport-container`.
+8. ~~**Toggle de vistas raro** (`js/ui/ui.js`)~~ — **RESUELTO (2026-09-18)**:
+   no era un bug visual sino código muerto: el panel `.view-btn` se había
+   quitado en la Fase A; se eliminó su wiring y su CSS.
 9. ~~**Escena duplicada `scenes/alarma_en_la_red (1).json`**~~ — **RESUELTO
    (2026-09-08)**: eliminada (sufijo de Windows); queda `scenes/alarma_en_la_red.json`.
 
@@ -220,13 +235,22 @@ wall-clock (no determinista total).
 3. ~~**Lip-sync mínimo**~~ **HECHO (2026-08-30)**: boca en `talk`/`sit_talk`.
    Pendiente: **audio por escena** (música + efectos, `js/audio.js`, WebAudio →
    `MediaStreamAudioDestinationNode`).
-4. **Exportación MP4** (WebCodecs o ffmpeg.wasm) y resolución/framerate fijos (1080p)
-   grabando offscreen para evitar drops.
+4. ~~**Exportación MP4**~~ **HECHO (2026-09-18)**: MP4 (H.264) elegido por
+   `isTypeSupported` con WebM (VP9/VP8) de respaldo y selector de formato; la
+   resolución/framerate son fijos (1080p 60 fps) grabando **offscreen**, con
+   un renderer propio de 1920×1080 (`output.renderer` en `core.js`) y pasos de
+   simulación de 1/30 s.
 5. ~~Guardar/cargar escenas (JSON)~~ **HECHO (2026-08-21)**: menú Archivo con
    Abrir/Guardar/Guardar como (`js/projectFiles.js`); serializa posiciones,
    acciones, recorridos con eventos y tomas de la timeline.
-6. **Cámaras colocables** con parámetros (FOV, altura, distancia): los offsets
-   cine son fijos.
+6. ~~**Cámaras colocables**~~ **HECHO (2026-09-18)**: prop `📷 Cámara`
+   (`js/office/sceneCameras.js`) con posición, orientación y **FOV propios**
+   (20°–100°, persistido en el JSON); la vista de toma “📷 Cámara puesta” la usa
+   como encuadre (`camMode: 'sceneCam'`).
+7. **Más props educativos**: pizarra/pantalla con texto o diagramas de red.
+   ~~paquetes de datos animados viajando entre dispositivos~~ **HECHO
+   (2026-09-18)**: `js/office/packets.js` recorre la red de canaletas (fija +
+   dibujada) con pulsos luminosos y estela.
 7. **Más props educativos**: pizarra/pantalla con texto o diagramas de red,
    paquetes de datos animados viajando entre dispositivos.
 8. ~~Limpieza: borrar `app.js`, `node_modules` y los bindings huérfanos.~~
@@ -240,12 +264,19 @@ wall-clock (no determinista total).
   personajes tipo "equipo IT" con acciones de teclear/hablar.
 - Cinemática por waypoints + pista PERSONAJES + imán + reproducción determinista.
 - 9+ vistas de cámara incluyendo 1ª/3ª persona, persecución, frente/perfil.
-- Exportación de video con cortes, subtítulos embebidos y guardado directo.
+- Exportación de video con cortes, subtítulos embebidos, audio y guardado directo;
+  **1080p 60 fps fijo y offscreen** en MP4 (H.264) con respaldo WebM.
+- Props de red "vivos": paquetes de datos recorriendo canaletas (`packets.js`) y
+  cámaras colocables con FOV propio (`sceneCameras.js`).
 - Setup cero-fricción: sin build, `serve.py` incluido, vendor local, UI en español
   estilo Blender.
 
 ## Recomendación de próximos pasos
 
-1. Audio por escena (`mini3d_mejoras.md` #3) — lo que más acerca a video publicable.
-2. Transiciones suaves entre acciones (~0,3 s) — pulido actoral barato.
-3. Cámara con dolly/zoom dentro de la toma (`camPosEnd`) + 1080p determinista.
+1. **Pizarra/pantalla con texto o diagramas de red** (`mini3d_mejoras.md` #9):
+   el prop educativo que falta — reutiliza el patrón canvas→texture de
+   subtítulos/quiz y es lo más pedido para clips de redes.
+2. **Terminal en pantalla / screencast** (`mini3d_mejoras.md` #11): comandos
+   guionados apareciendo en el monitor (nmap, ssh…) — mismo patrón técnico.
+3. **Poses keyframeables** (techo actoral que queda) y **WebCodecs** para
+   bitrate/resolución a medida en la exportación.
