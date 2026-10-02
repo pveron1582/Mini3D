@@ -3,6 +3,33 @@
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
 
+## [2026-10-01] — Commit del trabajo pendiente (backlog 2026-09-18)
+
+- Se commitea el lote que quedó sin commit desde el cierre del backlog
+  técnico: export **MP4 (H.264) con respaldo WebM**, salida **1080p 60 fps
+  fija offscreen** (`output.renderer` en `core.js`, `recorder.js` +142 líneas),
+  prop **📷 Cámara colocable** (`js/office/sceneCameras.js`, ahora trackeado —
+  `main.js` lo importaba desde hacia commits, un clone no cargaba), registro
+  en catálogo, fixes en `quiz.js`/`viewport.js`, retiro de `js/ui/compass.js`
+  (código muerto sin importadores) y mejoras en `tools/check-imports.cjs`
+  (salta `node_modules`) y `tools/fix-encoding.mjs` (recorre `js/` recursivo +
+  CSS). Actualización de `GLM.md` con el estado del cierre.
+
+## [2026-10-01] — Roadmap de mejoras + diagnóstico Spec-Driven Development
+
+- Nuevo `roadmap_mejoras.md` (raíz) con tres partes: **(I)** revisión general
+  del proyecto — fortalezas verificadas (suite `verify` en verde, arquitectura
+  por capas, docs) y hallazgos priorizados P0 (commit pendiente con
+  `sceneCameras.js` sin trackear, temporales de debug en raíz), P1 (sin CI,
+  `THREE.Clock` deprecado, tests sesgados al catálogo), P2 (archivos grandes,
+  sin spec del JSON) y P3 (ítem 7 duplicado en GLM, typo en `main.js`);
+  **(II)** diagnóstico de madurez SDD (~30–40%: hay backlog/reglas/CHANGELOG
+  pero descriptivos, no prescriptivos — falta `docs/specs/`, IDs de requisitos,
+  RNFs medibles y ADRs); **(III)** plan de adopción en Fases A–D (estructura
+  `docs/specs/` + `docs/adr/` con plantilla de spec, extracción desde el
+  material existente, proceso spec-first en `AGENTS.md`/`SKILL.md`, enforcement
+  continuo) con orden de ejecución y definición de hecho.
+
 ## [2026-09-23] — Reunión: el cierre del perro/heladera lo dice Alex (con lip-sync)
 
 - El último subtítulo de `reunion_prioridades_jefe.json` (40.0–44.8s,
