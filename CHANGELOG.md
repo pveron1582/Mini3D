@@ -3,6 +3,30 @@
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
 
+## [2026-10-01] — Fase A SDD: estructura docs/specs + ADRs (v1 para revisión)
+
+- Nueva carpeta `docs/specs/` con 6 archivos y `docs/adr/` con 4 decisiones.
+  Material extraído del código real + README/SKILL/GLM/backlog (no escritura
+  desde cero — reorganización). **Pendiente de revisión del usuario: los RFs
+  de backlog (RF-60..65) quedan en `borrador`, el resto en el estado que el
+  código/tests justifican (`verificado` = assert en p7-test).**
+- `plantilla_spec.md`: formato RF con estados
+  borrador/aprobado/implementado/verificado + regla "sin spec aprobada no se
+  implementa" (prepara la Fase C).
+- `00-vision.md`: visión, filosofía, caso de uso y fuera de alcance.
+- `01-requisitos.md`: ~50 RFs (A-proyecto, B-personajes, C-cinemática,
+  D-entornos, E-exportación, F-interfaz, G-backlog en borrador) con
+  trazabilidad a tests p7-test y CHANGELOG.
+- `02-no-funcionales.md`: RNF-01..10 medibles (0 deps, sin build, ≥60 fps,
+  arranque <2 s, JSON <1 MB, 1080p60, verify verde, vendor único, static host, español).
+- `03-formato-json.md`: esquema `version: 1` extraído de `serializeProject`
+  (**incluye `description`: solo existe en las escenas de ejemplo, el
+  serializador NO lo emite**), reglas de compat/migración y obligación de
+  documentar todo `spawnData` nuevo.
+- `04-flujos-usuario.md`: F1 (clip educativo completo) a F4 (construir ambiente).
+- ADRs 0001 (sin build), 0002 (estado mutable), 0003 (ciclos por inyección +
+  check-scc) y 0004 (offscreen 1080p).
+
 ## [2026-10-01] — P1-3: tests de navegación A* + ampliación del imán tlSnap
 
 - `tools/p7-test.mjs` (+95 líneas): **primeros tests de `js/cinema/navigation.js`**
