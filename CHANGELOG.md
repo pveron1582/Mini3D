@@ -3,6 +3,25 @@
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
 
+## [2026-10-01] — P1-3: tests de navegación A* + ampliación del imán tlSnap
+
+- `tools/p7-test.mjs` (+95 líneas): **primeros tests de `js/cinema/navigation.js`**
+  (era el módulo con cero cobertura). Bloque aislado (registry vacío + ambientes
+  ocultos, restaurado al final) con obstáculos fake vía `__colRadius`:
+  - camino despejado → exactamente 2 extremos sin intermedios;
+  - obstáculo central → desvío con intermedios **fuera del radio efectivo**
+    (1.225 m) y `y === planeY`;
+  - meta **fuera de la grilla** con tramo bloqueado → A* null → fallback al
+    camino directo (el guard `if (!cells) continue`);
+  - multi-waypoint → originales conservados en orden y **solo el tramo
+    bloqueado** suma puntos;
+  - guard clauses (`null`, un solo waypoint).
+  - Hallazgo documentado: `collectObstacles` acota `colR` a `Math.min(colR, 2.0)`.
+- Ampliación del **imán tlSnap** (ya cubría shots/bloques): refs de
+  `subtitleTrack` y `quizTrack`, comportamiento de `exclude` (el bloque
+  arrastrado no es referencia de sí mismo) y snap a 0.1s sobre subtítulo.
+- `roadmap_mejoras.md`: P1-3 marcado RESUELTO (P1 completo).
+
 ## [2026-10-01] — P1-2: THREE.Clock → THREE.Timer (fin del warning deprecado)
 
 - `js/render.js`: el reloj del bucle de render ahora es `THREE.Timer`

@@ -1229,5 +1229,103 @@ deselectAllBlocks();
 assert(getSelectedBlock() === null && blockPin.kind === null, 'todo limpio');
 console.log('✓ barra de bloques: selección, pin y acciones por pista');
 
+// --- navegación A* (navigation.js): desvío, fallback y extremos intactos ---
+// Aislamiento total: se vacía el registry y se ocultan TODOS los ambientes para
+// que los obstáculos sean 100% controlados por el test (sin paredes/muebles
+// reales de la escena cargada). Se restaura todo al final del bloque.
+const { solvePath } = await import(pathToFileURL('./js/cinema/navigation.js'));
+const { officeGroup: navOffice } = await import(pathToFileURL('./js/office/group.js'));
+const { parkGroup: navPark } = await import(pathToFileURL('./js/park.js'));
+const { studioGroup: navStudio } = await import(pathToFileURL('./js/lights.js'));
+const navSavedEntries = [...interactiveRegistry.entries()];
+const navSavedVis = [navOffice.visible, navPark.visible, navStudio.visible];
+interactiveRegistry.clear();
+navOffice.visible = false; navPark.visible = false; navStudio.visible = false;
+// Obstáculo circular fake: __colRadius evita setFromObject sobre el stub y el
+// group plano satisface isShown/wallData/position de collectObstacles.
+const navObs = (id, x, z, colR) => interactiveRegistry.set(id, {
+  id, type: 'prop', __colRadius: colR,
+  group: { position: { x, y: 0, z }, visible: true, parent: null, userData: {} },
+});
+
+// 1. Camino despejado → exactamente los 2 extremos, sin intermedios.
+let nav = solvePath([new V(-4, 0, -6), new V(4, 0, -6)], 0);
+assert(nav.length === 2, 'A*: sin obstáculos no inserta puntos');
+assert(Math.abs(nav[0].x + 4) < 1e-9 && Math.abs(nav[1].x - 4) < 1e-9, 'A*: extremos intactos');
+
+// 2. Obstáculo en el centro del tramo → desvío con intermedios fuera del radio.
+navObs('navObs1', 0, -6, 1.0);
+// Radio efectivo de collectObstacles: min(colR,2)*0.85 + CHAR_RADIUS*0.5 + MARGIN*0.5
+const NAV_R = 1.0 * 0.85 + 0.3 * 0.5 + 0.45 * 0.5;
+nav = solvePath([new V(-4, 0, -6), new V(4, 0, -6)], 0.17);
+assert(nav.length > 2, 'A*: el obstáculo central fuerza un desvío');
+assert(Math.abs(nav[0].x + 4) < 1e-9 && Math.abs(nav[0].z + 6) < 1e-9, 'A*: el extremo inicial se respeta');
+assert(Math.abs(nav[nav.length - 1].x - 4) < 1e-9 && Math.abs(nav[nav.length - 1].z + 6) < 1e-9, 'A*: el extremo final (rojo) se respeta');
+for (let i = 1; i < nav.length - 1; i++) {
+  const d = Math.hypot(nav[i].x - 0, nav[i].z - (-6));
+  assert(d >= NAV_R - 1e-6, `A*: intermedio ${i} fuera del obstáculo (d=${d.toFixed(3)} < ${NAV_R})`);
+  assert(Math.abs(nav[i].y - 0.17) < 1e-9, 'A*: los intermedios respetan planeY');
+}
+
+// 3. Tramo bloqueado + meta FUERA de la grilla → A* devuelve null → el guard
+//    `if (!cells) continue` conserva el camino directo (fallback probado).
+//    Nota: collectObstacles acota el radio a Math.min(colR, 2.0), así que un
+//    "obstáculo gigante" no sirve para forzar null — se usa meta fuera de bounds.
+interactiveRegistry.clear();
+navObs('navObsOut', 0, -6, 1.0);
+nav = solvePath([new V(-4, 0, -6), new V(20, 0, -6)], 0); // x=20 > maxX (15)
+assert(nav.length === 2, 'A*: sin solución posible se conserva el camino directo');
+assert(Math.abs(nav[1].x - 20) < 1e-9, 'A*: el extremo fuera de grilla también se respeta');
+
+// 4. Multi-waypoint: los originales se conservan en orden y SOLO el tramo
+//    bloqueado suma puntos intermedios.
+interactiveRegistry.clear();
+navObs('navObsMid', 0, -6, 1.0);
+nav = solvePath([new V(-4, 0, -6), new V(4, 0, -6), new V(4, 0, 6)], 0);
+const navNear = (p, x, z) => Math.abs(p.x - x) < 1e-9 && Math.abs(p.z - z) < 1e-9;
+const iA = nav.findIndex(p => navNear(p, -4, -6));
+const iB = nav.findIndex(p => navNear(p, 4, -6));
+const iC = nav.findIndex(p => navNear(p, 4, 6));
+assert(iA === 0, 'A*: waypoint inicial en la posición 0');
+assert(iB > iA, 'A*: waypoint intermedio conservado y en orden');
+assert(iC === nav.length - 1 && iB < iC, 'A*: waypoint final conservado al cierre');
+assert(nav.slice(iA + 1, iB).length >= 1, 'A*: tramo bloqueado suma intermedios');
+assert(nav.slice(iB + 1, iC).length === 0, 'A*: tramo libre NO suma intermedios');
+
+// 5. Entradas cortas se devuelven tal cual (guard clause).
+assert(solvePath(null, 0) === null, 'A*: null pasa tal cual');
+assert(solvePath([new V(1, 0, 1)], 0).length === 1, 'A*: un solo waypoint no hace nada');
+
+// Restaurar el estado para lo que corra después.
+interactiveRegistry.clear();
+navSavedEntries.forEach(([k, v]) => interactiveRegistry.set(k, v));
+navOffice.visible = navSavedVis[0];
+navPark.visible = navSavedVis[1];
+navStudio.visible = navSavedVis[2];
+console.log('✓ navegación A*: desvío alrededor de obstáculos, fallback sin solución, extremos y planeY intactos');
+
+// --- imán (tlSnap): exclude no imanta consigo mismo + refs de subtítulos/quiz ---
+// El test de arriba (línea ~1040) cubre shots/bloques; acá se agregan las
+// pistas restantes (subtitleTrack/quizTrack) y el exclude del bloque arrastrado.
+const navSnapSub = { start: 99.0, end: 99.5, text: '__nav_snap__' };
+const navSnapQuiz = { id: 'navSnapQuiz', question: 'Q?', options: ['A', 'B'], correct: 0, duration: 2, start: 98, end: 100 };
+const navSnapBlk = { id: 'navSnapBlk', start: 97, duration: 0.6, actions: {} };
+subtitleTrack.push(navSnapSub);
+quizTrack.push(navSnapQuiz);
+charBlocks.push(navSnapBlk);
+const refsAll = collectTimelineSnapTimes();
+assert(refsAll.includes(99) && refsAll.includes(99.5), 'imán: los bordes del subtítulo entran a las refs');
+assert(refsAll.includes(98) && refsAll.includes(100), 'imán: los bordes del cartel entran a las refs');
+const refsNoSelf = collectTimelineSnapTimes(navSnapBlk);
+assert(!refsNoSelf.includes(97), 'imán: exclude quita el inicio del bloque arrastrado');
+assert(!refsNoSelf.includes(97.6), 'imán: exclude quita el fin del bloque arrastrado');
+assert(refsNoSelf.includes(99.5), 'imán: exclude no quita las refs de las demás pistas');
+assert(Math.abs(snapTimeToRefs(99.45, 0.1, refsAll) - 99.5) < 1e-9, 'imán: 99.45 se pega al fin del subtítulo (99.5)');
+subtitleTrack.splice(subtitleTrack.indexOf(navSnapSub), 1);
+quizTrack.splice(quizTrack.indexOf(navSnapQuiz), 1);
+charBlocks.splice(charBlocks.indexOf(navSnapBlk), 1);
+assert(!collectTimelineSnapTimes().includes(97), 'imán: refs limpias tras el test');
+console.log('✓ imán tlSnap: exclude propio, refs de subtítulos/quiz y snap a 0.1s');
+
 console.log('\n✅ P7: todas las pruebas pasaron');
 process.exit(0);

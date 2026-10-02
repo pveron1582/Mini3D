@@ -43,7 +43,7 @@
 |---|---|---|
 | P1-1 ✅ | **Sin CI** — el repo tiene `origin` en GitHub y scripts de verify listos. | **RESUELTO (2026-10-01)**: `.github/workflows/verify.yml` — `npm run verify` en push/PR a main; run #2 en verde. Nota: `test-geo-cache.js` ahora usa `p7-loader.mjs` (antes dependía del shim gitignorado de `node_modules/three`). |
 | P1-2 ✅ | **`THREE.Clock` deprecado** en Three.js r0.185 — avisa en cada corrida y hace que PowerShell trate el stderr como error de la suite. | **RESUELTO (2026-10-01)**: migrado a `THREE.Timer` en `js/render.js` (`timer.update()` por frame + `connect(document)` para Page Visibility). Warning eliminado de la salida de tests. |
-| P1-3 | **Tests sesgados al catálogo** — spawn/persistencia/carga bien cubiertos; timeline, imán (`tlSnap`), bloques de movimiento y A* con poca cobertura. | Ampliar el patrón de `p7-test` a esas áreas. |
+| P1-3 ✅ | **Tests sesgados al catálogo** — spawn/persistencia/carga bien cubiertos; timeline, imán (`tlSnap`), bloques de movimiento y A* con poca cobertura. | **RESUELTO (2026-10-01)**: +19 asserts — primeros tests de `navigation.js` (A*: desvío, fallback, multi-waypoint, guard clauses) y ampliación de tlSnap (exclude + subtítulos/quiz). Timeline y bloques ya tenían cobertura amplia (30+ secciones en `p7-test.mjs`). **P1 completo.** |
 
 ### 🟢 P2 — Arquitectura a futuro
 
