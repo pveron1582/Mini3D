@@ -3,6 +3,19 @@
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
 
+## [2026-10-01] — P1-1: CI con GitHub Actions (verify en cada push/PR)
+
+- Nuevo `.github/workflows/verify.yml`: corre `npm run verify` (imports +
+  ciclos + suite funcional + carga + geo-cache) en `ubuntu-latest`/Node 20 en
+  cada push y PR a `main`. Run #2 en verde tras dos fixes:
+  - Se quitó `pnpm/action-setup@v4` (fallaba en el runner; el proyecto no
+    tiene dependencias y los scripts ya invocan `npm run`).
+  - `tools/test-geo-cache.js`: ahora registra `p7-loader.mjs` como los demás
+    tests; antes dependía del shim manual `node_modules/three` (gitignorado,
+    inexistente en CI) y fallaba con `ERR_MODULE_NOT_FOUND`. Verificado
+    localmente sin `node_modules`: `npm run verify` = 0.
+- `roadmap_mejoras.md`: P0-1/P0-2/P0-3 y P1-1 marcados RESUELTOS.
+
 ## [2026-10-01] — Commit del trabajo pendiente (backlog 2026-09-18)
 
 - Se commitea el lote que quedó sin commit desde el cierre del backlog

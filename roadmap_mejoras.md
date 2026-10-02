@@ -33,15 +33,15 @@
 
 | # | Hallazgo | Acción |
 |---|---|---|
-| P0-1 | **HEAD posiblemente roto**: `js/office/sceneCameras.js` está sin trackear pero `main.js` (committed) lo importa → un `clone` no carga. Además 9 archivos modificados sin commit (`recorder.js` +142 líneas, `core.js` con `output.renderer`, `catalog.js`, `GLM.md`, borrado de `js/ui/compass.js`). | Commit del lote pendiente (o stash si no está terminado). **Primera tarea.** |
-| P0-2 | **13 archivos de debug en la raíz** sin trackear: `_probe*.html`, `_dom_*.html` (~145 KB), `_idscheck.cjs`, `_proberun.cjs`, `_tmp_scan.py`, `_probe_err.txt`, más `tools/_scc2.cjs`. | Borrar y agregar `_*` + `tools/_scc*` al `.gitignore`. |
-| P0-3 | Copia completa del proyecto en `.kilo/worktrees/dent-article/` (con `js/`, `CHANGELOG.md`, etc.) — cluter que confunde. | Verificar si es worktree activo; si no, eliminar. |
+| P0-1 ✅ | **HEAD posiblemente roto**: `js/office/sceneCameras.js` estaba sin trackear pero `main.js` lo importa → un `clone` no cargaba. Además 9 archivos modificados sin commit. | **RESUELTO (2026-10-01)**: commits `4e30c6a` + `3138ae5` + `2df70f7`, pusheados. |
+| P0-2 ✅ | **14 archivos de debug en la raíz** sin trackear: `_probe*.html`, `_dom_*.html`, `_idscheck.cjs`, `_proberun.cjs`, `_tmp_scan.py`, `_probe_err.txt`, más `tools/_scc2.cjs`. | **RESUELTO (2026-10-01)**: borrados; `.gitignore` excluye `/_*` y `tools/_scc*`. |
+| P0-3 ✅ | Worktree `.kilo/worktrees/dent-article/` con copia completa del proyecto. | **RESUELTO (2026-10-01)**: worktree limpio y en ancestro de main → `git worktree remove` sin pérdida. |
 
 ### 🟡 P1 — Deuda técnica
 
 | # | Hallazgo | Acción |
 |---|---|---|
-| P1-1 | **Sin CI** — el repo tiene `origin` en GitHub y scripts de verify listos. | GitHub Actions corriendo `pnpm run verify` en cada push (~10 líneas). |
+| P1-1 ✅ | **Sin CI** — el repo tiene `origin` en GitHub y scripts de verify listos. | **RESUELTO (2026-10-01)**: `.github/workflows/verify.yml` — `npm run verify` en push/PR a main; run #2 en verde. Nota: `test-geo-cache.js` ahora usa `p7-loader.mjs` (antes dependía del shim gitignorado de `node_modules/three`). |
 | P1-2 | **`THREE.Clock` deprecado** en Three.js r0.185 — avisa en cada corrida y hace que PowerShell trate el stderr como error de la suite. | Migrar a `THREE.Timer` (cambio menor). |
 | P1-3 | **Tests sesgados al catálogo** — spawn/persistencia/carga bien cubiertos; timeline, imán (`tlSnap`), bloques de movimiento y A* con poca cobertura. | Ampliar el patrón de `p7-test` a esas áreas. |
 
