@@ -27,6 +27,10 @@ coverage/
 *.swp
 *~
 
+# Depuración / probes sueltos en la raíz (nunca se trackean)
+/_*
+tools/_scc*
+
 # Logs sueltos del servidor local (serve.py redirige output acá a veces)
 *.log
 server_err.txt
