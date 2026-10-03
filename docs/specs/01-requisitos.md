@@ -108,14 +108,43 @@ las ediciones de aguja escriben la base viva.
 
 ## C. Cinemática y línea de tiempo
 
-### RF-20 — Recorridos por waypoints con eventos
-Estado: `verificado`
+### RF-20 — Recorridos por waypoints, eventos y editor en barra de acciones
+Estado: `aprobado` (re-especificado 2026-10-03 tras la prueba "proyecto
+nuevo con un personaje"; antes estaba `verificado`)
+
 Camino punto a punto con acciones y esperas por waypoint; al pasar por el
 punto el personaje actúa y espera el tiempo indicado (con acción final
-persistente).
-- [ ] Un evento `wait` detiene al personaje el tiempo exacto; la acción final queda fija
+persistente). La edición del camino vive en la **barra de botones de la
+pista 🧍** (menú de acción), nunca en el panel izquierdo (ver criterio de
+estabilidad).
+
+Criterios originales:
+- [x] Un evento `wait` detiene al personaje el tiempo exacto; la acción final queda fija
 - Test: `p7-test` "camino: ⧉ duplica waypoints + eventos"
 - CHANGELOG: 2026-08-21
+
+Criterios nuevos (aprobados por el usuario, 2026-10-03):
+- [ ] **Línea visible en TODOS los flujos de edición**: la línea amarilla
+  conectando los markers se ve en el 3D al crear/editar el camino desde un
+  bloque 🚶 de movimiento, desde 🎬 cinemática, o desde el editor de barra.
+  (Bug visto: bloque de movimiento + icono de tabla de acción → puntos verdes/
+  rojos/amarillos visibles pero SIN línea.)
+- [ ] **Cero puntos fantasma**: salir del editor (✕ roja, cambio de modo,
+  click afuera) limpia markers y línea del camino; reentrar los recrea.
+- [ ] **Barra de edición del camino**: al clickear el icono de tabla de
+  acción en la pista 🧍, la barra de botones entra en modo edición:
+  a. el icono de acción se pone **azul**;
+  b. al lado aparece un **botón con dos círculos** (verde inicio / rojo fin)
+  que muestra-oculta los puntos del camino;
+  c. **desplegable de acción** de movimiento del personaje (caminar, correr…);
+  d. **desplegable de velocidad**: ×0.25 ×0.5 ×1 ×2 ×4 ×8;
+  e. una **✕ roja** en el lugar del icono original que cierra el menú y
+  restaura los botones normales de la barra.
+- [ ] **Cadencia sincronizada**: las piernas del personaje se mueven acordes
+  a la velocidad elegida (sin deslizamiento ni galope raro al variar ×0.25–×8).
+- [ ] **Estabilidad del panel izquierdo**: usar esta barra no cambia nada del
+  panel/menú de la izquierda (los modos dinámicos viven solo en esta barra).
+- Depende de: RF-21 (bloque 🚶 que abre el editor)
 
 ### RF-21 — Bloques de personaje (pista 🧍)
 Estado: `verificado`
@@ -123,6 +152,7 @@ Bloques estáticos (acción/todo el tramo) y de desplazamiento (verde→rojo con
 duración auto e interpolación en curva). El camino es editable (insertar/
 arrastrar puntos con toggle).
 - [ ] Duplicar un recorrido lo camina dos veces; la selección abraza el tramo visible
+- Depende de: RF-20 (acción y velocidad del recorrido se editan en su barra)
 - Test: `p7-test` "bloques de desplazamiento", "camino por tramos", "extender bloque"
 - CHANGELOG: 2026-08-28
 
@@ -186,6 +216,18 @@ Diálogo a dos: posiciones enfrentadas en el área libre + tomas sugeridas;
 entra al undo como un solo paso.
 - Sin test automatizado aún
 
+### RF-67 — Numeración de waypoints (01–99)
+Estado: `aprobado` (nuevo, propuesto y aprobado por el usuario 2026-10-03)
+Cada punto del camino muestra su **número de orden** (01, 02, … hasta 99; de
+100 en adelante sin número) en un sprite de texto sobre la esfera del marker,
+visible mientras se edita el camino. Permite seguir el orden del recorrido
+incluso si la línea no se ve o hay muchos puntos.
+- [ ] Todos los markers en modo edición muestran su número (01 = inicio, en orden)
+- [ ] De 100+ puntos en adelante los markers siguen funcionando sin número
+- [ ] El número se actualiza al insertar/borrar/reordenar puntos
+- Técnica sugerida: patrón canvas→texture ya usado en subtítulos/quiz
+- Depende de: RF-20
+
 ## D. Entornos y objetos
 
 ### RF-30 — Ambientes y switcher
@@ -207,6 +249,43 @@ con imán a pared y hueco; diseños de puerta (3) y ventana (3).
 Estado: `verificado`
 34+ piezas spawn/duplicar/borrar con persistencia en `spawned[]` y `rebuild`
 por fábrica; IDs autogenerados (`desk_spawn1`).
+- Test: `p7-test` (núcleo del archivo: catálogo, spawn, duplicar, escala/rotación, bug laptop)
+- CHANGELOG: 2026-08-28
+
+### RF-33 — Canaleta dibujada punto a punto
+Estado: `verificado`
+Click marca inicio, cada click agrega tramo ortogonal (sin diagonales) con
+ghost; imán a la red resolviendo recta/esquina 90°/unión "T"; tramo como
+objeto seleccionable y serializable (puntos en `spawnData`).
+- Test: `p7-test` "canaleta dibujada", "pasamuros", "routing ortogonal"
+- CHANGELOG: 2026-08-28
+
+### RF-34 — Cámaras colocables con FOV
+Estado: `verificado`
+Prop 📷 con posición/orientación/FOV propios (20°–100°, en `spawnData.fov`);
+la vista de toma "📷 Cámara puesta" la usa como encuadre.
+- Test: `p7-test` "cámaras colocables"
+- CHANGELOG: 2026-09-18
+
+### RF-35 — Paquetes de datos por canaletas
+Estado: `verificado`
+Pulsos luminosos con estela recorren la red fija + dibujada; reconexión
+automática al agregar/mover/borrar; la red es un grafo conexo (suben por
+las bajadas).
+- Test: `p7-test` "paquetes de datos", "grafo conexo"
+- CHANGELOG: 2026-09-18
+
+### RF-36 — Alarma de emergencia
+Estado: `implementado`
+Balizas rojas en toma (`alarm: true` en el shot): teñido pulsante de escena.
+- Expuesto en tomas; usado en la escena de ejemplo
+
+### RF-37 — Mini rack con puerta multi-instancia
+Estado: `verificado`
+Puerta interactiva por rack (registro en `group.js`, ticker anima todas;
+`openDoor` de la toma las abre todas).
+- Test: `p7-test` "mini rack (Lote 3b)"
+- CHANGELOG: 2026-09-18
 
 ## E. Exportación de video
 
@@ -263,10 +342,22 @@ Acciones por clic derecho (acción base, sentarse con elección de silla,
 eliminar); todas deshacibles con `pushHistory` antes de mutar.
 
 ### RF-53 — Barra de bloques de la timeline
-Estado: `verificado`
+Estado: `aprobado` (re-especificado 2026-10-03 por bugs del pin/doble clic;
+antes estaba `verificado`)
 Selección por pista (toma/bloque/subtítulo/quiz), barra 🎬↻⧉🗑✕📌 + pin rojo,
 duplicar/restablecer/borrar por tipo.
+
+Criterios originales:
+- [x] Selección, pin y acciones por tipo
 - Test: `p7-test` "barra de bloques" (sección completa)
+
+Criterios nuevos (aprobados por el usuario, 2026-10-03):
+- [ ] **Toggle simétrico del pin**: doble clic fija y un segundo doble clic
+  suelta; 📌 fija y 📌 de nuevo suelta (hoy quedaba fijado sin poder salir).
+- [ ] **El pin no bloquea el scrub**: con el bloque fijado, la aguja roja de
+  la timeline sigue arrastrándose y el click en otros lados no cambia el
+  bloque fijado (el pin solo bloquea elegir otro bloque/modo).
+- [ ] Cerrar con ✕ de la barra también suelta la fijación.
 
 ### RF-54 — Pantalla de arranque (boot)
 Estado: `implementado`
@@ -320,41 +411,3 @@ Estado: `borrador`
 El parque existe (bancos, camino, farolas) pero sin razones para filmar ahí:
 mobiliario narrativo + al menos una escena de ejemplo que lo use.
 Depende de: RF-30.
-
-- Test: `p7-test` (núcleo del archivo: catálogo, spawn, duplicar, escala/rotación, bug laptop)
-- CHANGELOG: 2026-08-28
-
-### RF-33 — Canaleta dibujada punto a punto
-Estado: `verificado`
-Click marca inicio, cada click agrega tramo ortogonal (sin diagonales) con
-ghost; imán a la red resolviendo recta/esquina 90°/unión "T"; tramo como
-objeto seleccionable y serializable (puntos en `spawnData`).
-- Test: `p7-test` "canaleta dibujada", "pasamuros", "routing ortogonal"
-- CHANGELOG: 2026-08-28
-
-### RF-34 — Cámaras colocables con FOV
-Estado: `verificado`
-Prop 📷 con posición/orientación/FOV propios (20°–100°, en `spawnData.fov`);
-la vista de toma "📷 Cámara puesta" la usa como encuadre.
-- Test: `p7-test` "cámaras colocables"
-- CHANGELOG: 2026-09-18
-
-### RF-35 — Paquetes de datos por canaletas
-Estado: `verificado`
-Pulsos luminosos con estela recorren la red fija + dibujada; reconexión
-automática al agregar/mover/borrar; la red es un grafo conexo (suben por
-las bajadas).
-- Test: `p7-test` "paquetes de datos", "grafo conexo"
-- CHANGELOG: 2026-09-18
-
-### RF-36 — Alarma de emergencia
-Estado: `implementado`
-Balizas rojas en toma (`alarm: true` en el shot): teñido pulsante de escena.
-- Expuesto en tomas; usado en la escena de ejemplo
-
-### RF-37 — Mini rack con puerta multi-instancia
-Estado: `verificado`
-Puerta interactiva por rack (registro en `group.js`, ticker anima todas;
-`openDoor` de la toma las abre todas).
-- Test: `p7-test` "mini rack (Lote 3b)"
-- CHANGELOG: 2026-09-18

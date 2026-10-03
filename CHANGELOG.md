@@ -3,6 +3,32 @@
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
 
+## [2026-10-03] — Specs: re-especificación de RF-20 y RF-53 + RF-67 nuevo (RF-20, RF-53, RF-67)
+
+Prueba real del usuario ("proyecto nuevo con un personaje, bloque de
+movimiento"): 5 hallazgos que re-especifican specs antes de tocar código
+(regla 8).
+
+- **RF-20** (→ `aprobado`): +5 criterios — línea visible en TODOS los
+  flujos de edición (bug: bloque 🚶 + tabla de acción no mostraba la línea);
+  cero puntos fantasma al salir del editor; **barra de edición del camino**
+  rediseñada (icono azul, botón de dos círculos inicio/fin, desplegable de
+  acción, desplegable de velocidad ×0.25–×8, ✕ roja de cierre); cadencia de
+  piernas sincronizada con la velocidad; estabilidad del panel izquierdo
+  (los modos dinámicos solo en la barra — el panel izquierdo se limpiará
+  después).
+- **RF-53** (→ `aprobado`): +3 criterios — toggle simétrico del pin (doble
+  clic y 📌 fijan y SUELTAN), el pin no bloquea el scrub de la aguja roja, ✕
+  también suelta la fijación.
+- **RF-67 nuevo** (→ `aprobado`): numeración de waypoints 01–99 en sprites
+  sobre los markers (propuesta del usuario).
+- RF-21: dependencia explícita con RF-20 (acción/velocidad).
+
+## [2026-10-03] — Ajuste fino SDD: orden en 01-requisitos.md y pathing en check-specs (infra)
+
+- `docs/specs/01-requisitos.md`: reubicados `RF-33` a `RF-37` (canaletas, cámaras, paquetes de datos, alarma, mini rack) en la sección `## D. Entornos y objetos`, restauradas las líneas de test/changelog de `RF-32` y dejado `## G. Backlog` al final del documento.
+- `tools/check-specs.cjs`: anclaje de rutas con `path.resolve(__dirname, '..')`, permitiendo ejecutar el validador desde cualquier directorio de trabajo sin fallar por `ENOENT`.
+
 ## [2026-10-03] — P3 completo: typo main.js + archivo/ → docs/historial (infra)
 
 - `js/main.js`: typo "evaluución" → "evaluación".
