@@ -54,10 +54,16 @@
 
 ### 🔵 P3 — Menores
 
-- `GLM.md`: ítem 7 "Más props educativos" duplicado consecutivo (~líneas 250/254).
-- Typo `main.js:5`: "evaluución" → "evaluación".
-- `archivo/` (docs históricos de Gemini): mover a `docs/historial/`.
-- Raíz con 11 archivos `.md`: considerar consolidar tras la adopción SDD (ver Fase B).
+- ~~`GLM.md`: ítem 7 "Más props educativos" duplicado consecutivo~~ ✅
+  RESUELTO (Fase B, 2026-10-01: fusionado y con pointer a RF-60).
+- ~~Typo `main.js:5`: "evaluución" → "evaluación".~~ ✅ RESUELTO (2026-10-03).
+- ~~`archivo/` (docs históricos de Gemini): mover a `docs/historial/`.~~ ✅
+  RESUELTO (2026-10-03: `git mv`; sin referencias rotas).
+- ~~Raíz con 11 archivos `.md`: consolidar tras la adopción SDD.~~ ✅ CERRADO
+  (2026-10-03, decisión): no se consolida más — las notas SDD en GLM.md y
+  mini3d_mejoras.md aclaran el rol de cada documento (visión/estado/backlog/
+  proceso/specs) y `CLAUDE.md`/`AGENTS.md` son punteros por agente. **P3
+  completo.**
 
 ---
 

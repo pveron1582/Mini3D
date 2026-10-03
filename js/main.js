@@ -2,7 +2,7 @@
 // MiniStudio 3D - Punto de entrada (orquestador)
 // ==========================================
 // Importar todos los módulos (efecto secundario: construyen escena, personajes,
-// entornos y registran listeners). El orden de evaluución lo resuelve el grafo
+// entornos y registran listeners). El orden de evaluación lo resuelve el grafo
 // de dependencias de ES modules.
 import './core.js';
 import './state.js';

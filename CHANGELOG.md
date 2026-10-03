@@ -3,6 +3,15 @@
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
 
+## [2026-10-03] — P3 completo: typo main.js + archivo/ → docs/historial (infra)
+
+- `js/main.js`: typo "evaluución" → "evaluación".
+- `archivo/` movido a `docs/historial/` (`git mv`, cero referencias rotas —
+  solo lo mencionaba el propio roadmap).
+- Roadmap P3 cerrado: duplicado de GLM (ya en Fase B) y consolidación de la
+  raíz resuelta por decisión (roles aclarados con las notas SDD; no se
+  consolida más). **Todo el roadmap P0-P3 + Fases A-D ejecutado.**
+
 ## [2026-10-01] — Fase D SDD: enforcement automático (check-specs en verify) (infra)
 
 - Nuevo `tools/check-specs.cjs`, cableado en `pnpm run check`/`verify` y por
