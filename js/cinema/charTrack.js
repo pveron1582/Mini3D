@@ -22,6 +22,7 @@ import { pushHistory } from '../undo.js';
 import { setStatus } from '../media/recorder.js';
 import { collectTimelineSnapTimes, snapTimeToRefs, TL_SNAP_PX } from './tlSnap.js';
 import { pxPerSec, LANE_LABEL_W } from './tlScale.js';
+import { syncMarkerNumber } from './wpNumbers.js';
 
 let blockCounter = 0;
 export function bumpCharBlockCounter(n) { blockCounter = Math.max(blockCounter, n); }
@@ -1354,6 +1355,8 @@ function ensureMoveMarkers() {
   const mat = (c) => new THREE.MeshBasicMaterial({ color: c, depthTest: false, transparent: true, opacity: 0.95 });
   markFrom = new THREE.Mesh(new THREE.SphereGeometry(0.12, 14, 14), mat(0x35d03a));
   markTo = new THREE.Mesh(new THREE.SphereGeometry(0.12, 14, 14), mat(0xe04040));
+  markFrom.userData.isMoveMarker = true;
+  markTo.userData.isMoveMarker = true;
   markLine = new THREE.Line(
     new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
     new THREE.LineBasicMaterial({ color: 0xffd24d, depthTest: false, transparent: true, opacity: 0.9 })
@@ -1384,6 +1387,11 @@ function updateMoveMarkers() {
   markTo.visible = n >= 2;
   if (n >= 1) markFrom.position.set(wps[0].x, 0.12, wps[0].z);
   if (n >= 2) markTo.position.set(wps[n - 1].x, 0.12, wps[n - 1].z);
+  // RF-67: números solo en modo edición (pathEdit); al seleccionar sin editar
+  // los markers se ven sin número.
+  const showNums = !!pathEdit;
+  syncMarkerNumber(markFrom, showNums && n >= 1 ? 0 : -1, 0.26);
+  syncMarkerNumber(markTo, showNums && n >= 2 ? n - 1 : -1, 0.26);
   // Pool de intermedios: crece según haga falta, los que sobran se ocultan.
   const needMid = Math.max(0, n - 2);
   const matMid = (c) => new THREE.MeshBasicMaterial({ color: c, depthTest: false, transparent: true, opacity: 0.95 });
@@ -1391,12 +1399,14 @@ function updateMoveMarkers() {
     const s = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 12), matMid(0xffd24d));
     s.renderOrder = 998;
     s.visible = false;
+    s.userData.isMoveMarker = true;
     scene.add(s);
     markMids.push(s);
   }
   markMids.forEach((s, i) => {
     const p = i < needMid ? wps[i + 1] : null;
     s.visible = !!p;
+    syncMarkerNumber(s, showNums && p ? i + 1 : -1, 0.23);
     if (p) {
       s.position.set(p.x, 0.12, p.z);
       // El punto arrastrado se agranda para verlo bien.

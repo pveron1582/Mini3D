@@ -217,16 +217,18 @@ entra al undo como un solo paso.
 - Sin test automatizado aún
 
 ### RF-67 — Numeración de waypoints (01–99)
-Estado: `aprobado` (nuevo, propuesto y aprobado por el usuario 2026-10-03)
+Estado: `verificado`
 Cada punto del camino muestra su **número de orden** (01, 02, … hasta 99; de
 100 en adelante sin número) en un sprite de texto sobre la esfera del marker,
 visible mientras se edita el camino. Permite seguir el orden del recorrido
 incluso si la línea no se ve o hay muchos puntos.
-- [ ] Todos los markers en modo edición muestran su número (01 = inicio, en orden)
-- [ ] De 100+ puntos en adelante los markers siguen funcionando sin número
-- [ ] El número se actualiza al insertar/borrar/reordenar puntos
+- [x] Todos los markers en modo edición muestran su número (01 = inicio, en orden)
+- [x] De 100+ puntos en adelante los markers siguen funcionando sin número
+- [x] El número se actualiza al insertar/borrar/reordenar puntos
 - Técnica sugerida: patrón canvas→texture ya usado en subtítulos/quiz
 - Depende de: RF-20
+- Test: `p7-test` "RF-67" (etiquetas, sprites, 🎬 y 🚶, renumeración)
+- CHANGELOG: 2026-10-03
 
 ## D. Entornos y objetos
 

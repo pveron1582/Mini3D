@@ -3,6 +3,33 @@
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
 
+## [2026-10-03] — Numeración de waypoints 01–99 sobre los markers (RF-67)
+
+Cada punto del camino ahora muestra su número de orden en un sprite de texto
+sobre la esfera del marker, visible mientras se edita el camino (en el bloque
+🚶 solo en modo edición; al seleccionar el bloque sin editar van sin número):
+
+- **`js/cinema/wpNumbers.js`** (nuevo): `waypointNumberLabel()` (01…99; del
+  punto 100 en adelante sin número) + `syncMarkerNumber()` — sprite
+  CanvasTexture con el patrón de subtítulos/quiz (`depthTest` apagado,
+  renderOrder por encima de las esferas); redibuja el lienzo solo si la
+  etiqueta cambió (barato en drags).
+- **`cinematics.js`** (🎬): los markers del recorrido se numeran dentro de
+  `cinemaRebuildVisuals()` — el único punto por el que pasa todo insertar,
+  borrar o arrastrar; `cinemaDisposeDeep()` ahora dispone en profundidad
+  (geometrías, materiales y texturas de los sprites anidados).
+- **`charTrack.js`** (🚶): `updateMoveMarkers()` numera la pool de esferas
+  (inicio 01, fin n, intermedios en orden) solo con `pathEdit` activo; fuera
+  de edición los markers quedan sin número. Esferas etiquetadas
+  `userData.isMoveMarker` para testeo.
+- Tests: `p7-test` +12 asserts RF-67 (etiquetas 01/09/10/99/100+, sprite
+  oculto sin número, 🎬 numerado y renumerado al agregar punto, 🚶 numerado
+  en edición, actualizado al insertar, sin números al salir).
+- Specs: RF-67 → `verificado` (3 criterios). `verify` = 0.
+- Nota: el warning `BufferGeometry: Buffer size too small` de la curva 🚶 es
+  preexistente (`markLine.geometry` nace con 2 posiciones y la curva manda
+  100) — queda para RF-20 (línea visible en todos los flujos).
+
 ## [2026-10-03] — RF-53: fix del pin (soltable siempre) + aguja no atrapada (RF-53)
 
 Bug reportado por el usuario (bloque fijado que no se podía soltar; aguja roja

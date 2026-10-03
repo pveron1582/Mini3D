@@ -964,6 +964,57 @@ assert(cinema.active === false, 'al 💾 de la toma: modo cinemático liberado')
 assert(cinemaPaths.has('cineCommitChar') && cinemaPaths.get('cineCommitChar').waypoints.length === 2,
   'al 💾 de la toma: recorrido quedo guardado (se reproduce en la escena)');
 
+// --- números sobre los markers del camino: 01, 02, … --- (RF-67)
+// (los 2 avisos "Buffer size too small" de la curva 🚶 son preexistentes:
+// markLine.geometry nace con 2 posiciones y la curva manda 100 — es RF-20)
+const { cinemaLoadTarget } = await import(pathToFileURL('./js/cinema/cinematics.js'));
+const { waypointNumberLabel, syncMarkerNumber } = await import(pathToFileURL('./js/cinema/wpNumbers.js'));
+assert(waypointNumberLabel(0) === '01' && waypointNumberLabel(8) === '09' && waypointNumberLabel(9) === '10',
+  'RF-67: la etiqueta usa dos dígitos (01, 09, 10)');
+assert(waypointNumberLabel(98) === '99' && waypointNumberLabel(99) === '' && waypointNumberLabel(150) === '',
+  'RF-67: del punto 100 en adelante va sin número');
+const numMesh = new THREE_MOD.Mesh();
+syncMarkerNumber(numMesh, 4, 0.3);
+assert(numMesh.userData.numberLabel === '05' && numMesh.userData.numberSprite.visible === true,
+  'RF-67: el sprite del marker muestra 05');
+syncMarkerNumber(numMesh, 99);
+assert(numMesh.userData.numberLabel === '' && numMesh.userData.numberSprite.visible === false,
+  'RF-67: con índice ≥ 100 el sprite queda oculto');
+// Recorrido 🎬: los markers del editor se numeran y renumeran en cada rebuild
+cinemaPaths.set('wp67Char', { waypoints: [new V(0, 0, 0), new V(2, 0, 0), new V(4, 0, 0)], planeY: 0, speed: 2, events: {} });
+cinemaActivate();
+cinemaLoadTarget('wp67Char');
+assert(cinema.markers.length === 3, 'RF-67 🎬: 3 markers al cargar el recorrido');
+assert(cinema.markers.map(m => m.mesh.userData.numberLabel).join(',') === '01,02,03',
+  'RF-67 🎬: markers numerados 01,02,03');
+assert(cinema.markers.every(m => m.mesh.userData.numberSprite && m.mesh.userData.numberSprite.visible),
+  'RF-67 🎬: el número se ve sobre cada esfera');
+cinemaPaths.get('wp67Char').waypoints.push(new V(6, 0, 0));
+cinemaLoadTarget('wp67Char');
+assert(cinema.markers.map(m => m.mesh.userData.numberLabel).join(',') === '01,02,03,04',
+  'RF-67 🎬: la numeración se actualiza al agregar un punto');
+cinemaDeactivate();
+cinemaPaths.delete('wp67Char');
+assert(cinema.active === false, 'RF-67 🎬: cinemática cerrada tras el teste');
+// Camino del bloque 🚶: números solo mientras se edita el camino
+const { enterPathEditMode, exitPathEditMode, startMovePick } = await import(pathToFileURL('./js/cinema/charTrack.js'));
+const { scene: sceneT } = await import(pathToFileURL('./js/core.js'));
+const moveNums = () => sceneT.children
+  .filter(c => c.userData.isMoveMarker && c.visible && c.userData.numberLabel)
+  .map(c => c.userData.numberLabel).sort();
+setCharBlocks([
+  { id: 'cbN1', start: 0, duration: 3, actions: { customChar1: { action: 'walk', move: { waypoints: [{ x: 0, z: 0 }, { x: 4, z: 0 }], speed: 2 } } } }
+], {});
+const blkN1 = charBlocks.find(b => b.id === 'cbN1');
+enterPathEditMode(blkN1, 'customChar1');
+assert(moveNums().join(',') === '01,02', 'RF-67 🚶: en edición el camino muestra 01,02');
+blkN1.actions.customChar1.move.waypoints.splice(1, 0, { x: 2, z: 0 });
+startMovePick(blkN1, 'customChar1', 'to');
+assert(moveNums().join(',') === '01,02,03', 'RF-67 🚶: la numeración se actualiza al insertar un punto');
+exitPathEditMode();
+assert(moveNums().join(',') === '', 'RF-67 🚶: fuera de edición los markers no llevan número');
+setCharBlocks([], {});
+
 // --- ✕ DESCARTA: el snapshot restaura el bloque modificado --- (RF-03)
 // (discardSelection usa el mismo mecanismo: Object.assign sobre el snapshot)
 const shotDiscard = { id: 'shotX', start: 1, duration: 2, camMode: 'free', subjectId: null, label: '', color: '#111' };

@@ -7,6 +7,7 @@ import { raycaster, getPointerNDC, projectPointerToPlane } from '../ui/gizmo.js'
 import { setStatus } from '../media/recorder.js';
 import { solvePath } from './navigation.js';
 import { charActionsAt, charPoseAt, charMoveAt } from './charTrack.js';
+import { syncMarkerNumber } from './wpNumbers.js';
 import { pushHistory } from '../undo.js';
 import { anchorSeats } from '../characters/anchors.js';
 import { getWallColliders, getDoorColliders } from '../office/walls.js';
@@ -28,12 +29,20 @@ function cinemaInitGroup() {
   scene.add(cinemaAllGroup);
 }
 
+function cinemaDisposeDeep(c) {
+  if (c.children) [...c.children].forEach(cinemaDisposeDeep);
+  if (c.geometry) c.geometry.dispose();
+  if (c.material) {
+    const mats = Array.isArray(c.material) ? c.material : [c.material];
+    mats.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); });
+  }
+}
+
 function cinemaDisposeChildren(group) {
   while (group.children.length) {
     const c = group.children[0];
     group.remove(c);
-    if (c.geometry) c.geometry.dispose();
-    if (c.material) c.material.dispose();
+    cinemaDisposeDeep(c);
   }
 }
 
@@ -100,6 +109,7 @@ function cinemaRebuildVisuals() {
     const color = i === 0 ? 0x48bb78 : (i === cinema.waypoints.length - 1 ? 0xe04d4d : 0xffd24d);
     const mk = cinemaMakeMarker(wp, color, isEnd ? 0.22 : 0.16, isEnd);
     mk.userData.waypointIndex = i;
+    syncMarkerNumber(mk, i, (isEnd ? 0.22 : 0.16) + 0.14);
     cinema.markers.push({ mesh: mk, index: i });
   });
   cinemaDrawAllPaths();
