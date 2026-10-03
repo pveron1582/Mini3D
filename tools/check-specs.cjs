@@ -17,11 +17,14 @@
 const fs = require('fs');
 const path = require('path');
 
+const ROOT = path.resolve(__dirname, '..');
+const r = (...p) => path.join(ROOT, ...p);
+
 const ESTADOS = new Set(['borrador', 'aprobado', 'implementado', 'verificado']);
 const SDD_SINCE = '2026-10-01'; // fecha de adopción: entradas anteriores quedan exentas
 
-const SPEC_REQ = 'docs/specs/01-requisitos.md';
-const SPEC_RNF = 'docs/specs/02-no-funcionales.md';
+const SPEC_REQ = r('docs/specs/01-requisitos.md');
+const SPEC_RNF = r('docs/specs/02-no-funcionales.md');
 
 let errors = 0;
 const fail = (msg) => { console.error('  ✗ ' + msg); errors++; };
@@ -50,8 +53,8 @@ if (rnfDefs.size === 0) fail(`no se encontró ningún RNF en ${SPEC_RNF}`);
 if (!/^Estado:/m.test(rnfSrc)) fail(`${SPEC_RNF} sin "Estado:" global en el encabezado`);
 
 // ---------- 2. Toda spec declara Estado ----------
-for (const f of fs.readdirSync('docs/specs').filter(f => /^\d\d-.*\.md$/.test(f))) {
-  const src = fs.readFileSync(path.join('docs/specs', f), 'utf8');
+for (const f of fs.readdirSync(r('docs/specs')).filter(f => /^\d\d-.*\.md$/.test(f))) {
+  const src = fs.readFileSync(r('docs/specs', f), 'utf8');
   if (!/^Estado:/m.test(src)) fail(`docs/specs/${f} sin línea "Estado:"`);
 }
 
@@ -67,7 +70,8 @@ function walk(dir, acc = []) {
 }
 const scanFiles = ['CHANGELOG.md', 'README.md', 'AGENTS.md', 'SKILL.md', 'GLM.md',
   'roadmap_mejoras.md', 'mini3d_mejoras.md', 'package.json']
-  .filter(f => fs.existsSync(f)).concat(walk('docs'), walk('tools'), walk('js'));
+  .map(f => r(f))
+  .filter(f => fs.existsSync(f)).concat(walk(r('docs')), walk(r('tools')), walk(r('js')));
 
 const phantomRF = new Map(), phantomRNF = new Map();
 for (const f of scanFiles) {
@@ -81,11 +85,11 @@ for (const f of scanFiles) {
     if (!rnfDefs.has(id)) phantomRNF.set(id, f);
   }
 }
-for (const [id, f] of phantomRF) fail(`${id} referenciado en ${f} pero NO existe en ${SPEC_REQ}`);
-for (const [id, f] of phantomRNF) fail(`${id} referenciado en ${f} pero NO existe en ${SPEC_RNF}`);
+for (const [id, f] of phantomRF) fail(`${id} referenciado en ${path.relative(ROOT, f)} pero NO existe en ${SPEC_REQ}`);
+for (const [id, f] of phantomRNF) fail(`${id} referenciado en ${path.relative(ROOT, f)} pero NO existe en ${SPEC_RNF}`);
 
 // ---------- 4. CHANGELOG reciente: RF o (infra) ----------
-const clSrc = fs.readFileSync('CHANGELOG.md', 'utf8');
+const clSrc = fs.readFileSync(r('CHANGELOG.md'), 'utf8');
 const entries = clSrc.split(/^## /m).slice(1);
 let recientes = 0;
 for (const e of entries) {

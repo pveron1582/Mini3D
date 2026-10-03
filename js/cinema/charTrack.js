@@ -86,6 +86,10 @@ function renderCaminoSegments(inner, entry, info, pps) {
     el.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
     el.addEventListener('click', (ev) => {
       ev.stopPropagation();
+      // RF-53 (fix 2026-10-03): el segundo clic de un doble clic no vuelve a
+      // togglear el editor — antes click+click+dblclick lo abrían y cerraban
+      // tres veces seguidas (el doble clic lo maneja el handler de abajo).
+      if (ev.detail >= 2) return;
       if (blockSelectionBlocked('camino', entry.id)) {
         setStatus('Bloque fijado con 📌: soltalo (doble clic o 📌) para elegir otro.');
         return;
@@ -101,7 +105,8 @@ function renderCaminoSegments(inner, entry, info, pps) {
         setStatus('Bloque fijado con 📌: soltalo (doble clic o 📌) para elegir otro.');
         return;
       }
-      togglePathEditor(entry.id);
+      // Doble clic = fijar/soltar el pin (RF-53: toggle simétrico). No toca el
+      // editor de camino: eso lo hace el clic simple.
       selectedCamino = { charId: entry.id, seg: idx };
       togglePinBlock('camino', entry.id);
       renderCharBlocks();

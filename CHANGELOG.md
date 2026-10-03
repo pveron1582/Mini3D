@@ -3,6 +3,26 @@
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
 
+## [2026-10-03] — RF-53: fix del pin (soltable siempre) + aguja no atrapada (RF-53)
+
+Bug reportado por el usuario (bloque fijado que no se podía soltar; aguja roja
+inmovilizada). Tres causas encontradas y corregidas:
+
+- `blockBar.js` — `blockPinToggle()`: si hay CUALQUIER pin activo, el primer
+  clic lo suelta **aunque no haya bloque vigente** (un camino fijado cuyo
+  editor se cerró dejaba `getSelectedBlock() === null` y el pin quedaba
+  huérfano, imposible de soltar). El ✕ de la barra también suelta la fijación.
+- `timeline.js` — nuevo `scrubTimeLimits()` (pura, exportada): con el bloque
+  FIJADO la aguja ya no queda encerrada en su tramo (antes el límite de
+  `selectedBlockTimeRange` + el pin impedían deseleccionar → sin salida).
+- `charTrack.js` — el doble clic en el bloque 🚶 ya no dispara 3 toggles del
+  editor (`ev.detail >= 2` ignora el 2º clic; el dblclick solo fija/suelta el
+  pin).
+- Tests: `p7-test` +5 asserts (pin huérfano soltable, límites de la aguja
+  con/sin pin y con bloque en edición). `verify` = 0.
+- Incluye el ajuste ajeno ya verificado en `tools/check-specs.cjs` (rutas
+  resueltas desde `__dirname`: funciona también fuera del repo).
+
 ## [2026-10-03] — Specs: re-especificación de RF-20 y RF-53 + RF-67 nuevo (RF-20, RF-53, RF-67)
 
 Prueba real del usuario ("proyecto nuevo con un personaje, bloque de

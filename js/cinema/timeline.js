@@ -504,15 +504,29 @@ window.addEventListener('resize', () => { playheadDx = null; });
 // seleccionado (toma / subtítulo / cartel / bloque de personajes). No tiene
 // sentido irse lejos mientras se edita: el cabezal es la herramienta de
 // trabajo de ese tramo. Sin selección, se mueve libre por toda la línea.
+//
+// RF-53 (fix 2026-10-03): con un bloque FIJADO (📌) el límite NO se aplica.
+// Antes la aguja quedaba atrapada en el tramo del bloque pinneado y, como el
+// pin impide deseleccionar, no había forma de salir de ahí.
 function scrubFromEvent(e) {
   if (!track) return;
   const rect = track.getBoundingClientRect();
-  let maxT = timeline.duration > 0 ? timeline.duration : 3600;
-  let minT = 0;
-  const blk = selectedBlockTimeRange();
-  if (blk) { minT = blk.start; maxT = blk.end; }
+  const { minT, maxT } = scrubTimeLimits();
   const t = Math.max(minT, Math.min(maxT, (e.clientX - rect.left - LANE_LABEL_W) / pxPerSec()));
   scrubTo(t);
+}
+
+// Límites de la aguja al hacer scrub (pura, testeable — RF-53):
+//   - bloque en edición → solo su tramo (el cabezal es su herramienta);
+//   - con pin 📌 → libre (el pin impide deseleccionar: limitar dejaría la
+//     aguja atrapada sin salida, el bug reportado);
+//   - sin selección → toda la línea.
+export function scrubTimeLimits() {
+  const full = { minT: 0, maxT: timeline.duration > 0 ? timeline.duration : 3600 };
+  if (blockPin.kind) return full;
+  const blk = selectedBlockTimeRange();
+  if (blk) return { minT: blk.start, maxT: blk.end };
+  return full;
 }
 
 // Tramo del bloque en edición (toma / subtítulo / cartel / personajes), si

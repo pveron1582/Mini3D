@@ -342,8 +342,7 @@ Acciones por clic derecho (acción base, sentarse con elección de silla,
 eliminar); todas deshacibles con `pushHistory` antes de mutar.
 
 ### RF-53 — Barra de bloques de la timeline
-Estado: `aprobado` (re-especificado 2026-10-03 por bugs del pin/doble clic;
-antes estaba `verificado`)
+Estado: `verificado` (re-especificado y arreglado 2026-10-03; antes `aprobado`)
 Selección por pista (toma/bloque/subtítulo/quiz), barra 🎬↻⧉🗑✕📌 + pin rojo,
 duplicar/restablecer/borrar por tipo.
 
@@ -351,13 +350,18 @@ Criterios originales:
 - [x] Selección, pin y acciones por tipo
 - Test: `p7-test` "barra de bloques" (sección completa)
 
-Criterios nuevos (aprobados por el usuario, 2026-10-03):
-- [ ] **Toggle simétrico del pin**: doble clic fija y un segundo doble clic
-  suelta; 📌 fija y 📌 de nuevo suelta (hoy quedaba fijado sin poder salir).
-- [ ] **El pin no bloquea el scrub**: con el bloque fijado, la aguja roja de
-  la timeline sigue arrastrándose y el click en otros lados no cambia el
-  bloque fijado (el pin solo bloquea elegir otro bloque/modo).
-- [ ] Cerrar con ✕ de la barra también suelta la fijación.
+Criterios del fix (aprobados por el usuario, 2026-10-03):
+- [x] **Toggle simétrico del pin**: doble clic fija y un segundo doble clic
+  suelta; 📌 fija y 📌 de nuevo suelta. (📌 con test; el doble clic en el
+  camino ya no dispara 3 toggles — `ev.detail >= 2` ignora el 2º clic.)
+- [x] **El pin no bloquea el scrub**: con el bloque fijado la aguja roja se
+  mueve libre por toda la línea (`scrubTimeLimits()` devuelve el rango
+  completo si `blockPin.kind`).
+- [x] Cerrar con ✕ también suelta la fijación.
+- [x] **Pin huérfano**: si el bloque fijado ya no está vigente (p. ej. un
+  camino cuyo editor se cerró), 📌 lo suelta igual.
+- Test: `p7-test` "RF-53: pin soltable siempre + aguja libre con el bloque fijado"
+- CHANGELOG: 2026-10-03
 
 ### RF-54 — Pantalla de arranque (boot)
 Estado: `implementado`

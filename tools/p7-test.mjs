@@ -1151,7 +1151,7 @@ assert(Math.abs(selectionRing.position.y - 0.19) < 1e-9, 'anillo apoyado sobre e
 
 // --- barra de bloques: selección, pin y acciones por pista --- (RF-53)
 const { selectShot, getSelectedShot, resetShotToSnapshot, duplicateShot, deleteShot, openSubEditor, resetSubToSnapshot, duplicateSub, deleteSub } = await import(pathToFileURL('./js/cinema/timeline.js'));
-const { openCharBlockEditor, charBlockSelection, resetCharBlock, deleteCharBlock } = await import(pathToFileURL('./js/cinema/charTrack.js'));
+const { openCharBlockEditor, charBlockSelection, resetCharBlock, deleteCharBlock, clearCharBlockSelection } = await import(pathToFileURL('./js/cinema/charTrack.js'));
 const { openQuizEditor, quizSelection, resetQuizBlock, duplicateQuizBlock, deleteQuizBlock } = await import(pathToFileURL('./js/cinema/quizTrack.js'));
 const { subtitleTrack } = await import(pathToFileURL('./js/media/subtitles.js'));
 const { quizTrack, togglePinBlock, pinMatches, blockPin } = await import(pathToFileURL('./js/state.js'));
@@ -1326,6 +1326,36 @@ quizTrack.splice(quizTrack.indexOf(navSnapQuiz), 1);
 charBlocks.splice(charBlocks.indexOf(navSnapBlk), 1);
 assert(!collectTimelineSnapTimes().includes(97), 'imán: refs limpias tras el test');
 console.log('✓ imán tlSnap: exclude propio, refs de subtítulos/quiz y snap a 0.1s');
+
+// --- RF-53 (fix 2026-10-03): pin siempre soltable + aguja no atrapada ---
+// Bug reportado por el usuario: al fijar con doble clic o 📌, el bloque
+// quedaba fijado sin forma de soltarlo y la aguja roja no se podía mover.
+const { blockPinToggle } = await import(pathToFileURL('./js/cinema/blockBar.js'));
+const { scrubTimeLimits } = await import(pathToFileURL('./js/cinema/timeline.js'));
+
+// Caso A — pin de un camino cuyo editor se cerró: no hay bloque vigente
+// (getSelectedBlock() === null) pero el pin DEBE poder soltarse con 📌.
+togglePinBlock('camino', 'human1');
+assert(getSelectedBlock() === null, 'RF-53: pin de camino sin editor no da bloque vigente');
+blockPinToggle();
+assert(blockPin.kind === null && blockPin.ref === null, 'RF-53: el pin huérfano se suelta con el botón 📌');
+
+// Caso B — el pin libera la aguja; con bloque en edición (sin pin) se limita.
+navSnapBlk.actions = { human1: { action: 'idle' } };
+charBlocks.push(navSnapBlk);
+openCharBlockEditor(navSnapBlk);
+const limSel = scrubTimeLimits();
+assert(limSel.minT === navSnapBlk.start && limSel.maxT === navSnapBlk.start + navSnapBlk.duration,
+  'RF-53: bloque en edición → la aguja se limita a su tramo');
+togglePinBlock('char', navSnapBlk);
+const limPin2 = scrubTimeLimits();
+const fullMax = timeline.duration > 0 ? timeline.duration : 3600;
+assert(limPin2.minT === 0 && limPin2.maxT === fullMax, 'RF-53: con el bloque fijado (📌) la aguja se mueve libre');
+togglePinBlock('char', navSnapBlk);          // soltar el pin
+clearCharBlockSelection();
+charBlocks.pop();
+assert(scrubTimeLimits().minT === 0, 'RF-53: sin selección la aguja corre toda la línea');
+console.log('✓ RF-53: pin soltable siempre + aguja libre con el bloque fijado');
 
 console.log('\n✅ P7: todas las pruebas pasaron');
 process.exit(0);

@@ -201,17 +201,33 @@ function blockClose(sel) {
   }
   else if (sel.kind === 'sub') clearSubSelection();
   else if (sel.kind === 'quiz') clearQuizSelection();
+  // RF-53 (fix 2026-10-03): cerrar con ✕ también suelta la fijación del bloque.
+  if (pinMatches(sel.kind, sel.ref)) {
+    blockPin.kind = null;
+    blockPin.ref = null;
+  }
   if (blockBus.refreshBar) blockBus.refreshBar();
 }
 
 // 📌 Fijar/soltar el pin del bloque vigente.
-function blockPinToggle() {
+// RF-53 (fix 2026-10-03): si hay CUALQUIER pin activo, el primer clic lo
+// suelta — incluso si el bloque ya no está vigente (p. ej. un camino cuyo
+// editor se cerró: getSelectedBlock() devuelve null y antes el pin quedaba
+// huérfano, imposible de soltar).
+export function blockPinToggle() {
+  if (blockPin.kind) {
+    togglePinBlock(blockPin.kind, blockPin.ref);
+    renderAllLanes();
+    if (blockBus.refreshBar) blockBus.refreshBar();
+    setStatus('Pin soltado.');
+    return;
+  }
   const sel = needSel();
   if (!sel) return;
-  const pinned = togglePinBlock(sel.kind, sel.ref);
+  togglePinBlock(sel.kind, sel.ref);
   renderAllLanes();
   if (blockBus.refreshBar) blockBus.refreshBar();
-  setStatus(pinned ? 'Bloque fijado en rojo: doble clic o 📌 para soltarlo.' : 'Pin soltado.');
+  setStatus('Bloque fijado en rojo: doble clic o 📌 para soltarlo.');
 }
 
 function wireBar() {
