@@ -102,9 +102,9 @@ modular). No usarlo como referencia de arquitectura.
    junto a ellos. Si el equipo se mueve o se elimina, mover/eliminar también su
    conexión.
 6. **Verificar antes de dar por terminada una tarea**: correr `pnpm run verify`
-   (imports + ciclos + suite funcional + carga + geo-cache). El proyecto no
-   tiene dependencias, así que no hace falta instalar nada — solo Node y pnpm.
-   Verificación rápida del grafo: `pnpm run check`.
+   (imports + ciclos + salud de specs + suite funcional + carga + geo-cache).
+   El proyecto no tiene dependencias, así que no hace falta instalar nada —
+   solo Node y pnpm. Verificación rápida del grafo y specs: `pnpm run check`.
 7. **Orientación de personajes y muebles (error recurrente)**: un rig con
    `rotY = 0` mira al **SUR (+z)**; `rotY = π` mira al **NORTE (-z)**; `±π/2`
    mira al **ESTE/OESTE**. Para "que mire hacia X", usar SIEMPRE
@@ -129,3 +129,13 @@ modular). No usarlo como referencia de arquitectura.
       entrada de `CHANGELOG.md` referenciando el `RF-XX`.
    d. **Zona libre**: experimentos y spikes pueden vivir sin spec (rama o
       estado `borrador`); nada mergea a `main` sin spec `aprobada`.
+   e. **Enforcement automático**: `tools/check-specs.cjs` (corre en
+      `pnpm run verify` y en el CI) falla si hay estados inválidos, IDs
+      `RF-XX`/`RNF-XX` referenciados que no existen, o entradas del
+      CHANGELOG desde 2026-10-01 sin `RF-XX` ni `(infra)` en el título.
+9. **Refactor al editar (no proactivo)**: los archivos grandes
+   (`characters.js` 75 KB, `charTrack.js` 67 KB, `cinematics.js` 63 KB…)
+   se parten SOLO cuando una tarea los toca — en ese momento, además del
+   cambio pedido, dividir en submódulos con responsabilidades claras
+   (patrón del split de `office/`). Prohibido refactor grande sin tarea que
+   lo pida.

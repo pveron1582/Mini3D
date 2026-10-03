@@ -3,6 +3,27 @@
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
 
+## [2026-10-01] — Fase D SDD: enforcement automático (check-specs en verify) (infra)
+
+- Nuevo `tools/check-specs.cjs`, cableado en `pnpm run check`/`verify` y por
+  lo tanto en el **CI de cada push**. Valida: (1) toda spec declara `Estado`
+  y los 47 RFs tienen estado de la lista válida; (2) todo `RF-XX`/`RNF-XX`
+  referenciado en el repo existe en su spec (cero IDs fantasma); (3) las
+  entradas del CHANGELOG desde 2026-10-01 referencian un `RF-XX` o llevan
+  `(infra)` en el título. Las 6 entradas previas se ajustaron a la convención
+  y la convención queda documentada en el encabezado del CHANGELOG.
+- `SKILL.md`: regla 8.e (enforcement automático) + **regla 9 "refactor al
+  editar"** (los archivos grandes se parten solo cuando una tarea los toca —
+  cierra el ítem P2-1) + regla 6 actualizada con "salud de specs".
+- **Plan SDD A→D completo.** Verificación: `check-specs` = 47 RFs
+  (30 verificados, 7 borrador), 10 RNFs, 8 entradas con SDD, 0 fantasmas.
+
+> **Convención SDD (desde 2026-10-01)**: toda entrada debe referenciar al
+> menos un `RF-XX` de `docs/specs/01-requisitos.md`, o llevar `(infra)` en el
+> título si es un cambio de proceso/docs/CI sin requisito de producto
+> asociado. Lo valida `tools/check-specs.cjs` dentro de `pnpm run verify`
+> (y por lo tanto el CI en cada push).
+
 ## [2026-10-01] — Fase B SDD: trazabilidad test↔RF + consolidación de docs
 
 - **B.5 (trazabilidad)**: las **59 secciones** de `tools/p7-test.mjs` llevan
@@ -16,7 +37,7 @@ recientes van arriba.
     `docs/specs/`) + punteros `→ RF-XX` en los 11 ítems numerados.
 - `roadmap_mejoras.md`: Fase B marcada HECHA. Queda solo la Fase D y P2/P3.
 
-## [2026-10-01] — Fase C SDD: reglas spec-first en SKILL.md y AGENTS.md
+## [2026-10-01] — Fase C SDD: reglas spec-first en SKILL.md y AGENTS.md (infra)
 
 - `SKILL.md` **regla 8 (Spec-first)**: `docs/specs/` es fuente de verdad;
   proceso obligatorio en 4 pasos — (a) empezar en la spec (crear/editar RF
@@ -53,7 +74,7 @@ recientes van arriba.
 - ADRs 0001 (sin build), 0002 (estado mutable), 0003 (ciclos por inyección +
   check-scc) y 0004 (offscreen 1080p).
 
-## [2026-10-01] — P1-3: tests de navegación A* + ampliación del imán tlSnap
+## [2026-10-01] — P1-3: tests de navegación A* + ampliación del imán tlSnap (RF-28, RF-23)
 
 - `tools/p7-test.mjs` (+95 líneas): **primeros tests de `js/cinema/navigation.js`**
   (era el módulo con cero cobertura). Bloque aislado (registry vacío + ambientes
@@ -72,7 +93,7 @@ recientes van arriba.
   arrastrado no es referencia de sí mismo) y snap a 0.1s sobre subtítulo.
 - `roadmap_mejoras.md`: P1-3 marcado RESUELTO (P1 completo).
 
-## [2026-10-01] — P1-2: THREE.Clock → THREE.Timer (fin del warning deprecado)
+## [2026-10-01] — P1-2: THREE.Clock → THREE.Timer (fin del warning deprecado) (infra)
 
 - `js/render.js`: el reloj del bucle de render ahora es `THREE.Timer`
   (`timer.update()` una vez por frame antes de `getDelta()`, API distinta de
@@ -86,7 +107,7 @@ recientes van arriba.
   verify` = 0 y grep del warning = 0 ocurrencias.
 - `roadmap_mejoras.md`: P1-2 marcado RESUELTO.
 
-## [2026-10-01] — P1-1: CI con GitHub Actions (verify en cada push/PR)
+## [2026-10-01] — P1-1: CI con GitHub Actions (verify en cada push/PR) (infra)
 
 - Nuevo `.github/workflows/verify.yml`: corre `npm run verify` (imports +
   ciclos + suite funcional + carga + geo-cache) en `ubuntu-latest`/Node 20 en
@@ -99,7 +120,7 @@ recientes van arriba.
     localmente sin `node_modules`: `npm run verify` = 0.
 - `roadmap_mejoras.md`: P0-1/P0-2/P0-3 y P1-1 marcados RESUELTOS.
 
-## [2026-10-01] — Commit del trabajo pendiente (backlog 2026-09-18)
+## [2026-10-01] — Commit del trabajo pendiente (backlog 2026-09-18) (RF-40, RF-34)
 
 - Se commitea el lote que quedó sin commit desde el cierre del backlog
   técnico: export **MP4 (H.264) con respaldo WebM**, salida **1080p 60 fps
@@ -111,7 +132,7 @@ recientes van arriba.
   (salta `node_modules`) y `tools/fix-encoding.mjs` (recorre `js/` recursivo +
   CSS). Actualización de `GLM.md` con el estado del cierre.
 
-## [2026-10-01] — Roadmap de mejoras + diagnóstico Spec-Driven Development
+## [2026-10-01] — Roadmap de mejoras + diagnóstico Spec-Driven Development (infra)
 
 - Nuevo `roadmap_mejoras.md` (raíz) con tres partes: **(I)** revisión general
   del proyecto — fortalezas verificadas (suite `verify` en verde, arquitectura

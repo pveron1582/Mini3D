@@ -6,7 +6,8 @@
   "scripts": {
     "check:imports": "node tools/check-imports.cjs",
     "check:scc": "node tools/check-scc.js",
-    "check": "node tools/check-imports.cjs && node tools/check-scc.js",
+    "check:specs": "node tools/check-specs.cjs",
+    "check": "node tools/check-imports.cjs && node tools/check-scc.js && node tools/check-specs.cjs",
     "test": "node tools/p7-test.mjs",
     "test:load": "node tools/p7-loadtest.mjs",
     "verify": "npm run check && npm run test && npm run test:load && node tools/test-geo-cache.js"

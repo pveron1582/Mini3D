@@ -178,13 +178,14 @@ Agregar a `AGENTS.md` + `SKILL.md`:
 4. **Zona libre**: experimentos pueden vivir sin spec (rama o estado
    `borrador`); nada mergea a main sin spec `aprobado`.
 
-### Fase D — Mantenimiento y enforcement (continuo)
+### Fase D — Mantenimiento y enforcement (continuo) ✅ HECHA (2026-10-01)
 
-- CI (P1-1): `pnpm run verify` en GitHub Actions.
-- Check opcional en `tools/`: specs con estado válido + CHANGELOG referenciando
-  IDs por entrada reciente.
-- Regla "refactor al editar" para P2-1 (partir archivos grandes solo cuando
-  se toquen).
+- CI (P1-1): `pnpm run verify` en GitHub Actions. ✅
+- Check en `tools/`: **`tools/check-specs.cjs`** — estados de RF válidos,
+  cero IDs fantasma (RF/RNF referenciados inexistentes), entradas del
+  CHANGELOG desde 2026-10-01 con `RF-XX` o `(infra)`. Corre en
+  `pnpm run check`/`verify` → CI.
+- Regla "refactor al editar" para P2-1: **`SKILL.md` regla 9**. ✅
 
 ### Orden de ejecución recomendado
 
