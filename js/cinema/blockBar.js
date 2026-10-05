@@ -5,8 +5,17 @@
 // (no se puede elegir otro ni cambiar de modo hasta soltarlo). Sin selección,
 // los botones se ven semioscuros (deshabilitados) y no hacen nada.
 // Cada pista conserva su lógica; acá solo se orquesta sobre el bloque vigente.
+//
+// RF-20 (2026-10-04): modo EDICIÓN DE CAMINO. Con un bloque de movimiento
+// vigente, 🎬 entra en modo edición de camino: el icono se pone azul, aparece
+// un botón ⦿⦿ (dos círculos: muestra/oculta los puntos), un desplegable de
+// acción (caminar/correr) y un desplegable de velocidad (×0.25…×8); la 🎬 se
+// vuelve ✕ roja que cierra el modo. Todo vive en ESTA barra — el panel
+// izquierdo no cambia (criterio de estabilidad de RF-20).
 
 import { timeline, interactiveRegistry, blockPin, pinMatches, togglePinBlock, blockBus, charLaneBus, timelineBus, laneVis } from '../state.js';
+// RF-20: MOVE_ACTIONS/SPEED_MULTS viven en charTrack.js (blockBar ya depende
+// de charTrack — mismo sentido, sin ciclo).
 import { byId } from '../dom.js';
 import { setStatus } from '../media/recorder.js';
 import { pushHistory } from '../undo.js';
@@ -20,7 +29,9 @@ import {
   charBlockSelection, clearCharBlockSelection, resetCharBlock, deleteCharBlock,
   captureBlockPose, duplicateCharBlock, charBaseSelection, clearBaseSelection,
   resetCharBase, deleteCharBase, commitCharBase, caminoSelection, clearCaminoSelection,
-  renderCharBlocks, togglePathEditMode
+  renderCharBlocks, togglePathEditMode, editingMoveInfo, setEditingMoveAction,
+  setEditingMoveSpeedMult, moveMarkersVisible, toggleMoveMarkers, exitPathEditMode,
+  MOVE_ACTIONS, SPEED_MULTS
 } from './charTrack.js';
 import {
   quizSelection, clearQuizSelection, resetQuizBlock, duplicateQuizBlock, deleteQuizBlock,
@@ -47,6 +58,132 @@ export function getSelectedBlock() {
 
 const BAR_BTNS = ['btnBlockCine', 'btnBlockReset', 'btnBlockDup', 'btnBlockDel', 'btnBlockClose', 'btnBlockPin'];
 
+// ---------- Modo EDICIÓN DE CAMINO (RF-20, 2026-10-04) ----------
+// Con un bloque de movimiento vigente, 🎬 entra en modo edición: el botón se
+// pone azul, aparecen ⦿⦿ (mostrar/ocultar puntos) + 2 desplegables (acción y
+// velocidad), y la 🎬 se vuelve ✕ roja que cierra el modo. El estado vive acá
+// (UI de ESTA barra) y el editor 3D en charTrack.js (pathEdit); ambos se
+// encienden/apagan juntos.
+let pathBarEditing = false;
+
+// ¿La barra está en modo edición de camino? (para tests y refrescos).
+export function isPathBarEditing() { return pathBarEditing; }
+
+// Sale del modo edición (restaura los botones normales). No toca el pin.
+export function exitPathBarEdit() {
+  if (!pathBarEditing) return;
+  pathBarEditing = false;
+  ensurePathBarControls(false);
+  renderPathBarEdit();
+  if (blockBus.refreshBar) blockBus.refreshBar();
+}
+
+// Crea (una vez) los controles del modo edición dentro del grupo de la barra.
+function ensurePathBarControls(on) {
+  const cine = byId('btnBlockCine');
+  const group = cine ? cine.parentElement : null;
+  if (!group) return;
+  let dots = byId('btnPathDots');
+  let actSel = byId('selPathAction');
+  let spdSel = byId('selPathSpeed');
+  if (on && !dots) {
+    dots = document.createElement('button');
+    dots.className = 'blender-btn';
+    dots.id = 'btnPathDots';
+    dots.title = 'Mostrar/ocultar los puntos del camino (verde/rojo/amarillos)';
+    dots.textContent = '⦿⦿';
+    dots.addEventListener('click', () => {
+      const vis = toggleMoveMarkers();
+      dots.classList.toggle('primary', vis);
+      const info = editingMoveInfo();
+      setStatus(vis ? 'Puntos del camino visibles.' : 'Puntos del camino ocultos (el camino sigue ahí).');
+      if (info) setStatus((vis ? 'Puntos visibles' : 'Puntos ocultos') + ` · ${info.block.duration.toFixed(1)}s.`);
+    });
+    actSel = document.createElement('select');
+    actSel.className = 'tl-input';
+    actSel.id = 'selPathAction';
+    actSel.title = 'Acción de movimiento del personaje';
+    actSel.style.cssText = 'max-width:110px;';
+    actSel.addEventListener('change', () => {
+      if (setEditingMoveAction(actSel.value || null)) {
+        renderPathBarEdit();
+        setStatus(actSel.value ? `Camino: el personaje ${actSel.value === 'run' ? 'corre' : 'camina'}.` : 'Camino: sin animación de movimiento.');
+      }
+    });
+    spdSel = document.createElement('select');
+    spdSel.className = 'tl-input';
+    spdSel.id = 'selPathSpeed';
+    spdSel.title = 'Velocidad del recorrido (multiplica la base; la duración se recalcula)';
+    spdSel.style.cssText = 'max-width:70px;';
+    spdSel.addEventListener('change', () => {
+      const mult = parseFloat(spdSel.value) || 1;
+      if (setEditingMoveSpeedMult(mult)) {
+        const info = editingMoveInfo();
+        setStatus(`Camino a ×${mult}: ${info ? info.block.duration.toFixed(1) + 's' : ''} (piernas sincronizadas).`);
+      }
+    });
+    group.insertBefore(dots, cine.nextSibling);
+    group.insertBefore(actSel, dots.nextSibling);
+    group.insertBefore(spdSel, actSel.nextSibling);
+  }
+  if (dots) dots.style.display = on ? '' : 'none';
+  if (actSel) actSel.style.display = on ? '' : 'none';
+  if (spdSel) spdSel.style.display = on ? '' : 'none';
+}
+
+// Sincroniza el modo edición con el estado real: icono azul, ⦿⦿, desplegables
+// con los valores vigentes, y 🎬 convertida en ✕ roja que cierra el modo.
+function renderPathBarEdit() {
+  const cine = byId('btnBlockCine');
+  if (!cine) return;
+  const info = editingMoveInfo();
+  // Si el editor 3D se cerró por otro lado, el modo de la barra se apaga solo.
+  if (pathBarEditing && !info) {
+    pathBarEditing = false;
+    ensurePathBarControls(false);
+  }
+  cine.classList.toggle('primary', pathBarEditing);
+  cine.textContent = pathBarEditing ? '✕' : '🎬';
+  cine.style.color = pathBarEditing ? '#ff6b6b' : '';
+  cine.title = pathBarEditing
+    ? 'Cerrar el editor del camino (restaura los botones)'
+    : 'Ir al bloque: aguja al inicio + abrir su editor';
+  if (!pathBarEditing) return;
+  ensurePathBarControls(true);
+  const dots = byId('btnPathDots');
+  if (dots) dots.classList.toggle('primary', moveMarkersVisible());
+  const actSel = byId('selPathAction');
+  if (actSel && actSel.options.length === 0) {
+    MOVE_ACTIONS.forEach(m => {
+      const o = document.createElement('option');
+      o.value = m.id; o.textContent = m.label;
+      actSel.appendChild(o);
+    });
+  }
+  if (actSel && info) actSel.value = info.block.actions[info.charId].action || MOVE_ACTIONS[0].id;
+  const spdSel = byId('selPathSpeed');
+  if (spdSel && spdSel.options.length === 0) {
+    SPEED_MULTS.forEach(m => {
+      const o = document.createElement('option');
+      o.value = String(m); o.textContent = '×' + m;
+      spdSel.appendChild(o);
+    });
+  }
+  if (spdSel && info) spdSel.value = String(info.move.speedMult || 1);
+}
+
+// Entra al modo edición de camino para el bloque de movimiento dado.
+function enterPathBarEdit(block, charId) {
+  togglePathEditMode(block, charId);
+  if (!editingMoveInfo()) return;
+  pathBarEditing = true;
+  ensurePathBarControls(true);
+  renderPathBarEdit();
+  scrubTo(block.start);
+  if (blockBus.refreshBar) blockBus.refreshBar();
+  setStatus('Editando camino: ⦿⦿ muestra/oculta puntos · desplegables de acción y velocidad · ✕ cierra.');
+}
+
 // Habilitado/deshabilitado según haya bloque vigente (⧉ no vale para la base).
 export function refreshBlockBar() {
   const sel = getSelectedBlock();
@@ -57,6 +194,9 @@ export function refreshBlockBar() {
   });
   const pin = byId('btnBlockPin');
   if (pin) pin.classList.toggle('primary', !!(sel && pinMatches(sel.kind, sel.ref)));
+  // RF-20 (2026-10-04): el modo edición del camino se sincroniza en cada
+  // refresco (si el editor 3D se cerró por otro lado, la barra se apaga sola).
+  renderPathBarEdit();
 }
 
 function needSel() {
@@ -87,7 +227,17 @@ function renderAllLanes() {
 // ---------- Acciones (una por botón, según el bloque vigente) ----------
 
 // 🎬 Ir al bloque: aguja al inicio + abrir su editor.
+// RF-20 (2026-10-04): en modo edición de camino la 🎬 es una ✕ roja que
+// cierra el modo (restaura los botones). Con bloque de movimiento vigente
+// entra al modo edición (icono azul + ⦿⦿ + desplegables).
 function blockGo(sel) {
+  if (pathBarEditing) {
+    exitPathEditMode();
+    exitPathBarEdit();
+    renderAllLanes();
+    setStatus('Editor del camino cerrado.');
+    return;
+  }
   if (sel.kind === 'shot') {
     scrubTo(sel.ref.start);
     if (laneVis.camera !== false) cutCameraToShot(sel.ref.camMode, sel.ref.subjectId, sel.ref);
@@ -96,10 +246,10 @@ function blockGo(sel) {
     const solo = Object.keys(sel.ref.actions || {})[0];
     const a = solo && sel.ref.actions[solo];
     if (solo && a && a.move) {
-      // Bloque de movimiento: 🎬 abre/muestra su camino (🎬 de nuevo sale).
+      // Bloque de movimiento: 🎬 entra al modo edición del camino
+      // (icono azul + ⦿⦿ + desplegables de acción y velocidad — RF-20).
       if (interactiveRegistry.has(solo)) setActiveTarget(solo);
-      togglePathEditMode(sel.ref, solo);
-      scrubTo(sel.ref.start);
+      enterPathBarEdit(sel.ref, solo);
     } else {
       if (solo && interactiveRegistry.has(solo)) setActiveTarget(solo);
       scrubTo(sel.ref.start);
@@ -201,6 +351,9 @@ function blockClose(sel) {
   }
   else if (sel.kind === 'sub') clearSubSelection();
   else if (sel.kind === 'quiz') clearQuizSelection();
+  // RF-20 (2026-10-04): cerrar cualquier bloque apaga el modo edición del
+  // camino (la ✕ roja vuelve a ser 🎬, puntos fantasma fuera).
+  if (pathBarEditing) exitPathBarEdit();
   // RF-53 (fix 2026-10-03): cerrar con ✕ también suelta la fijación del bloque.
   if (pinMatches(sel.kind, sel.ref)) {
     blockPin.kind = null;

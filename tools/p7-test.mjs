@@ -422,7 +422,7 @@ setCharBlocks([], {});
 // --- bloques guardan pose (lugar + rotación) y la reproducen --- (RF-16)
 // Cada cuadro recuerda dónde quedó el personaje: al pasar de un cuadro a
 // otro salta a su pose, y terminada la escena conserva la última.
-const { charPoseAt, createInitialCharBlock, captureBlockPose, charMoveAt, calcMoveDuration, calcMoveSpeed, moveDist, moveBlockReady } = await import(pathToFileURL('./js/cinema/charTrack.js'));const poseRig = addHumanCharacter('poseTestChar', 'Pose Test', 1, 2, 0, {});
+const { charPoseAt, createInitialCharBlock, captureBlockPose, charMoveAt, calcMoveDuration, calcMoveOldSpeed, calcMoveBaseSpeed, effectiveMoveSpeed, moveDist, moveBlockReady, moveMarkersVisible, toggleMoveMarkers, editingMoveInfo, SPEED_MULTS } = await import(pathToFileURL('./js/cinema/charTrack.js'));const poseRig = addHumanCharacter('poseTestChar', 'Pose Test', 1, 2, 0, {});
 // El bloque inicial (3 s) nace con el lugar de creación
 const poseInit = createInitialCharBlock('poseTestChar', 'idle');
 assert(poseInit.start === 0 && poseInit.duration === 3, 'bloque inicial: arranca en 0 y dura 3 s');
@@ -507,7 +507,25 @@ cinemaPaths.delete('dupPathChar');
 const mvTest = { waypoints: [{ x: 0, z: 0 }, { x: 3, z: 4 }], speed: 2 };
 assert(Math.abs(moveDist(mvTest) - 5) < 1e-6, 'distancia del recorrido (curva)');
 assert(Math.abs(calcMoveDuration(mvTest) - 2.5) < 1e-9, 'duración = distancia/velocidad');
-assert(Math.abs(calcMoveSpeed(mvTest, 5) - 1) < 1e-9, 'editar duración adapta la velocidad');
+assert(Math.abs(calcMoveOldSpeed(mvTest, 5) - 1) < 1e-9, 'editar duración adapta la velocidad');
+// --- RF-20 (2026-10-04): velocidad efectiva, cadencia y API de la barra ---
+const mvMult = { waypoints: [{ x: 0, z: 0 }, { x: 3, z: 4 }], speed: 2, speedMult: 2 };
+assert(Math.abs(effectiveMoveSpeed(mvMult) - 4) < 1e-9, 'RF-20: efectiva = base × mult (2×2=4)');
+assert(Math.abs(effectiveMoveSpeed(mvTest) - 2) < 1e-9, 'RF-20: sin mult la efectiva es la base');
+assert(Math.abs(calcMoveDuration(mvMult) - 1.25) < 1e-9, 'RF-20: duración con ×2 (5m/4m/s)');
+assert(Math.abs(calcMoveBaseSpeed(mvTest, 5, 2) - 0.5) < 1e-9, 'RF-20: base que cumple 5s con ×2 preservado');
+assert(JSON.stringify(SPEED_MULTS) === JSON.stringify([0.25, 0.5, 1, 2, 4, 8]), 'RF-20: multiplicadores ×0.25–×8');
+setCharBlocks([
+  { id: 'cbCad', start: 0, duration: 2.5, actions: { poseTestChar: { action: 'walk', move: { waypoints: [{ x: 0, z: 0 }, { x: 3, z: 4 }], speed: 2, speedMult: 2 } } } }
+], {});
+const mmCad = charMoveAt(1).get('poseTestChar');
+assert(!!mmCad && mmCad.cadence !== undefined, 'RF-20: charMoveAt devuelve cadencia');
+assert(Math.abs(mmCad.cadence - Math.min(2.0, Math.max(0.6, (5 / 2.5) / 1.8))) < 1e-9, 'RF-20: cadencia = efectiva/natural (walk 1.8)');
+assert(moveMarkersVisible() === true, 'RF-20: markers visibles por defecto');
+assert(toggleMoveMarkers() === false && moveMarkersVisible() === false, 'RF-20: ⦿⦿ oculta los puntos');
+assert(toggleMoveMarkers() === true && moveMarkersVisible() === true, 'RF-20: ⦿⦿ los muestra de nuevo');
+assert(editingMoveInfo() === null, 'RF-20: sin editor no hay move vigente');
+setCharBlocks([], {});
 assert(moveBlockReady({ actions: { c: { action: 'walk', move: { waypoints: [{ x: 0, z: 0 }, { x: 1, z: 0 }], speed: 2 } } } }) === true, 'move completo listo para guardar');
 assert(moveBlockReady({ actions: { c: { action: null, move: { waypoints: [], speed: 2 } } } }) === false, 'sin animación ni puntos no guarda');
 assert(moveBlockReady({ actions: { c: { action: 'idle' } } }) === true, 'estático siempre listo');
@@ -1279,6 +1297,12 @@ refreshBlockBar();
 deselectAllBlocks();
 assert(getSelectedBlock() === null && blockPin.kind === null, 'todo limpio');
 console.log('✓ barra de bloques: selección, pin y acciones por pista');
+
+// --- RF-20 (2026-10-04): modo edición del camino en la barra ---
+const { isPathBarEditing: isPathBarEditing2, exitPathBarEdit } = await import(pathToFileURL('./js/cinema/blockBar.js'));
+assert(isPathBarEditing2() === false, 'RF-20: la barra arranca fuera del modo edición');
+exitPathBarEdit(); // no-op sin modo: no rompe nada
+assert(isPathBarEditing2() === false, 'RF-20: salir sin modo es no-op');
 
 // --- navegación A* (navigation.js): desvío, fallback y extremos intactos --- (RF-28)
 // Aislamiento total: se vacía el registry y se ocultan TODOS los ambientes para

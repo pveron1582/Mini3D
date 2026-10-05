@@ -266,6 +266,10 @@ export function charActionsAt(t) {
 // Desplazamiento vigente en el instante t: por personaje, { x, z, action,
 // rotY (rumbo por la tangente de la curva) }. Solo dentro del tramo y con
 // recorrido válido; fuera, la pose de fin (charPoseAt) lo conserva.
+// RF-20 (2026-10-04): incluye `cadence` (zancadas por segundo normalizadas)
+// calculada con la velocidad EFECTIVA real (longitud de la curva ÷ duración
+// del tramo, con el multiplicador ya aplicado en la duración) — el mismo
+// patrón que cinematics.js (walk: natural 1.8 m/s, run: 4.5 m/s).
 export function charMoveAt(t) {
   const moves = new Map();
   charBlocks.forEach(b => {
@@ -278,10 +282,14 @@ export function charMoveAt(t) {
       const k = Math.max(0, Math.min(1, (t - b.start) / b.duration));
       const pos = c.curve.getPointAt(k);
       const tan = c.curve.getTangentAt(k);
+      const effSpeed = c.length / b.duration;
+      const natural = a.action === 'run' ? 4.5 : 1.8;
+      const cadence = THREE.MathUtils.clamp(effSpeed / natural, 0.6, 2.0);
       moves.set(charId, {
         x: pos.x, z: pos.z,
         action: a.action || null,
-        rotY: Math.atan2(tan.x, tan.z)
+        rotY: Math.atan2(tan.x, tan.z),
+        cadence
       });
     });
   });
@@ -970,7 +978,8 @@ function renderMoveEditorRow(list, entry, charId, a) {
   durIn.addEventListener('change', () => {
     selectedBlock.duration = Math.max(0.5, +durIn.value || selectedBlock.duration);
     // La velocidad se adapta para cumplir el tiempo con los mismos puntos
-    if (moveDist(m) > 0.05) m.speed = Math.round(calcMoveSpeed(m, selectedBlock.duration) * 100) / 100;
+    // (preservando el multiplicador elegido — RF-20).
+    if (moveDist(m) > 0.05) m.speed = Math.round(calcMoveBaseSpeed(m, selectedBlock.duration, m.speedMult || 1) * 100) / 100;
     renderCharBlocks();
     pushHistory();
     if (timelineBus.refreshDuration) timelineBus.refreshDuration();
@@ -1012,7 +1021,7 @@ export function extendBlockDataTo(b, end) {
   const solo = Object.keys(b.actions || {})[0];
   const a = solo && b.actions[solo];
   if (a && a.move && moveDist(a.move) > 0.05) {
-    a.move.speed = Math.round(calcMoveSpeed(a.move, target) * 100) / 100;
+    a.move.speed = Math.round(calcMoveBaseSpeed(a.move, target, a.move.speedMult || 1) * 100) / 100;
   }
   return true;
 }
@@ -1134,11 +1143,17 @@ export const MOVE_ACTIONS = [
   { id: 'run', label: '🏃 Correr' }
 ];
 export const DEFAULT_MOVE_SPEED = 2; // m/s (igual que la cinemática)
+// RF-20 (2026-10-04): multiplicadores de velocidad del recorrido (desplegable
+// de la barra de edición del camino). La efectiva = base × mult.
+export const SPEED_MULTS = [0.25, 0.5, 1, 2, 4, 8];
 
 // Recorrido del bloque: move = { waypoints: [{x,z}, ...], speed, _v? }.
 // Los extremos son inicio (verde) y fin (rojo); los intermedios (amarillos)
 // se agregan con clic sobre la curva en modo edición (🎬). _v es un contador
 // de versión para la caché de la curva (se serializa sin daño).
+// RF-20 (2026-10-04): move.speedMult (×0.25…×8, default 1) multiplica la
+// velocidad base para la reproducción; la duración del bloque manda y la
+// velocidad efectiva = speed × speedMult.
 function moveWaypoints(m) {
   if (!m) return [];
   if (Array.isArray(m.waypoints)) return m.waypoints;
@@ -1177,13 +1192,20 @@ export function moveDist(m) {
   return c ? c.length : 0;
 }
 
+// RF-20 (2026-10-04): velocidad efectiva del recorrido = base × multiplicador
+// (×0.25…×8 elegido en la barra de edición; 1 si no se definió). Es la que
+// manda en reproducción (duración y cadencia).
+export function effectiveMoveSpeed(m) {
+  return (m.speed || DEFAULT_MOVE_SPEED) * (m.speedMult || 1);
+}
+
 export function calcMoveDuration(m) {
   const d = moveDist(m);
   if (d < 1e-6) return 0;
-  return d / Math.max(0.1, m.speed || DEFAULT_MOVE_SPEED);
+  return d / Math.max(0.1, effectiveMoveSpeed(m));
 }
 
-export function calcMoveSpeed(m, duration) {
+export function calcMoveOldSpeed(m, duration) {
   const d = moveDist(m);
   if (!(duration > 0)) return m.speed || DEFAULT_MOVE_SPEED;
   return d / duration;
@@ -1349,6 +1371,15 @@ let markFrom = null;   // esfera verde (inicio)
 let markTo = null;     // esfera roja (fin)
 let markLine = null;   // curva amarilla entre los puntos
 let markMids = [];     // esferas amarillas (puntos intermedios, pool)
+// RF-20 (2026-10-04): el botón ⦿⦿ de la barra de edición muestra/oculta los
+// puntos del camino a voluntad (sin salir del modo edición).
+let moveMarkersHidden = false;
+export function moveMarkersVisible() { return !moveMarkersHidden; }
+export function toggleMoveMarkers() {
+  moveMarkersHidden = !moveMarkersHidden;
+  updateMoveMarkers();
+  return !moveMarkersHidden;
+}
 
 function ensureMoveMarkers() {
   if (markFrom) return;
@@ -1357,13 +1388,18 @@ function ensureMoveMarkers() {
   markTo = new THREE.Mesh(new THREE.SphereGeometry(0.12, 14, 14), mat(0xe04040));
   markFrom.userData.isMoveMarker = true;
   markTo.userData.isMoveMarker = true;
+  // RF-20 (fix 2026-10-04): la línea nace VACÍA (0 vértices) y se reconstruye
+  // con setFromPoints() en cada updateMoveMarkers(). Antes nacía con 2
+  // vértices y setFromPoints() con 101 puntos escribía de más o de menos en
+  // el mismo buffer → 'Buffer size too small' y línea invisible/rota.
   markLine = new THREE.Line(
-    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
+    new THREE.BufferGeometry(),
     new THREE.LineBasicMaterial({ color: 0xffd24d, depthTest: false, transparent: true, opacity: 0.9 })
   );
   markFrom.renderOrder = 998;
   markTo.renderOrder = 998;
   markLine.renderOrder = 997;
+  markLine.frustumCulled = false;
   markFrom.visible = markTo.visible = markLine.visible = false;
   scene.add(markFrom, markTo, markLine);
 }
@@ -1383,8 +1419,12 @@ function updateMoveMarkers() {
   }
   const wps = moveWaypoints(mv);
   const n = wps.length;
-  markFrom.visible = n >= 1;
-  markTo.visible = n >= 2;
+  // Sin camino a la vista (ni editando ni bloque con recorrido): todo oculto
+  // (cero puntos fantasma — RF-20 fix 2026-10-04). El botón ⦿ de la barra de
+  // edición también puede ocultar los puntos a voluntad.
+  const markHidden = (!pathEdit && !mv) || moveMarkersHidden;
+  markFrom.visible = n >= 1 && !markHidden;
+  markTo.visible = n >= 2 && !markHidden;
   if (n >= 1) markFrom.position.set(wps[0].x, 0.12, wps[0].z);
   if (n >= 2) markTo.position.set(wps[n - 1].x, 0.12, wps[n - 1].z);
   // RF-67: números solo en modo edición (pathEdit); al seleccionar sin editar
@@ -1414,12 +1454,19 @@ function updateMoveMarkers() {
     }
   });
   // La curva (no una recta): 100 muestras por los waypoints.
+  // RF-20 (fix 2026-10-04): se reconstruye la geometría en cada update (la
+  // línea nació vacía); además markLine.visible = false cuando no hay curva
+  // (cero puntos fantasma) y frustumCulled apagado (la curva larga se salía
+  // del frustum calculado con el buffer viejo y se volvía invisible).
   const c = n >= 2 ? moveCurve(mv) : null;
-  markLine.visible = !!c;
   if (c) {
-    markLine.geometry.setFromPoints(
+    if (markLine.geometry) markLine.geometry.dispose();
+    markLine.geometry = new THREE.BufferGeometry().setFromPoints(
       c.curve.getPoints(100).map(v => new THREE.Vector3(v.x, 0.12, v.z))
     );
+    markLine.visible = !markHidden;
+  } else {
+    markLine.visible = false;
   }
 }
 
@@ -1451,6 +1498,38 @@ export function enterPathEditMode(block, charId) {
   } else {
     startMovePick(block, charId, phase);
   }
+}
+
+// ---------- API del move vigente (para la barra de edición del camino) ----------
+// RF-20 (2026-10-04): la barra de edición (blockBar.js) lee y escribe el move
+// del bloque de movimiento en edición a través de estos helpers.
+// Devuelve { block, charId, move } del camino en edición, o null.
+export function editingMoveInfo() {
+  if (!pathEdit) return null;
+  const a = pathEdit.block && pathEdit.block.actions[pathEdit.charId];
+  if (!a || !a.move) return null;
+  return { block: pathEdit.block, charId: pathEdit.charId, move: a.move };
+}
+// Fija la acción de movimiento del camino (walk/run) y refresca.
+export function setEditingMoveAction(action) {
+  const info = editingMoveInfo();
+  if (!info) return false;
+  info.block.actions[info.charId].action = action || null;
+  renderCharBlocks();
+  pushHistory();
+  return true;
+}
+// Fija el multiplicador de velocidad (×0.25…×8): la duración se recalcula
+// con la velocidad efectiva (base × mult).
+export function setEditingMoveSpeedMult(mult) {
+  const info = editingMoveInfo();
+  if (!info) return false;
+  info.move.speedMult = mult;
+  info.block.duration = Math.max(0.5, Math.round(calcMoveDuration(info.move) * 10) / 10);
+  renderCharBlocks();
+  pushHistory();
+  if (timelineBus.refreshDuration) timelineBus.refreshDuration();
+  return true;
 }
 
 // 🎬 como interruptor: si ya se edita este bloque se sale, si no se entra.
@@ -1501,10 +1580,20 @@ function syncMoveEndPose(block, charId) {
 }
 
 // La duración manda: con los puntos actuales, velocidad para cumplir el tiempo.
+// RF-20 (2026-10-04): se adapta la velocidad BASE preservando el multiplicador
+// elegido por el usuario (speedMult); la efectiva resultante cumple la duración.
 function adaptMoveSpeedToDuration(block, charId) {
   const a = block.actions[charId];
   if (!a || !a.move) return;
-  a.move.speed = Math.round(calcMoveSpeed(a.move, block.duration) * 100) / 100;
+  const mult = a.move.speedMult || 1;
+  a.move.speed = Math.round(calcMoveBaseSpeed(a.move, block.duration, mult) * 100) / 100;
+}
+
+// Velocidad base necesaria para cumplir `duration` con el multiplicador dado.
+export function calcMoveBaseSpeed(m, duration, mult) {
+  const d = moveDist(m);
+  if (!(duration > 0) || d < 1e-6) return m.speed || DEFAULT_MOVE_SPEED;
+  return d / (duration * (mult || 1));
 }
 
 // Fija el punto marcado en fase 'from'/'to'. Al completar el fin por primera

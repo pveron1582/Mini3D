@@ -3,6 +3,34 @@
 Registro de cambios del proyecto. Formato: fecha + cambio. Las entradas más
 recientes van arriba.
 
+## [2026-10-04] — RF-20: línea visible + barra de edición del camino + cadencia sincronizada (RF-20)
+
+Los 5 criterios re-especificados el 2026-10-03 (prueba "proyecto nuevo con un
+personaje") implementados y testeados:
+
+- **Línea visible en todos los flujos**: `markLine` nacía con un buffer de 2
+  vértices y `setFromPoints()` con 101 puntos lo rompía (`Buffer size too
+  small`, línea invisible). Ahora la línea nace vacía, su geometría se
+  reconstruye en cada `updateMoveMarkers()` y `frustumCulled` está apagado
+  (la curva larga se salía del frustum calculado con el buffer viejo). La
+  suite ya no emite warnings de buffer.
+- **Cero puntos fantasma**: `markHidden` oculta markers + línea sin camino a
+  la vista; el botón ⦿⦿ los oculta a voluntad; `exitPathBarEdit()` apaga el
+  modo de la barra en cada cierre de bloque.
+- **Barra de edición del camino** (`blockBar.js`): con bloque de movimiento
+  vigente, 🎬 entra en modo edición — icono azul (`primary`), botón ⦿⦿
+  (muestra/oculta puntos), desplegable de acción (caminar/correr) y
+  desplegable de velocidad ×0.25–×8; la 🎬 se vuelve ✕ roja que cierra el
+  modo. Controles creados una vez dentro del grupo de la barra; el panel
+  izquierdo no se toca (criterio de estabilidad).
+- **Cadencia sincronizada**: nuevo `move.speedMult` (persiste en el JSON, la
+  duración se recalcula con la efectiva = base × mult);
+  `effectiveMoveSpeed()` + `calcMoveBaseSpeed()` (adapta la base preservando
+  el mult elegido); `charMoveAt()` devuelve `cadence` (efectiva/natural con
+  clamp 0.6–2.0, mismo patrón que cinemática) y `applyCharMove` la aplica al
+  rig en reproducción — sin deslizamiento ni galope al variar ×0.25–×8.
+- Tests: `p7-test` +13 asserts RF-20. Spec RF-20 → `verificado`. `verify` = 0.
+
 ## [2026-10-03] — Numeración de waypoints 01–99 sobre los markers (RF-67)
 
 Cada punto del camino ahora muestra su número de orden en un sprite de texto

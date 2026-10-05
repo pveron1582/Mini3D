@@ -1352,6 +1352,12 @@ export function evaluateAllPathsAt(t) {
     if (entry.rig && mv.action && entry.rig.currentAction !== mv.action) {
       entry.rig.setAction(mv.action);
     }
+    // RF-20 (2026-10-04): cadencia de las piernas sincronizada con la
+    // velocidad efectiva real (base × multiplicador ÷ duración del tramo) —
+    // sin deslizamiento ni galope al variar ×0.25–×8.
+    if (entry.rig && mv.action && mv.cadence !== undefined) {
+      entry.rig.cadence = mv.cadence;
+    }
   };
   interactiveRegistry.forEach((entry, id) => {
     if (!(entry.type === 'human' || entry.type === 'pet')) return;

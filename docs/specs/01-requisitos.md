@@ -109,8 +109,8 @@ las ediciones de aguja escriben la base viva.
 ## C. Cinemática y línea de tiempo
 
 ### RF-20 — Recorridos por waypoints, eventos y editor en barra de acciones
-Estado: `aprobado` (re-especificado 2026-10-03 tras la prueba "proyecto
-nuevo con un personaje"; antes estaba `verificado`)
+Estado: `verificado` (criterios nuevos implementados y testeados 2026-10-04;
+re-especificado 2026-10-03 tras la prueba "proyecto nuevo con un personaje")
 
 Camino punto a punto con acciones y esperas por waypoint; al pasar por el
 punto el personaje actúa y espera el tiempo indicado (con acción final
@@ -123,15 +123,21 @@ Criterios originales:
 - Test: `p7-test` "camino: ⧉ duplica waypoints + eventos"
 - CHANGELOG: 2026-08-21
 
-Criterios nuevos (aprobados por el usuario, 2026-10-03):
-- [ ] **Línea visible en TODOS los flujos de edición**: la línea amarilla
+Criterios nuevos (aprobados por el usuario, 2026-10-03; implementados 2026-10-04):
+- [x] **Línea visible en TODOS los flujos de edición**: la línea amarilla
   conectando los markers se ve en el 3D al crear/editar el camino desde un
   bloque 🚶 de movimiento, desde 🎬 cinemática, o desde el editor de barra.
   (Bug visto: bloque de movimiento + icono de tabla de acción → puntos verdes/
   rojos/amarillos visibles pero SIN línea.)
-- [ ] **Cero puntos fantasma**: salir del editor (✕ roja, cambio de modo,
+  Causa: `markLine` nacía con buffer de 2 vértices y `setFromPoints()` con 101
+  escribía de más o de menos (`Buffer size too small`, línea rota). Fix: la
+  línea nace vacía, geometría reconstruida en cada update + `frustumCulled`
+  apagado. Test: suite sin warnings de buffer.
+- [x] **Cero puntos fantasma**: salir del editor (✕ roja, cambio de modo,
   click afuera) limpia markers y línea del camino; reentrar los recrea.
-- [ ] **Barra de edición del camino**: al clickear el icono de tabla de
+  Fix: `markHidden` oculta todo sin camino a la vista + botón ⦿⦿ para ocultar
+  a voluntad + `exitPathBarEdit()` en cada cierre de bloque.
+- [x] **Barra de edición del camino**: al clickear el icono de tabla de
   acción en la pista 🧍, la barra de botones entra en modo edición:
   a. el icono de acción se pone **azul**;
   b. al lado aparece un **botón con dos círculos** (verde inicio / rojo fin)
@@ -140,10 +146,21 @@ Criterios nuevos (aprobados por el usuario, 2026-10-03):
   d. **desplegable de velocidad**: ×0.25 ×0.5 ×1 ×2 ×4 ×8;
   e. una **✕ roja** en el lugar del icono original que cierra el menú y
   restaura los botones normales de la barra.
-- [ ] **Cadencia sincronizada**: las piernas del personaje se mueven acordes
+  Implementado en `blockBar.js` (modo `pathBarEditing` + `selPathAction` /
+  `selPathSpeed` / `btnPathDots` creados una vez, viven en esta barra).
+- [x] **Cadencia sincronizada**: las piernas del personaje se mueven acordes
   a la velocidad elegida (sin deslizamiento ni galope raro al variar ×0.25–×8).
-- [ ] **Estabilidad del panel izquierdo**: usar esta barra no cambia nada del
+  Implementado: `move.speedMult` (persiste en el JSON) + `effectiveMoveSpeed()`
+  + `charMoveAt()` devuelve `cadence` (efectiva/natural, clamp 0.6–2.0, mismo
+  patrón que cinemática: walk 1.8 m/s, run 4.5 m/s) + `applyCharMove` la aplica
+  al rig en reproducción.
+- [x] **Estabilidad del panel izquierdo**: usar esta barra no cambia nada del
   panel/menú de la izquierda (los modos dinámicos viven solo en esta barra).
+  Los controles del modo edición se crean dentro del grupo de la barra; ningún
+  cambio en el panel izquierdo.
+- Tests: `p7-test` +13 asserts RF-20 (efectiva, duración con ×2, base con mult
+  preservado, cadencia, ⦿⦿ toggle, barra fuera de modo). `verify` = 0.
+- CHANGELOG: 2026-10-04
 - Depende de: RF-21 (bloque 🚶 que abre el editor)
 
 ### RF-21 — Bloques de personaje (pista 🧍)
